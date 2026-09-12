@@ -33,6 +33,7 @@ bima-web/web/public/uploads/
 # ===== publicspace_vlm model weights =====
 publicspace_vlm/sam*
 publicspace_vlm/yolo*
+publicspace_vlm/weights/clip/*
 
 # ===== OS / Editor =====
 .DS_Store
@@ -42,3 +43,6 @@ Thumbs.db
 
 # ===== Logs =====
 *.log
+
+# Model Weights
+*.pt
