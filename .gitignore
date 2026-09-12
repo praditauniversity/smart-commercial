@@ -1,0 +1,44 @@
+# ===== Environment & Secrets =====
+bima-web/.env
+bima-web/.env.*
+!bima-web/.env.example
+bima-web/*.pem
+
+# ===== Python =====
+bima-web/**/__pycache__/
+bima-web/**/*.py[cod]
+bima-web/**/*.egg-info/
+bima-web/.pytest_cache/
+bima-web/.venv/
+bima-web/venv/
+
+# ===== AI Service: model weights & generated outputs =====
+bima-web/ai-service/playground/models/*.pt
+bima-web/ai-service/playground/images-output/
+bima-web/ai-service/openrouter_debug.log
+
+# ===== Web (Next.js) =====
+bima-web/web/node_modules/
+bima-web/web/.next/
+bima-web/web/out/
+bima-web/web/build/
+bima-web/web/coverage/
+bima-web/web/.vercel/
+bima-web/web/*.tsbuildinfo
+bima-web/web/next-env.d.ts
+
+# ===== Uploaded media (runtime data, not source) =====
+bima-web/web/public/uploads/
+
+# ===== publicspace_vlm model weights =====
+publicspace_vlm/sam*
+publicspace_vlm/yolo*
+
+# ===== OS / Editor =====
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ===== Logs =====
+*.log
