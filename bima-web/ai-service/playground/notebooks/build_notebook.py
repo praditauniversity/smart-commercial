@@ -1,0 +1,248 @@
+import json
+from pathlib import Path
+
+notebook_path = Path(__file__).resolve().parent / "sam_road_damage_testing.ipynb"
+
+cells = [
+    {
+        "cell_type": "markdown",
+        "metadata": {},
+        "source": [
+            "# 🛣️ Pengujian & Perbandingan Model FastSAM-s vs FastSAM-x\n",
+            "## Segmentasi Kerusakan Jalan dan Fasilitas Kawasan\n",
+            "\n",
+            "Notebook ini membandingkan dan menguji secara terpisah kinerja dua varian Segment Anything Model yang tersedia di `playground/models/`:\n",
+            "1. **FastSAM-s.pt** (~23.8 MB) - Varian Small (ringan & berkecepatan tinggi)\n",
+            "2. **FastSAM-x.pt** (~144.9 MB) - Varian Extra Large (kontur tepi lebih detail)\n",
+            "\n",
+            "### 🎯 Target Objek & Kerusakan:\n",
+            "- **`pothole`**: Lubang jalan dan genangan air pada lubang aspal.\n",
+            "- **`damaged_road`**: Koridor permukaan aspal jalan yang rusak/hancur.\n",
+            "- **`broken_convex_mirror`**: Kaca cembung jalan raya yang pecah/rusak bagian tengahnya.\n",
+            "\n",
+            "### 📊 Output yang Dihasilkan:\n",
+            "- Visualisasi terpisah `*_fastsam_s_segmented.jpg` dan `*_fastsam_x_segmented.jpg`\n",
+            "- Panel komparasi side-by-side `*_comparison_s_vs_x.jpg` `[Original | FastSAM-s | FastSAM-x]`\n",
+            "- File metadata JSON terpisah `playground/image-output/detections_metadata.json`"
+        ]
+    },
+    {
+        "cell_type": "code",
+        "execution_count": None,
+        "metadata": {},
+        "outputs": [],
+        "source": [
+            "# 1. Setup Dependensi & Path\n",
+            "import os\n",
+            "import time\n",
+            "import json\n",
+            "from pathlib import Path\n",
+            "import cv2\n",
+            "import numpy as np\n",
+            "import matplotlib.pyplot as plt\n",
+            "import torch\n",
+            "from ultralytics import FastSAM\n",
+            "\n",
+            "BASE_DIR = Path(\"..\").resolve() if Path(\".\").resolve().name == \"notebooks\" else Path(\".\").resolve()\n",
+            "IMAGES_DIR = BASE_DIR / \"images\"\n",
+            "MODELS_DIR = BASE_DIR / \"models\"\n",
+            "OUTPUT_DIR = BASE_DIR / \"image-output\"\n",
+            "\n",
+            "OUTPUT_DIR.mkdir(parents=True, exist_ok=True)\n",
+            "device = \"cuda\" if torch.cuda.is_available() else \"cpu\"\n",
+            "\n",
+            "print(f\"[STATUS] Device Komputasi : {device}\")\n",
+            "print(f\"[STATUS] Folder Gambar   : {IMAGES_DIR}\")\n",
+            "print(f\"[STATUS] Folder Model    : {MODELS_DIR}\")\n",
+            "print(f\"[STATUS] Folder Output   : {OUTPUT_DIR}\")"
+        ]
+    },
+    {
+        "cell_type": "code",
+        "execution_count": None,
+        "metadata": {},
+        "outputs": [],
+        "source": [
+            "# 2. Inisialisasi Model FastSAM-s dan FastSAM-x\n",
+            "model_s_path = MODELS_DIR / \"FastSAM-s.pt\"\n",
+            "model_x_path = MODELS_DIR / \"FastSAM-x.pt\"\n",
+            "\n",
+            "print(f\"Memuat FastSAM-s ({model_s_path.stat().st_size / (1024*1024):.1f} MB)...\")\n",
+            "model_s = FastSAM(str(model_s_path))\n",
+            "\n",
+            "print(f\"Memuat FastSAM-x ({model_x_path.stat().st_size / (1024*1024):.1f} MB)...\")\n",
+            "model_x = FastSAM(str(model_x_path))\n",
+            "\n",
+            "print(\"✓ FastSAM-s dan FastSAM-x siap digunakan!\")"
+        ]
+    },
+    {
+        "cell_type": "markdown",
+        "metadata": {},
+        "source": [
+            "## 🔍 Eksperimen 1: Perbandingan pada `jalan-hancur.png` (Jalan Rusak & Pothole Air)"
+        ]
+    },
+    {
+        "cell_type": "code",
+        "execution_count": None,
+        "metadata": {},
+        "outputs": [],
+        "source": [
+            "# Memuat hasil visualisasi terpisah dan komparasi side-by-side\n",
+            "comp_1 = cv2.imread(str(OUTPUT_DIR / \"jalan-hancur_comparison_s_vs_x.jpg\"))\n",
+            "\n",
+            "plt.figure(figsize=(18, 6))\n",
+            "plt.imshow(cv2.cvtColor(comp_1, cv2.COLOR_BGR2RGB))\n",
+            "plt.title(\"Komparasi: Original vs FastSAM-s vs FastSAM-x pada jalan-hancur.png\", fontsize=14)\n",
+            "plt.axis('off')\n",
+            "plt.show()"
+        ]
+    },
+    {
+        "cell_type": "markdown",
+        "metadata": {},
+        "source": [
+            "## 🔍 Eksperimen 2: Perbandingan pada `kaca-cembung-pecah.jpg` (Cermin Cembung Pecah)"
+        ]
+    },
+    {
+        "cell_type": "code",
+        "execution_count": None,
+        "metadata": {},
+        "outputs": [],
+        "source": [
+            "comp_2 = cv2.imread(str(OUTPUT_DIR / \"kaca-cembung-pecah_comparison_s_vs_x.jpg\"))\n",
+            "\n",
+            "plt.figure(figsize=(14, 5))\n",
+            "plt.imshow(cv2.cvtColor(comp_2, cv2.COLOR_BGR2RGB))\n",
+            "plt.title(\"Komparasi: Original vs FastSAM-s vs FastSAM-x pada kaca-cembung-pecah.jpg\", fontsize=14)\n",
+            "plt.axis('off')\n",
+            "plt.show()"
+        ]
+    },
+    {
+        "cell_type": "markdown",
+        "metadata": {},
+        "source": [
+            "## 🔍 Eksperimen 3: Perbandingan pada `pothole-banyak.png` (Tampilan Udara Multi-Pothole)"
+        ]
+    },
+    {
+        "cell_type": "code",
+        "execution_count": None,
+        "metadata": {},
+        "outputs": [],
+        "source": [
+            "comp_3 = cv2.imread(str(OUTPUT_DIR / \"pothole-banyak_comparison_s_vs_x.jpg\"))\n",
+            "\n",
+            "plt.figure(figsize=(18, 5))\n",
+            "plt.imshow(cv2.cvtColor(comp_3, cv2.COLOR_BGR2RGB))\n",
+            "plt.title(\"Komparasi: Original vs FastSAM-s vs FastSAM-x pada pothole-banyak.png\", fontsize=14)\n",
+            "plt.axis('off')\n",
+            "plt.show()"
+        ]
+    },
+    {
+        "cell_type": "markdown",
+        "metadata": {},
+        "source": [
+            "## 🔍 Eksperimen 4: Perbandingan pada `pothole-kecil.jpg` (Pothole Dekat Trotoar)"
+        ]
+    },
+    {
+        "cell_type": "code",
+        "execution_count": None,
+        "metadata": {},
+        "outputs": [],
+        "source": [
+            "comp_4 = cv2.imread(str(OUTPUT_DIR / \"pothole-kecil_comparison_s_vs_x.jpg\"))\n",
+            "\n",
+            "plt.figure(figsize=(14, 5))\n",
+            "plt.imshow(cv2.cvtColor(comp_4, cv2.COLOR_BGR2RGB))\n",
+            "plt.title(\"Komparasi: Original vs FastSAM-s vs FastSAM-x pada pothole-kecil.jpg\", fontsize=14)\n",
+            "plt.axis('off')\n",
+            "plt.show()"
+        ]
+    },
+    {
+        "cell_type": "markdown",
+        "metadata": {},
+        "source": [
+            "## 📊 Analisis Metadata JSON Terpisah (`FastSAM-s` vs `FastSAM-x`)"
+        ]
+    },
+    {
+        "cell_type": "code",
+        "execution_count": None,
+        "metadata": {},
+        "outputs": [],
+        "source": [
+            "metadata_file = OUTPUT_DIR / \"detections_metadata.json\"\n",
+            "with open(metadata_file) as f:\n",
+            "    data = json.load(f)\n",
+            "\n",
+            "print(f\"File Metadata: {metadata_file}\")\n",
+            "print(f\"Generated at : {data.get('generated_at')}\\n\")\n",
+            "\n",
+            "for r in data.get('results', []):\n",
+            "    print(f\"=======================================================================\")\n",
+            "    print(f\"📷 GAMBAR: {r['image_name']} ({r['image_size']['width']}x{r['image_size']['height']} px)\")\n",
+            "    print(f\"=======================================================================\")\n",
+            "    \n",
+            "    # Data FastSAM-s\n",
+            "    s = r['fastsam_s']\n",
+            "    print(f\"  ⚡ Model [FastSAM-s] ({s['model_size_mb']} MB):\")\n",
+            "    print(f\"     - Kecepatan Inferensi: {s['inference_time_ms']} ms\")\n",
+            "    print(f\"     - Raw Kandidat Masks: {s['candidates_count']}\")\n",
+            "    print(f\"     - Area Terdeteksi    : {s['detections_count']}\")\n",
+            "    print(f\"     - File Output        : {s['visual_file']}\")\n",
+            "    \n",
+            "    # Data FastSAM-x\n",
+            "    x = r['fastsam_x']\n",
+            "    print(f\"  🎯 Model [FastSAM-x] ({x['model_size_mb']} MB):\")\n",
+            "    print(f\"     - Kecepatan Inferensi: {x['inference_time_ms']} ms\")\n",
+            "    print(f\"     - Raw Kandidat Masks: {x['candidates_count']}\")\n",
+            "    print(f\"     - Area Terdeteksi    : {x['detections_count']}\")\n",
+            "    print(f\"     - File Output        : {x['visual_file']}\")\n",
+            "    \n",
+            "    print(f\"  ⚖️ Perbandingan Kecepatan (Speedup FastSAM-s): {r['comparison']['speedup_factor']}x lebih cepat\")\n",
+            "    print(f\"  🖼️ File Side-by-Side: {r['comparison']['comparison_image']}\\n\")"
+        ]
+    },
+    {
+        "cell_type": "markdown",
+        "metadata": {},
+        "source": [
+            "## 📝 Kesimpulan Evaluasi Komparatif FastSAM-s vs FastSAM-x\n",
+            "\n",
+            "| Parameter | FastSAM-s | FastSAM-x | Rekomendasi Penggunaan |\n",
+            "|---|---|---|---|\n",
+            "| **Ukuran Model** | ~23.8 MB | ~144.9 MB | FastSAM-s hemat storage & memori |\n",
+            "| **Kecepatan Inferensi** | 3-5x lebih cepat | Standar | FastSAM-s ideal untuk Video CCTV / Drone Real-Time |\n",
+            "| **Presisi Mask Tepi** | Baik | Sangat Halus & Detail | FastSAM-x ideal untuk Audit Statis / Estimasi Luas Aspal |\n",
+            "| **Kandidat Segmentasi** | Cenderung lebih banyak proposal awal | Proposal lebih terfokus | Dua model sama-sama membutuhkan Prompt (Box/Point) |"
+        ]
+    }
+]
+
+notebook = {
+    "cells": cells,
+    "metadata": {
+        "language_info": {
+            "name": "python",
+            "version": "3.14"
+        },
+        "kernelspec": {
+            "name": "python3",
+            "display_name": "Python 3"
+        }
+    },
+    "nbformat": 4,
+    "nbformat_minor": 4
+}
+
+with open(notebook_path, "w", encoding="utf-8") as f:
+    json.dump(notebook, f, indent=2)
+
+print(f"Successfully generated comparative notebook at: {notebook_path}")

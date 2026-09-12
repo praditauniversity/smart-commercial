@@ -1,0 +1,18 @@
+# Core AI Vision & Processing Service
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+pydantic>=2.10.0
+python-dotenv>=1.0.0
+httpx>=0.28.0
+pillow>=10.0.0
+
+# Testing
+pytest>=8.0.0
+
+# Optional: Computer Vision Playground / Notebooks (FastSAM & Local Research)
+# Uncomment below if you plan to run playground notebooks / FastSAM scripts:
+# torch>=2.0.0
+# torchvision>=0.15.0
+# ultralytics>=8.0.0
+# opencv-python>=4.8.0
+# numpy>=1.24.0

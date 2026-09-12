@@ -1,0 +1,40 @@
+# ===== Environment & Secrets =====
+.env
+.env.*
+!.env.example
+*.pem
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# ===== AI Service: model weights & generated outputs =====
+ai-service/playground/models/*.pt
+ai-service/playground/images-output/
+ai-service/openrouter_debug.log
+
+# ===== Web (Next.js) =====
+web/node_modules/
+web/.next/
+web/out/
+web/build/
+web/coverage/
+web/.vercel/
+web/*.tsbuildinfo
+web/next-env.d.ts
+
+# ===== Uploaded media (runtime data, not source) =====
+web/public/uploads/
+
+# ===== OS / Editor =====
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ===== Logs =====
+*.log

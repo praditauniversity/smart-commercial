@@ -1,0 +1,15 @@
+names:
+- bache
+- grieta
+- registro
+- rejilla
+nc: 4
+roboflow:
+  license: CC BY 4.0
+  project: pothole-segmentation-mls2r
+  url: https://universe.roboflow.com/aprendeingenia/pothole-segmentation-mls2r/dataset/3
+  version: 3
+  workspace: aprendeingenia
+test: ../test/images
+train: ../train/images
+val: ../valid/images

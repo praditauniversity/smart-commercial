@@ -1,0 +1,171 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                  String              @id @default(uuid())
+  email               String              @unique
+  name                String
+  passwordHash        String
+  role                String              @default("surveyor") // "surveyor" | "admin"
+  isActive            Boolean             @default(true)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  surveySessions      SurveySession[]
+  reviewedSubmissions SubmissionVersion[]
+  auditLogs           AuditLog[]
+}
+
+model ClassDefinition {
+  id                    String                   @id @default(uuid())
+  name                  String                   @unique
+  displayName           String
+  visualDescription     String
+  conditionCriteria     String
+  feasibilityCriteria   String
+  isActive              Boolean                  @default(true)
+  mutuallyExclusiveWith String                   @default("[]") // JSON Array of class IDs
+  conflictIouThreshold  Float                    @default(0.5)
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  versions              ClassDefinitionVersion[]
+  detections            Detection[]
+}
+
+model ClassDefinitionVersion {
+  id                String          @id @default(uuid())
+  classId           String
+  versionNumber     Int
+  snapshotData      String // JSON snapshot of class fields
+  createdAt         DateTime        @default(now())
+  classDefinition   ClassDefinition @relation(fields: [classId], references: [id], onDelete: Cascade)
+  detections        Detection[]
+}
+
+model ModelConfig {
+  id              String      @id @default(uuid())
+  name            String
+  provider        String      @default("OpenRouter") // "OpenRouter" | "onpremise"
+  modelName       String      @default("qwen/qwen3-vl-8b-instruct")
+  endpointUrl     String?
+  encryptedApiKey String?
+  isDefault       Boolean     @default(false)
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  detections      Detection[]
+}
+
+model SurveySession {
+  id              String              @id @default(uuid())
+  name            String
+  locationType    String              @default("point") // "point" | "polygon"
+  locationGeojson String              @default("{}") // GeoJSON String
+  locationAddress String?
+  surveyDate      DateTime            @default(now())
+  startedAt       DateTime            @default(now())
+  finishedAt      DateTime?
+  status          String              @default("berlangsung") // "berlangsung" | "selesai_menunggu_submit" | "menunggu_review" | "disetujui" | "ditolak" | "perlu_perbaikan"
+  surveyorId      String
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  surveyor        User                @relation(fields: [surveyorId], references: [id])
+  mediaAssets     MediaAsset[]
+  submissions     SubmissionVersion[]
+  detections      Detection[]
+}
+
+model MediaAsset {
+  id              String         @id @default(uuid())
+  sessionId       String
+  fileName        String
+  fileType        String // "image" | "video"
+  fileUrl         String
+  storagePath     String
+  durationSeconds Float?
+  status          String         @default("queued") // "queued" | "uploading" | "uploaded" | "processing" | "completed" | "failed" | "deleted"
+  errorMessage    String?
+  idempotencyKey  String?        @unique
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  session         SurveySession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  segments        MediaSegment[]
+  detections      Detection[]
+}
+
+model MediaSegment {
+  id                 String      @id @default(uuid())
+  mediaAssetId       String
+  segmentIndex       Int
+  startTime          Float
+  endTime            Float
+  mediaUrl           String?
+  status             String      @default("pending") // "pending" | "processing" | "completed" | "failed"
+  extractionMetadata String?     @default("{}") // JSON string
+  createdAt          DateTime    @default(now())
+  mediaAsset         MediaAsset  @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+  detections         Detection[]
+}
+
+model Detection {
+  id               String                  @id @default(uuid())
+  sessionId        String
+  mediaAssetId     String
+  mediaSegmentId   String?
+  classId          String
+  classVersionId   String?
+  className        String
+  bbox             String // JSON String: {x: number, y: number, width: number, height: number} normalized 0-1
+  condition        String
+  feasibility      String // "layak" | "cukup_layak" | "tidak_layak"
+  timestampSeconds Float?
+  frameIndex       Int?
+  locationGeojson  String? // Fallback to session location if empty
+  modelConfigId    String?
+  modelName        String?
+  promptVersion    String?
+  hasConflict      Boolean                 @default(false)
+  conflictResolved Boolean                 @default(false)
+  conflictDetails  String?                 @default("{}") // JSON string describing conflicting detection IDs & classes
+  isDeleted        Boolean                 @default(false)
+  createdAt        DateTime                @default(now())
+  session          SurveySession           @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  mediaAsset       MediaAsset              @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+  mediaSegment     MediaSegment?           @relation(fields: [mediaSegmentId], references: [id], onDelete: SetNull)
+  classDefinition  ClassDefinition         @relation(fields: [classId], references: [id])
+  classVersion     ClassDefinitionVersion? @relation(fields: [classVersionId], references: [id], onDelete: SetNull)
+  modelConfig      ModelConfig?            @relation(fields: [modelConfigId], references: [id], onDelete: SetNull)
+}
+
+model SubmissionVersion {
+  id            String        @id @default(uuid())
+  sessionId     String
+  versionNumber Int
+  status        String        @default("menunggu_review") // "menunggu_review" | "disetujui" | "ditolak"
+  snapshotData  String // JSON string: full immutable snapshot of survey session, detections, and media assets
+  reviewNotes   String?
+  rejectReason  String?
+  reviewerId    String?
+  submittedAt   DateTime      @default(now())
+  reviewedAt    DateTime?
+  createdAt     DateTime      @default(now())
+  session       SurveySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  reviewer      User?         @relation(fields: [reviewerId], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  action     String
+  entityType String
+  entityId   String
+  actorId    String?
+  changes    String // JSON string describing previous and new values
+  createdAt  DateTime @default(now())
+  actor      User?    @relation(fields: [actorId], references: [id])
+}
