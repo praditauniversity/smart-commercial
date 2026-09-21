@@ -3,11 +3,12 @@ import json
 from typing import List, Optional
 from schemas import DetectionSchema, DetectionItem, BBox, ClassDef, ModelConfigPayload
 from providers.base import BaseVisionProvider
+from config import require_env
 
 class OnPremiseProvider(BaseVisionProvider):
     def __init__(self, config: ModelConfigPayload):
         super().__init__(config)
-        self.endpoint_url = config.endpoint_url or "http://localhost:8000/v1/vision"
+        self.endpoint_url = config.endpoint_url or require_env("ONPREMISE_ENDPOINT_URL")
         self.api_key = config.api_key
 
     async def detect(

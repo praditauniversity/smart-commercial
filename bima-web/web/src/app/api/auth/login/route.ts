@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
 import { signJwtToken } from '@/lib/security';
+import { requireEnvNumber } from '@/lib/env';
 
 export async function POST(request: Request) {
   try {
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: requireEnvNumber('SESSION_MAX_AGE_SECONDS'),
     });
 
     return response;

@@ -12,8 +12,8 @@ Cakupan: `src/lib/*`, `src/app/api/**`, `prisma/schema.prisma`, komponen & halam
 **Lokasi:** `web/src/lib/security.ts`
 
 ```ts
-const ENCRYPTION_KEY = process.env.ENCRYPTION_SECRET_KEY || 'bima-aes-encryption-key-32bytes!';
-const JWT_SECRET = process.env.JWT_SECRET || 'bima-jwt-super-secret-key-32-chars-min-key!';
+const ENCRYPTION_KEY = process.env.ENCRYPTION_SECRET_KEY || '<nilai bawaan lama, sudah dihapus>';
+const JWT_SECRET = process.env.JWT_SECRET || '<nilai bawaan lama, sudah dihapus>';
 ```
 
 Jika env var tidak diset, penandatanganan JWT dan enkripsi AES memakai kunci
@@ -104,7 +104,6 @@ Akibatnya cache 60 detik menyajikan kelas nonaktif dan jejak audit hilang.
 | Temuan | Lokasi | Catatan |
 |--------|--------|---------|
 | Cache user tidak di-invalidate saat user dinonaktifkan | `lib/auth.ts` | User nonaktif bisa terotorisasi hingga 60s |
-| `save-capture` menyimpan data URL base64 penuh di kolom DB `fileUrl` | `api/live/save-capture/route.ts` | Inkonsisten dengan upload route yang menulis ke disk; bloat DB |
 | Duplikasi logika snapshot antara `submit` dan `resubmit` | `api/sessions/[id]/{submit,resubmit}/route.ts` | Ekstrak helper `buildSubmissionSnapshot(session, user)` bersama |
 | `where: any` | `api/sessions/route.ts` | Perkuat tiping |
 | Tanpa pagination | `GET /api/sessions`, `dashboard/stats`, `dashboard/map-points`, `dashboard/class-summary` | Unbounded fetch; tambahkan pagination/limit |

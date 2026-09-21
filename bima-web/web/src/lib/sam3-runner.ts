@@ -1,10 +1,5 @@
 import prisma from '@/lib/prisma';
-
-const FASTAPI_SERVICE_URL = process.env.FASTAPI_SERVICE_URL || 'http://127.0.0.1:8000';
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET || 'bima-research-internal-secret-2026';
-
-const POLL_INTERVAL_MS = 3000;
-const MAX_WAIT_MS = 60 * 60 * 1000; // 1 hour
+import { requireEnv, requireEnvNumber } from '@/lib/env';
 
 interface Sam3ClassInput {
   id: string;
@@ -15,12 +10,18 @@ interface Sam3ClassInput {
   feasibilityCriteria: string;
   samPrompt: string | null;
   samColor: string | null;
+  mutuallyExclusiveWith: string; // JSON array of class ids
+  conflictIouThreshold: number;
 }
 
-const headers = {
-  'Content-Type': 'application/json',
-  'X-Internal-Secret': INTERNAL_API_SECRET,
-};
+function parseIdList(raw: string | null | undefined): string[] {
+  try {
+    const value = JSON.parse(raw || '[]');
+    return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 async function markFailed(mediaId: string, message: string) {
   await prisma.mediaAsset
@@ -42,6 +43,13 @@ export async function runSam3Job(params: {
 }): Promise<void> {
   const { mediaAsset, classes, modelName, modelConfigId, samMode } = params;
   try {
+    const FASTAPI_SERVICE_URL = requireEnv('FASTAPI_SERVICE_URL');
+    const POLL_INTERVAL_MS = requireEnvNumber('SAM3_POLL_INTERVAL_MS');
+    const MAX_WAIT_MS = requireEnvNumber('SAM3_MAX_WAIT_MS');
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Internal-Secret': requireEnv('INTERNAL_API_SECRET'),
+    };
     const payload = {
       session_id: mediaAsset.sessionId,
       media_asset_id: mediaAsset.id,
@@ -54,12 +62,14 @@ export async function runSam3Job(params: {
         visual_description: c.visualDescription,
         condition_criteria: c.conditionCriteria,
         feasibility_criteria: c.feasibilityCriteria,
-        mutually_exclusive_with: [],
+        mutually_exclusive_with: parseIdList(c.mutuallyExclusiveWith),
+        conflict_iou_threshold: c.conflictIouThreshold,
         sam_prompt: c.samPrompt,
         sam_color: c.samColor,
       })),
       ai_model_config: { provider: 'sam3', model_name: modelName, endpoint_url: null, api_key: null, sam_mode: samMode || null },
       idempotency_key: mediaAsset.idempotencyKey,
+      conflict_threshold: requireEnvNumber('DEFAULT_CONFLICT_IOU_THRESHOLD'),
     };
 
     const createRes = await fetch(`${FASTAPI_SERVICE_URL}/api/v1/sam3/jobs`, {
@@ -143,9 +153,9 @@ export async function runSam3Job(params: {
             modelConfigId: modelConfigId || null,
             modelName,
             promptVersion: 'sam3',
-            hasConflict: false,
+            hasConflict: Boolean(det.has_conflict),
             conflictResolved: false,
-            conflictDetails: '{}',
+            conflictDetails: JSON.stringify(det.conflict_details || {}),
             isDeleted: false,
           },
         ];

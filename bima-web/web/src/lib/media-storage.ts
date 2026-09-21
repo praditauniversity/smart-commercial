@@ -4,9 +4,20 @@ import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { getMaxVideoSeconds, videoTooLongMessage } from './media-limits';
+import { requireEnv, requireEnvNumber } from './env';
 
-// System ffmpeg (has libx264/libwebp). The anaconda build lacks libx264.
-const FFMPEG_PATH = process.env.FFMPEG_PATH || '/usr/bin/ffmpeg';
+// ffmpeg needs libx264 and libwebp (the anaconda build lacks libx264). Paths come from the environment only.
+const ffmpegPath = () => requireEnv('FFMPEG_PATH');
+const ffprobePath = () => requireEnv('FFPROBE_PATH');
+
+/** Thrown when a file breaks a configured media limit; the upload route turns it into HTTP 400. */
+export class MediaLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MediaLimitError';
+  }
+}
 
 const BUCKETS = { image: 'img', video: 'vids' } as const;
 export type MediaKind = keyof typeof BUCKETS;
@@ -28,7 +39,7 @@ function getAdminClient(): SupabaseClient {
 
 function runFfmpeg(args: string[], timeoutMs: number): Promise<void> {
   return new Promise((resolve, reject) => {
-    const proc = spawn(FFMPEG_PATH, ['-hide_banner', '-loglevel', 'error', '-y', ...args]);
+    const proc = spawn(ffmpegPath(), ['-hide_banner', '-loglevel', 'error', '-y', ...args]);
     let stderr = '';
     proc.stderr.on('data', (d) => {
       stderr += d.toString();
@@ -39,7 +50,7 @@ function runFfmpeg(args: string[], timeoutMs: number): Promise<void> {
     }, timeoutMs);
     proc.on('error', (err) => {
       clearTimeout(timer);
-      reject(new Error(`ffmpeg tidak bisa dijalankan (${FFMPEG_PATH}): ${err.message}`));
+      reject(new Error(`ffmpeg tidak bisa dijalankan (${ffmpegPath()}): ${err.message}`));
     });
     proc.on('close', (code) => {
       clearTimeout(timer);
@@ -49,16 +60,45 @@ function runFfmpeg(args: string[], timeoutMs: number): Promise<void> {
   });
 }
 
-// Longest side capped at 1280px, only ever downscaled.
-const IMAGE_SCALE = "scale='min(1280,iw)':'min(1280,ih)':force_original_aspect_ratio=decrease";
-// Height capped at 720p, only ever downscaled; width auto and kept even for H.264.
-const VIDEO_SCALE = "scale=-2:'min(720,ih)'";
+/** Reads the real duration (seconds) with ffprobe; null when it cannot be determined. */
+function probeDurationSeconds(filePath: string): Promise<number | null> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(ffprobePath(), [
+      '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', filePath,
+    ]);
+    let stdout = '';
+    const timer = setTimeout(() => {
+      proc.kill('SIGKILL');
+      reject(new Error('Pembacaan durasi video melebihi batas waktu.'));
+    }, requireEnvNumber('FFPROBE_TIMEOUT_MS'));
+    proc.stdout.on('data', (d) => {
+      stdout += d.toString();
+    });
+    proc.on('error', (err) => {
+      clearTimeout(timer);
+      reject(new Error(`ffprobe tidak bisa dijalankan (${ffprobePath()}): ${err.message}`));
+    });
+    proc.on('close', () => {
+      clearTimeout(timer);
+      const value = parseFloat(stdout.trim());
+      resolve(Number.isFinite(value) && value > 0 ? value : null);
+    });
+  });
+}
+
+// Longest image side is capped (MEDIA_IMAGE_MAX_SIDE), only ever downscaled.
+const imageScale = () => {
+  const side = requireEnvNumber('MEDIA_IMAGE_MAX_SIDE');
+  return `scale='min(${side},iw)':'min(${side},ih)':force_original_aspect_ratio=decrease`;
+};
+// Video height is capped (MEDIA_VIDEO_MAX_HEIGHT), only ever downscaled; width auto and kept even for H.264.
+const videoScale = () => `scale=-2:'min(${requireEnvNumber('MEDIA_VIDEO_MAX_HEIGHT')},ih)'`;
 
 /** Compress raw media with ffmpeg: images -> WebP, videos -> H.264 (no audio). */
 export async function compressMedia(
   input: Buffer,
   kind: MediaKind
-): Promise<{ buffer: Buffer; contentType: string; ext: string }> {
+): Promise<{ buffer: Buffer; contentType: string; ext: string; durationSeconds: number | null }> {
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bima-media-'));
   const inPath = path.join(workDir, 'input');
   const ext = kind === 'image' ? 'webp' : 'mp4';
@@ -67,28 +107,37 @@ export async function compressMedia(
   try {
     await fs.writeFile(inPath, input);
 
+    let durationSeconds: number | null = null;
+    if (kind === 'video') {
+      // Enforced here (not trusted from the client) and before the expensive re-encode.
+      durationSeconds = await probeDurationSeconds(inPath);
+      if (durationSeconds === null || durationSeconds > getMaxVideoSeconds()) {
+        throw new MediaLimitError(videoTooLongMessage(durationSeconds));
+      }
+    }
+
     if (kind === 'image') {
       await runFfmpeg(
-        ['-i', inPath, '-frames:v', '1', '-vf', IMAGE_SCALE, '-c:v', 'libwebp', '-quality', '65', '-compression_level', '6', outPath],
-        60_000
+        ['-i', inPath, '-frames:v', '1', '-vf', imageScale(), '-c:v', 'libwebp', '-quality', String(requireEnvNumber('MEDIA_IMAGE_QUALITY')), '-compression_level', '6', outPath],
+        requireEnvNumber('FFMPEG_IMAGE_TIMEOUT_MS')
       );
     } else {
       await runFfmpeg(
         [
           '-i', inPath,
-          '-vf', VIDEO_SCALE,
-          '-c:v', 'libx264', '-preset', 'slow', '-crf', '30',
+          '-vf', videoScale(),
+          '-c:v', 'libx264', '-preset', 'slow', '-crf', String(requireEnvNumber('MEDIA_VIDEO_CRF')),
           '-pix_fmt', 'yuv420p',
           '-an',
           '-movflags', '+faststart',
           outPath,
         ],
-        15 * 60_000
+        requireEnvNumber('FFMPEG_VIDEO_TIMEOUT_MS')
       );
     }
 
     const buffer = await fs.readFile(outPath);
-    return { buffer, contentType: kind === 'image' ? 'image/webp' : 'video/mp4', ext };
+    return { buffer, contentType: kind === 'image' ? 'image/webp' : 'video/mp4', ext, durationSeconds };
   } finally {
     await fs.rm(workDir, { recursive: true, force: true });
   }
@@ -99,9 +148,15 @@ export async function compressAndUpload(params: {
   input: Buffer;
   kind: MediaKind;
   sessionId: string;
-}): Promise<{ fileUrl: string; storagePath: string; originalBytes: number; storedBytes: number }> {
+}): Promise<{
+  fileUrl: string;
+  storagePath: string;
+  originalBytes: number;
+  storedBytes: number;
+  durationSeconds: number | null;
+}> {
   const { input, kind, sessionId } = params;
-  const { buffer, contentType, ext } = await compressMedia(input, kind);
+  const { buffer, contentType, ext, durationSeconds } = await compressMedia(input, kind);
 
   const storagePath = `sessions/${sessionId}/${crypto.randomUUID()}.${ext}`;
   const bucket = BUCKETS[kind];
@@ -115,7 +170,13 @@ export async function compressAndUpload(params: {
   if (error) throw new Error(`Gagal upload ke bucket "${bucket}": ${error.message}`);
 
   const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath);
-  return { fileUrl: data.publicUrl, storagePath, originalBytes: input.length, storedBytes: buffer.length };
+  return {
+    fileUrl: data.publicUrl,
+    storagePath,
+    originalBytes: input.length,
+    storedBytes: buffer.length,
+    durationSeconds,
+  };
 }
 
 /** Best-effort removal of a stored file; ignores files that are not in Supabase Storage (legacy local uploads). */

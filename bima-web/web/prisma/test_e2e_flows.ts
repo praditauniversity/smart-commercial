@@ -1,3 +1,5 @@
+import 'dotenv/config';
+import { requireEnv } from '../src/lib/env';
 import { PrismaClient } from '@prisma/client';
 import { validateSurveySessionTransition, validateMediaAssetTransition, SurveySessionStatus } from '../src/lib/state-machine';
 import { encryptSecret, decryptSecret } from '../src/lib/security';
@@ -10,8 +12,8 @@ async function runE2ETests() {
   console.log('================================================================\n');
 
   // Retrieve seeded surveyor and admin
-  const surveyor = await prisma.user.findUnique({ where: { email: 'surveyor@bima.id' } });
-  const admin = await prisma.user.findUnique({ where: { email: 'admin@bima.id' } });
+  const surveyor = await prisma.user.findUnique({ where: { email: requireEnv('SEED_SURVEYOR_EMAIL') } });
+  const admin = await prisma.user.findUnique({ where: { email: requireEnv('SEED_ADMIN_EMAIL') } });
   const classes = await prisma.classDefinition.findMany({ include: { versions: true } });
   const potholeClass = classes.find(c => c.name === 'jalan_berlubang')!;
 
@@ -59,7 +61,7 @@ async function runE2ETests() {
       sessionId: session.id,
       fileName: 'pothole_sudirman_km4.jpg',
       fileType: 'image',
-      fileUrl: 'https://kxdtxcwxwtqtwfwfjnan.supabase.co/storage/v1/object/public/survey-media/sessions/' + session.id + '/pothole_sudirman_km4.jpg',
+      fileUrl: requireEnv('NEXT_PUBLIC_SUPABASE_URL') + '/storage/v1/object/public/survey-media/sessions/' + session.id + '/pothole_sudirman_km4.jpg',
       storagePath: `sessions/${session.id}/pothole_sudirman_km4.jpg`,
       status: 'uploaded',
       idempotencyKey: 'idempotency-asset-1-' + Date.now(),
@@ -125,7 +127,7 @@ async function runE2ETests() {
     data: {
       name: 'Qwen3 VL Vision Verified Endpoint',
       provider: 'OpenRouter',
-      modelName: 'qwen/qwen3-vl-8b-instruct',
+      modelName: requireEnv('NEXT_PUBLIC_DEFAULT_MODEL_NAME'),
       encryptedApiKey: encryptSecret('sk-or-v1-verified-test-key-for-vision-pipeline'),
       isDefault: true,
       isActive: true,
@@ -184,7 +186,7 @@ async function runE2ETests() {
       sessionId: session.id,
       fileName: 'rambu_rusak_sudirman.jpg',
       fileType: 'image',
-      fileUrl: 'https://kxdtxcwxwtqtwfwfjnan.supabase.co/storage/v1/object/public/survey-media/sessions/' + session.id + '/rambu_rusak_sudirman.jpg',
+      fileUrl: requireEnv('NEXT_PUBLIC_SUPABASE_URL') + '/storage/v1/object/public/survey-media/sessions/' + session.id + '/rambu_rusak_sudirman.jpg',
       storagePath: `sessions/${session.id}/rambu_rusak_sudirman.jpg`,
       status: 'completed',
       idempotencyKey: 'idempotency-asset-2-' + Date.now(),
@@ -504,7 +506,7 @@ async function runE2ETests() {
   await prisma.modelConfig.delete({ where: { id: configuredModel.id } });
   // Restore default model
   await prisma.modelConfig.updateMany({
-    where: { modelName: 'qwen/qwen3-vl-8b-instruct' },
+    where: { modelName: requireEnv('NEXT_PUBLIC_DEFAULT_MODEL_NAME') },
     data: { isDefault: true }
   });
 

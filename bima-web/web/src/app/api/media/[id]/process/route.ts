@@ -3,9 +3,7 @@ import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { decryptSecret, encryptSecret } from '@/lib/security';
 import { runSam3Job } from '@/lib/sam3-runner';
-
-const FASTAPI_SERVICE_URL = process.env.FASTAPI_SERVICE_URL || 'http://127.0.0.1:8000';
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET || 'bima-research-internal-secret-2026';
+import { requireEnv, requireEnvNumber } from '@/lib/env';
 
 export async function POST(
   _request: Request,
@@ -14,6 +12,8 @@ export async function POST(
   try {
     const user = await requireAuth();
     const { id } = await params;
+    const FASTAPI_SERVICE_URL = requireEnv('FASTAPI_SERVICE_URL');
+    const INTERNAL_API_SECRET = requireEnv('INTERNAL_API_SECRET');
 
     const mediaAsset = await prisma.mediaAsset.findUnique({
       where: { id },
@@ -154,7 +154,7 @@ export async function POST(
         api_key: decryptedKey,
       },
       idempotency_key: mediaAsset.idempotencyKey,
-      conflict_threshold: 0.5,
+      conflict_threshold: requireEnvNumber('DEFAULT_CONFLICT_IOU_THRESHOLD'),
     };
 
     // 4. Call FastAPI
@@ -265,7 +265,7 @@ export async function POST(
             frameIndex: det.frame_index,
             locationGeojson: mediaAsset.session.locationGeojson,
             modelConfigId: modelConfig?.id || null,
-            modelName: modelConfig?.modelName || 'qwen/qwen3-vl-8b-instruct',
+            modelName: modelConfig?.modelName ?? null,
             promptVersion: 'v1.0',
             hasConflict: det.has_conflict || false,
             conflictResolved: false,

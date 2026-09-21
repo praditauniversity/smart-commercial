@@ -138,7 +138,7 @@ export default function AdminReviewQueuePage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-bold text-sm sm:text-base text-slate-900 break-words">{sub.sessionName}</h3>
 
-                    {/* Initial vs Resubmission Badge (US-008) */}
+                    {/* Initial vs Resubmission Badge (US-007) */}
                     {sub.isResubmission ? (
                       <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
                         <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />

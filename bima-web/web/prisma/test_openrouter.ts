@@ -1,5 +1,7 @@
+import 'dotenv/config';
+import { requireEnv } from '../src/lib/env';
 async function testOpenRouterVision() {
-  const apiKey = process.env.OPEN_ROUTER_API_KEY || '';
+  const apiKey = requireEnv('OPEN_ROUTER_API_KEY');
   if (!apiKey) {
     throw new Error('OPEN_ROUTER_API_KEY environment variable is required to run this test.');
   }
@@ -10,7 +12,7 @@ async function testOpenRouterVision() {
   console.log('Testing OpenRouter Vision request with sample image...');
   
   const payload = {
-    model: 'qwen/qwen3-vl-8b-instruct',
+    model: requireEnv('NEXT_PUBLIC_DEFAULT_MODEL_NAME'),
     messages: [
       {
         role: 'system',
@@ -33,12 +35,12 @@ async function testOpenRouterVision() {
     response_format: { type: 'json_object' }
   };
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const response = await fetch(requireEnv('NEXT_PUBLIC_OPENROUTER_ENDPOINT_URL'), {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://bima-research.local',
+      ...(process.env.OPENROUTER_HTTP_REFERER ? { 'HTTP-Referer': process.env.OPENROUTER_HTTP_REFERER } : {}),
       'X-Title': 'Aplikasi Pemantauan Kawasan AI',
     },
     body: JSON.stringify(payload)

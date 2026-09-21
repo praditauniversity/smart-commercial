@@ -1,7 +1,7 @@
 import pytest
 from schemas import BBox, DetectionItem, ClassDef
 from services.deduplication import calculate_iou, deduplicate_temporal_detections
-from services.conflict_detector import detect_class_conflicts
+from services.conflict_detector import detect_class_conflicts, detect_video_conflicts
 from services.video_splitter import plan_video_segments
 
 def test_iou_calculation():
@@ -110,6 +110,74 @@ def test_mutually_exclusive_conflict_detection():
     assert result[0].has_conflict is True
     assert result[1].has_conflict is True
     assert "mutually exclusive" in result[0].conflict_details["reason"]
+
+def _exclusive_pair():
+    return [
+        ClassDef(id="c1", name="jalan_berlubang", visual_description="v", condition_criteria="c",
+                 feasibility_criteria="f", mutually_exclusive_with=["c2"], conflict_iou_threshold=0.5),
+        ClassDef(id="c2", name="jalan_mulus", visual_description="v", condition_criteria="c",
+                 feasibility_criteria="f", mutually_exclusive_with=["c1"], conflict_iou_threshold=0.5),
+    ]
+
+
+def _det(class_id, name, box, frame_index=None):
+    return DetectionItem(class_id=class_id, class_name=name, bbox=box, condition="x",
+                         feasibility="layak", frame_index=frame_index)
+
+
+def test_conflict_requires_same_frame():
+    box = BBox(x=0.2, y=0.2, width=0.3, height=0.3)
+    same = detect_class_conflicts([_det("c1", "jalan_berlubang", box, 3), _det("c2", "jalan_mulus", box, 3)],
+                                  _exclusive_pair())
+    assert same[0].has_conflict and same[1].has_conflict
+
+    other = detect_class_conflicts([_det("c1", "jalan_berlubang", box, 3), _det("c2", "jalan_mulus", box, 4)],
+                                   _exclusive_pair())
+    assert not other[0].has_conflict and not other[1].has_conflict
+
+
+def test_conflict_ignores_classes_that_are_not_exclusive():
+    classes = _exclusive_pair()
+    for c in classes:
+        c.mutually_exclusive_with = []
+    box = BBox(x=0.2, y=0.2, width=0.3, height=0.3)
+    result = detect_class_conflicts([_det("c1", "jalan_berlubang", box), _det("c2", "jalan_mulus", box)], classes)
+    assert not any(d.has_conflict for d in result)
+
+
+def test_video_conflict_uses_per_frame_records_not_peak_frames():
+    # Peaks of the two classes are on different frames (2 and 5), so direct comparison would find nothing,
+    # but the classes overlap on frame 3.
+    findings = [
+        _det("c1", "jalan_berlubang", BBox(x=0.2, y=0.2, width=0.3, height=0.3), frame_index=2),
+        _det("c2", "jalan_mulus", BBox(x=0.6, y=0.6, width=0.2, height=0.2), frame_index=5),
+    ]
+    box = {"x": 0.2, "y": 0.2, "width": 0.3, "height": 0.3}
+    frame_records = [
+        [], [],
+        [{"class": "jalan_berlubang", "bbox": box, "confidence": 0.9}],
+        [{"class": "jalan_berlubang", "bbox": box, "confidence": 0.9},
+         {"class": "jalan_mulus", "bbox": box, "confidence": 0.9}],
+        [], [],
+    ]
+    result = detect_video_conflicts(findings, frame_records, _exclusive_pair(), 0.5, min_confidence=0.4, fps=10.0)
+    assert all(d.has_conflict for d in result)
+    assert result[0].conflict_details["conflict_frame_index"] == 3
+    assert result[0].conflict_details["conflict_timestamp_seconds"] == 0.3
+    assert result[0].conflict_details["conflicting_with_class"] == "jalan_mulus"
+
+
+def test_video_conflict_ignores_low_confidence_instances():
+    findings = [
+        _det("c1", "jalan_berlubang", BBox(x=0.2, y=0.2, width=0.3, height=0.3), frame_index=0),
+        _det("c2", "jalan_mulus", BBox(x=0.2, y=0.2, width=0.3, height=0.3), frame_index=0),
+    ]
+    box = {"x": 0.2, "y": 0.2, "width": 0.3, "height": 0.3}
+    frame_records = [[{"class": "jalan_berlubang", "bbox": box, "confidence": 0.9},
+                      {"class": "jalan_mulus", "bbox": box, "confidence": 0.3}]]
+    result = detect_video_conflicts(findings, frame_records, _exclusive_pair(), 0.5, min_confidence=0.4)
+    assert not any(d.has_conflict for d in result)
+
 
 def test_grid_to_pixel_coords_calculation():
     from services.visual_grid import grid_to_pixel_coords

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Layers, MapPin, User as UserIcon } from 'lucide-react';
+import { mapConfig } from '@/lib/public-config';
 
 interface DashboardMapPoint {
   id: string;
@@ -53,9 +54,9 @@ export default function LeafletDashboardMap({ points, defaultCenter }: LeafletDa
 
   useEffect(() => {
     const customIcon = L.icon({
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconUrl: mapConfig.markerIconUrl(),
+      iconRetinaUrl: mapConfig.markerIconRetinaUrl(),
+      shadowUrl: mapConfig.markerShadowUrl(),
       iconSize: [25, 41],
       iconAnchor: [12, 41],
       popupAnchor: [1, -34],
@@ -67,8 +68,8 @@ export default function LeafletDashboardMap({ points, defaultCenter }: LeafletDa
   return (
     <MapContainer center={defaultCenter} zoom={12} scrollWheelZoom={true} style={{ width: '100%', height: '100%' }}>
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution={mapConfig.attribution()}
+        url={mapConfig.tileUrl()}
       />
       <DashboardMapBoundsUpdater points={points} defaultCenter={defaultCenter} />
 

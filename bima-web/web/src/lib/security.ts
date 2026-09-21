@@ -1,8 +1,7 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import { requireEnv, requireEnvNumber } from './env';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_SECRET_KEY || 'bima-aes-encryption-key-32bytes!';
-const JWT_SECRET = process.env.JWT_SECRET || 'bima-jwt-super-secret-key-32-chars-min-key!';
 const IV_LENGTH = 16;
 
 /**
@@ -10,7 +9,7 @@ const IV_LENGTH = 16;
  */
 export function encryptSecret(text: string): string {
   if (!text) return '';
-  const key = crypto.createHash('sha256').update(ENCRYPTION_KEY).digest();
+  const key = crypto.createHash('sha256').update(requireEnv('ENCRYPTION_SECRET_KEY')).digest();
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
@@ -23,8 +22,8 @@ export function encryptSecret(text: string): string {
  */
 export function decryptSecret(encryptedText: string): string {
   if (!encryptedText || !encryptedText.includes(':')) return '';
+  const key = crypto.createHash('sha256').update(requireEnv('ENCRYPTION_SECRET_KEY')).digest(); // throws when unset
   try {
-    const key = crypto.createHash('sha256').update(ENCRYPTION_KEY).digest();
     const parts = encryptedText.split(':');
     const iv = Buffer.from(parts[0], 'hex');
     const encrypted = parts[1];
@@ -54,13 +53,19 @@ export interface UserJwtPayload {
   name: string;
 }
 
+/**
+ * JWT_SECRET and SESSION_MAX_AGE_SECONDS must come from the environment; there is deliberately no
+ * built-in fallback (a publicly-known default would let anyone forge a session cookie).
+ * Read lazily so `next build` does not fail when the variables are only provided at runtime.
+ */
 export function signJwtToken(payload: UserJwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign(payload, requireEnv('JWT_SECRET'), { expiresIn: requireEnvNumber('SESSION_MAX_AGE_SECONDS') });
 }
 
 export function verifyJwtToken(token: string): UserJwtPayload | null {
+  const secret = requireEnv('JWT_SECRET'); // throws when unset, so it is loud instead of "everyone is logged out"
   try {
-    return jwt.verify(token, JWT_SECRET) as UserJwtPayload;
+    return jwt.verify(token, secret) as UserJwtPayload;
   } catch {
     return null;
   }

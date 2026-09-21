@@ -1,3 +1,5 @@
+import 'dotenv/config';
+import { requireEnv } from '../src/lib/env';
 /**
  * Seeds SAM prompts (from publicspace_vlm's CLASS_PROMPTS) for the classes and a local SAM3 model
  * config, then makes SAM3 the default model. Idempotent: safe to run repeatedly.
@@ -100,7 +102,7 @@ async function main() {
       data: {
         name: 'SAM 3.1 Lokal (Default)',
         provider: 'sam3',
-        modelName: 'sam3_1',
+        modelName: requireEnv('NEXT_PUBLIC_DEFAULT_SAM3_MODEL_NAME'),
         samMode: 'optimized',
         endpointUrl: null,
         encryptedApiKey: null,

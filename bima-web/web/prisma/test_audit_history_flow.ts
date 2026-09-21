@@ -1,3 +1,5 @@
+import 'dotenv/config';
+import { requireEnv } from '../src/lib/env';
 import prisma from '../src/lib/prisma';
 import bcrypt from 'bcryptjs';
 
@@ -6,22 +8,22 @@ async function main() {
 
   // 1. Ensure surveyor and admin users exist
   const surveyor = await prisma.user.upsert({
-    where: { email: 'surveyor@bima.id' },
+    where: { email: requireEnv('SEED_SURVEYOR_EMAIL') },
     update: {},
     create: {
-      email: 'surveyor@bima.id',
-      passwordHash: await bcrypt.hash('surveyor123', 10),
+      email: requireEnv('SEED_SURVEYOR_EMAIL'),
+      passwordHash: await bcrypt.hash(requireEnv('SEED_SURVEYOR_PASSWORD'), 10),
       name: 'Bima Surveyor Lapangan',
       role: 'surveyor',
     },
   });
 
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@bima.id' },
+    where: { email: requireEnv('SEED_ADMIN_EMAIL') },
     update: {},
     create: {
-      email: 'admin@bima.id',
-      passwordHash: await bcrypt.hash('admin123', 10),
+      email: requireEnv('SEED_ADMIN_EMAIL'),
+      passwordHash: await bcrypt.hash(requireEnv('SEED_ADMIN_PASSWORD'), 10),
       name: 'Admin Bima Utama',
       role: 'admin',
     },

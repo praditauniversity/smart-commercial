@@ -33,7 +33,7 @@ atau tolak eksplisit `file_type == "video"` sampai implementasinya siap.
 **Lokasi:** `ai-service/main.py`
 
 ```python
-INTERNAL_SECRET = os.getenv("INTERNAL_API_SECRET", "bima-research-internal-secret-2026")
+INTERNAL_SECRET = os.getenv("INTERNAL_API_SECRET", "<nilai bawaan lama, sudah dihapus>")
 ```
 
 Jika env var tidak diset, service dilindungi secret default yang diketahui publik

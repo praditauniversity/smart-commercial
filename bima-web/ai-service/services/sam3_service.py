@@ -8,7 +8,10 @@ from urllib.parse import urlparse
 
 import httpx
 
+from config import require_env_float
+
 from schemas import BBox, DetectionItem, MediaSegmentResult, ProcessMediaRequest, ProcessMediaResponse
+from services.conflict_detector import detect_class_conflicts, detect_video_conflicts
 from services.sam3_engine import DEFAULT_COLORS_BGR, ClassPrompts, engine, hex_to_bgr
 from services.storage import upload_public
 
@@ -34,7 +37,6 @@ def build_class_prompts(req: ProcessMediaRequest) -> ClassPrompts:
 MAX_DETECTIONS_PER_CLASS = 100
 # Instances below this confidence are kept in the result (the UI slider can reveal them) but are not
 # stored as findings. SAM3_CONF (default 0.25) is the model's own floor.
-FINDING_CONF = float(os.getenv("SAM3_FINDING_CONF", "0.4"))
 
 
 def _feasibility(area_percent: float) -> str:
@@ -50,9 +52,13 @@ def _clamp01(v: float) -> float:
     return float(min(1.0, max(0.0, v)))
 
 
+def finding_conf() -> float:
+    return require_env_float("SAM3_FINDING_CONF")
+
+
 def _is_finding(rec: dict) -> bool:
     conf = rec.get("confidence")
-    return conf is None or conf >= FINDING_CONF
+    return conf is None or conf >= finding_conf()
 
 
 def _record_to_detection(rec: dict, cls, timestamp: Optional[float], frame_index: Optional[int]) -> DetectionItem:
@@ -76,6 +82,7 @@ def build_detections(req: ProcessMediaRequest, summary: dict, is_video: bool) ->
     """Image: one detection per instance. Video: instances of each class's peak frame."""
     classes = {c.name: c for c in req.active_classes}
     detections: List[DetectionItem] = []
+    frame_records = summary.pop("_frame_records", None) or []  # per-frame instances; too big to keep in the summary
     if is_video:
         fps = summary.get("fps") or 30.0
         for name, peak in (summary.pop("_peaks", {}) or {}).items():
@@ -93,6 +100,13 @@ def build_detections(req: ProcessMediaRequest, summary: dict, is_video: bool) ->
                 continue
             per_class[rec["class"]] = per_class.get(rec["class"], 0) + 1
             detections.append(_record_to_detection(rec, cls, None, None))
+
+    # Mutually exclusive classes overlapping on the same frame must be resolved by the surveyor before submit.
+    if is_video:
+        detect_video_conflicts(detections, frame_records, req.active_classes, req.conflict_threshold,
+                               min_confidence=finding_conf(), fps=summary.get("fps"))
+    else:
+        detect_class_conflicts(detections, req.active_classes, default_iou_threshold=req.conflict_threshold)
     return detections
 
 
@@ -158,7 +172,7 @@ def _run_sam3_job(req: ProcessMediaRequest, on_progress: Optional[Callable[[floa
         inst["area_percent"] = round(inst["area_percent"], 3)
         if inst.get("confidence") is not None:
             inst["confidence"] = round(inst["confidence"], 3)
-    summary["finding_conf"] = FINDING_CONF
+    summary["finding_conf"] = finding_conf()
 
     summary["provider"] = "sam3"
     if is_video:

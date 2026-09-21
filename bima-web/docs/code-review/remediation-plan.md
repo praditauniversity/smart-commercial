@@ -33,7 +33,6 @@ Urutan prioritas perbaikan berdasarkan hasil review
 ## Prioritas 4 — Kebersihan kode (opsional)
 
 - Ekstrak helper snapshot bersama (`submit` vs `resubmit`).
-- Simpan capture live ke disk, bukan base64 di DB.
 - Refactor `_parse_bbox` menjadi dispatcher format.
 - Bersihkan dead code (`MockVisionProvider`) atau sambungkan ke `get_provider`.
 - Perkuat tiping (`any` → tipe Prisma/eksplisit).

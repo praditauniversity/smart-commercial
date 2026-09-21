@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { CardSkeleton } from '@/components/SkeletonLoaders';
 import { useToast } from '@/components/ToastProvider';
+import { modelFormConfig } from '@/lib/public-config';
 import {
   Cpu,
   Plus,
@@ -39,8 +40,8 @@ export default function AdminModelsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [provider, setProvider] = useState('OpenRouter');
-  const [modelName, setModelName] = useState('qwen/qwen3-vl-8b-instruct');
-  const [endpointUrl, setEndpointUrl] = useState('https://openrouter.ai/api/v1/chat/completions');
+  const [modelName, setModelName] = useState(() => modelFormConfig.defaultVlmModelName());
+  const [endpointUrl, setEndpointUrl] = useState(() => modelFormConfig.openRouterEndpointUrl());
   const [apiKey, setApiKey] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [samMode, setSamMode] = useState<'optimized' | 'fast'>('optimized');
@@ -74,8 +75,8 @@ export default function AdminModelsPage() {
     setEditingId(null);
     setName('');
     setApiKey('');
-    setModelName('qwen/qwen3-vl-8b-instruct');
-    setEndpointUrl('https://openrouter.ai/api/v1/chat/completions');
+    setModelName(modelFormConfig.defaultVlmModelName());
+    setEndpointUrl(modelFormConfig.openRouterEndpointUrl());
     setProvider('OpenRouter');
     setSamMode('optimized');
     setIsDefault(false);
@@ -87,7 +88,7 @@ export default function AdminModelsPage() {
     setName(m.name);
     setApiKey('');
     setModelName(m.modelName);
-    setEndpointUrl(m.endpointUrl || 'https://openrouter.ai/api/v1/chat/completions');
+    setEndpointUrl(m.endpointUrl || modelFormConfig.openRouterEndpointUrl());
     setProvider(m.provider);
     setSamMode(m.samMode === 'fast' ? 'fast' : 'optimized');
     setIsDefault(m.isDefault);
@@ -399,11 +400,11 @@ export default function AdminModelsPage() {
                     setProvider(e.target.value);
                     if (e.target.value === 'sam3') {
                       setEndpointUrl('');
-                      setModelName('sam3_1');
+                      setModelName(modelFormConfig.defaultSam3ModelName());
                     } else if (e.target.value === 'onpremise') {
-                      setEndpointUrl('http://localhost:8000/v1/vision');
+                      setEndpointUrl(modelFormConfig.onPremiseEndpointUrl());
                     } else {
-                      setEndpointUrl('https://openrouter.ai/api/v1/chat/completions');
+                      setEndpointUrl(modelFormConfig.openRouterEndpointUrl());
                     }
                   }}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium"
@@ -421,7 +422,7 @@ export default function AdminModelsPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Contoh: qwen/qwen3-vl-8b-instruct"
+                  placeholder={`Contoh: ${modelFormConfig.defaultVlmModelName()}`}
                   value={modelName}
                   onChange={(e) => setModelName(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl font-mono text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"

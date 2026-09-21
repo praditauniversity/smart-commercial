@@ -3,6 +3,8 @@
 Hasil analisis lima dimensi (correctness, readability, architecture, security, performance)
 terhadap kode **AI Service (FastAPI)** dan **Web (Next.js)**. Tidak ada perubahan kode yang dilakukan.
 
+> **Status terbaru:** review ini adalah snapshot sebelum provider SAM3 dan perubahan storage. Status setiap temuan terhadap kode saat ini (mana yang sudah diperbaiki, mana yang masih terbuka) ada di [`../prd-gap-analysis.md`](../prd-gap-analysis.md#3-keamanan-dan-hardening).
+
 ## Daftar Dokumen
 
 | File | Cakupan |

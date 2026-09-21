@@ -1,10 +1,12 @@
+import 'dotenv/config';
+import { requireEnv } from '../src/lib/env';
 import { PrismaClient } from '@prisma/client';
 import { encryptSecret } from '../src/lib/security';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const apiKey = process.env.OPEN_ROUTER_API_KEY || '';
+  const apiKey = requireEnv('OPEN_ROUTER_API_KEY');
   if (!apiKey) {
     throw new Error('OPEN_ROUTER_API_KEY environment variable is required to run this test.');
   }
@@ -45,19 +47,19 @@ async function main() {
     })),
     ai_model_config: {
       provider: 'OpenRouter',
-      model_name: 'qwen/qwen3-vl-8b-instruct',
-      endpoint_url: 'https://openrouter.ai/api/v1/chat/completions',
+      model_name: requireEnv('NEXT_PUBLIC_DEFAULT_MODEL_NAME'),
+      endpoint_url: requireEnv('NEXT_PUBLIC_OPENROUTER_ENDPOINT_URL'),
       api_key: apiKey,
     },
     idempotency_key: 'test-key-' + Date.now(),
     conflict_threshold: 0.5,
   };
 
-  const response = await fetch('http://127.0.0.1:8000/api/v1/process-media', {
+  const response = await fetch(`${requireEnv('FASTAPI_SERVICE_URL')}/api/v1/process-media`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Internal-Secret': 'bima-research-internal-secret-2026',
+      'X-Internal-Secret': requireEnv('INTERNAL_API_SECRET'),
     },
     body: JSON.stringify(payload),
   });

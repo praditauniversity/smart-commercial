@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import MediaBoxOverlay, { OverlayDetection } from '@/components/MediaBoxOverlay';
 import MediaInspectionModal from '@/components/MediaInspectionModal';
 import { Sam3Chips, getSam3Result } from '@/components/Sam3Result';
+import Pagination from '@/components/Pagination';
+import { FINDINGS_PAGE_SIZE, paginateTwo } from '@/lib/pagination';
+import { getMaxVideoSeconds, formatDuration, readVideoDuration, videoTooLongMessage } from '@/lib/media-limits';
 import { useToast } from '@/components/ToastProvider';
 import { DetailWorkspaceSkeleton } from '@/components/SkeletonLoaders';
 import {
@@ -13,7 +16,6 @@ import {
   Calendar,
   Clock,
   UploadCloud,
-  Camera,
   CheckCircle2,
   AlertTriangle,
   RefreshCw,
@@ -26,8 +28,6 @@ import {
   Loader2,
   X,
   Plus,
-  Play,
-  Square,
   AlertCircle,
   Eye,
   Sparkles,
@@ -68,8 +68,9 @@ export default function SurveyorSessionWorkspace() {
 
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'findings' | 'media' | 'live' | 'history'>('findings');
+  const [activeTab, setActiveTab] = useState<'findings' | 'media' | 'history'>('findings');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
+  const [findingsPage, setFindingsPage] = useState(1);
 
   // Media Inspection Modal state
   const [inspectingMediaId, setInspectingMediaId] = useState<string | null>(null);
@@ -77,13 +78,6 @@ export default function SurveyorSessionWorkspace() {
   // Media upload state
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
-
-  // Live mode state
-  const [liveActive, setLiveActive] = useState(false);
-  const [liveOverlayDetections, setLiveOverlayDetections] = useState<OverlayDetection[]>([]);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const liveIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Conflict modal state
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
@@ -166,9 +160,20 @@ export default function SurveyorSessionWorkspace() {
     setUploadProgress(`Menyiapkan ${files.length} file media...`);
     setActionAlert(null);
 
+    let uploadedCount = 0;
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+
+        // Reject over-long videos in the browser first so a large file is not uploaded for nothing.
+        if (file.type.startsWith('video/')) {
+          const duration = await readVideoDuration(file);
+          if (duration === null || duration > getMaxVideoSeconds()) {
+            toast.warning(`${file.name}: ${videoTooLongMessage(duration)}`, 'Video Dilewati');
+            continue;
+          }
+        }
+
         setUploadProgress(`Mengompres & mengupload file (${i + 1}/${files.length}): ${file.name}...`);
 
         // 1. Send the raw file; the server compresses it and stores it in the Supabase bucket
@@ -204,12 +209,15 @@ export default function SurveyorSessionWorkspace() {
           console.error('AI processing connection error:', procErr);
         }
 
+        uploadedCount++;
         await fetchSessionDetails();
       }
 
       setUploadProgress(null);
       setUploading(false);
-      toast.success(`${files.length} file berhasil diunggah dan dianalisis AI!`, 'Upload Selesai');
+      if (uploadedCount > 0) {
+        toast.success(`${uploadedCount} file berhasil diunggah dan dianalisis AI!`, 'Upload Selesai');
+      }
       await fetchSessionDetails();
     } catch (err: any) {
       console.error(err);
@@ -325,120 +333,7 @@ export default function SurveyorSessionWorkspace() {
     }
   };
 
-  // Live Camera Mode (US-003)
-  const startLiveCamera = async () => {
-    setLiveActive(true);
-    setActionAlert(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
-        audio: false,
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      toast.info('Kamera live aktif. AI sedang memantau frame video.', 'Kamera Aktif');
-
-      // Sampling frames periodically (~1 frame every 1.5 seconds)
-      liveIntervalRef.current = setInterval(() => {
-        captureAndDetectLiveFrame();
-      }, 1500);
-    } catch (err: any) {
-      console.error('Camera access error:', err);
-      toast.error('Tidak dapat mengakses kamera perangkat. Pastikan izin kamera telah diberikan.');
-      setActionAlert({
-        type: 'error',
-        message: 'Tidak dapat mengakses kamera perangkat. Pastikan izin kamera telah diberikan.',
-      });
-      setLiveActive(false);
-    }
-  };
-
-  const stopLiveCamera = () => {
-    setLiveActive(false);
-    if (liveIntervalRef.current) {
-      clearInterval(liveIntervalRef.current);
-    }
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach((t) => t.stop());
-      videoRef.current.srcObject = null;
-    }
-    setLiveOverlayDetections([]);
-    toast.info('Kamera live dinonaktifkan.', 'Kamera Berhenti');
-  };
-
-  const captureAndDetectLiveFrame = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx || video.videoWidth === 0) return;
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const frameBase64 = canvas.toDataURL('image/jpeg', 0.6);
-
-    try {
-      const res = await fetch('/api/live/frame', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ frameBase64 }),
-      });
-      const data = await res.json();
-      if (data.detections) {
-        const formatted: OverlayDetection[] = data.detections.map((d: any, idx: number) => ({
-          id: `live-${idx}`,
-          className: d.class_name,
-          displayName: d.class_name,
-          bbox: d.bbox,
-          condition: d.condition,
-          feasibility: d.feasibility,
-          hasConflict: d.has_conflict,
-          conflictDetails: d.conflict_details,
-        }));
-        setLiveOverlayDetections(formatted);
-      }
-    } catch {}
-  };
-
-  // Explicitly Save Live Capture Frame (US-003)
-  const saveCurrentLiveFrame = async () => {
-    if (!canvasRef.current) return;
-    const frameDataUrl = canvasRef.current.toDataURL('image/jpeg', 0.85);
-
-    try {
-      const res = await fetch('/api/live/save-capture', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          captureDataUrl: frameDataUrl,
-          captureType: 'image',
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success('Frame foto berhasil disimpan dan masuk antrean AI!', 'Frame Tersimpan');
-        setActionAlert({
-          type: 'success',
-          message: 'Frame berhasil disimpan sebagai MediaAsset dan masuk antrean AI!',
-        });
-        fetchSessionDetails();
-      } else {
-        toast.error(data.error || 'Gagal menyimpan frame.');
-        setActionAlert({ type: 'error', message: data.error || 'Gagal menyimpan frame.' });
-      }
-    } catch {
-      toast.error('Koneksi error saat menyimpan frame.');
-      setActionAlert({ type: 'error', message: 'Koneksi error saat menyimpan frame.' });
-    }
-  };
-
-  // Action: Akhiri Survei (US-004)
+  // Action: Akhiri Survei (US-003)
   const handleEndSurvey = async () => {
     setActionLoading(true);
     setActionAlert(null);
@@ -464,7 +359,7 @@ export default function SurveyorSessionWorkspace() {
     }
   };
 
-  // Action: Submit Survei (US-006)
+  // Action: Submit Survei (US-005)
   const handleSubmitSurvey = async () => {
     setActionLoading(true);
     setActionAlert(null);
@@ -490,7 +385,7 @@ export default function SurveyorSessionWorkspace() {
     }
   };
 
-  // Action: Buat Revisi (US-007)
+  // Action: Buat Revisi (US-006)
   const handleCreateRevision = async () => {
     setActionLoading(true);
     setActionAlert(null);
@@ -516,7 +411,7 @@ export default function SurveyorSessionWorkspace() {
     }
   };
 
-  // Action: Re-submit Revisi (US-007)
+  // Action: Re-submit Revisi (US-006)
   const handleResubmitSurvey = async () => {
     setActionLoading(true);
     setActionAlert(null);
@@ -542,7 +437,7 @@ export default function SurveyorSessionWorkspace() {
     }
   };
 
-  // Action: Save Metadata Edit (US-005)
+  // Action: Save Metadata Edit (US-004)
   const handleSaveMetadata = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -568,7 +463,7 @@ export default function SurveyorSessionWorkspace() {
     }
   };
 
-  // Action: Resolve Conflict (US-006 & Section 6.2)
+  // Action: Resolve Conflict (US-005 & Section 6.2)
   const handleResolveConflict = async (chosenClassId: string) => {
     if (!activeConflictDetection) return;
     try {
@@ -654,6 +549,8 @@ export default function SurveyorSessionWorkspace() {
     }))
     .filter((g) => g.dets.length > 0);
 
+  const findingsPaged = paginateTwo(sam3Groups, vlmDetections, findingsPage, FINDINGS_PAGE_SIZE);
+
   const unresolvedConflicts = detections.filter((d) => d.hasConflict && !d.conflictResolved);
   const processingMedia = mediaAssets.filter((m) =>
     ['queued', 'uploading', 'processing'].includes(m.status)
@@ -737,7 +634,7 @@ export default function SurveyorSessionWorkspace() {
                 </button>
               )}
 
-              {/* Akhiri Survei (US-004) */}
+              {/* Akhiri Survei (US-003) */}
               {session.status === 'berlangsung' && (
                 <button
                   type="button"
@@ -750,7 +647,7 @@ export default function SurveyorSessionWorkspace() {
                 </button>
               )}
 
-              {/* Submit Survei (US-006) */}
+              {/* Submit Survei (US-005) */}
               {canSubmit && (
                 <button
                   type="button"
@@ -763,7 +660,7 @@ export default function SurveyorSessionWorkspace() {
                 </button>
               )}
 
-              {/* Buat Revisi (US-007) */}
+              {/* Buat Revisi (US-006) */}
               {isRejected && (
                 <button
                   type="button"
@@ -776,7 +673,7 @@ export default function SurveyorSessionWorkspace() {
                 </button>
               )}
 
-              {/* Re-submit (US-007) */}
+              {/* Re-submit (US-006) */}
               {canResubmit && (
                 <button
                   type="button"
@@ -791,7 +688,7 @@ export default function SurveyorSessionWorkspace() {
             </div>
           </div>
 
-          {/* Rejection Details Banner (US-007) */}
+          {/* Rejection Details Banner (US-006) */}
           {isRejected && lastSubmission && (
             <div className="mt-4 p-3.5 sm:p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 text-xs">
               <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-rose-800 mb-1">
@@ -889,23 +786,6 @@ export default function SurveyorSessionWorkspace() {
               )}
             </button>
 
-            {canUploadMedia && (
-              <button
-                onClick={() => {
-                  setActiveTab('live');
-                  if (!liveActive) startLiveCamera();
-                }}
-                className={`pb-2.5 sm:pb-3 px-2.5 sm:px-3 text-xs sm:text-sm font-semibold border-b-2 flex items-center gap-1.5 sm:gap-2 transition-colors whitespace-nowrap cursor-pointer ${
-                  activeTab === 'live'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                <Camera className="w-4 h-4 text-emerald-600" />
-                Live Mode
-              </button>
-            )}
-
             <button
               onClick={() => setActiveTab('history')}
               className={`pb-2.5 sm:pb-3 px-2.5 sm:px-3 text-xs sm:text-sm font-semibold border-b-2 flex items-center gap-1.5 sm:gap-2 transition-colors whitespace-nowrap cursor-pointer ${
@@ -938,6 +818,7 @@ export default function SurveyorSessionWorkspace() {
               <label className="cursor-pointer px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-all shrink-0">
                 <Plus className="w-3.5 h-3.5" />
                 <span>Upload Gambar/Video</span>
+                <span className="hidden sm:inline text-[10px] font-normal opacity-80">(video maks {formatDuration(getMaxVideoSeconds())})</span>
                 <input
                   type="file"
                   multiple
@@ -966,7 +847,10 @@ export default function SurveyorSessionWorkspace() {
             {/* Class Filter Badges */}
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => setSelectedClassFilter('all')}
+                onClick={() => {
+                  setSelectedClassFilter('all');
+                  setFindingsPage(1);
+                }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   selectedClassFilter === 'all'
                     ? 'bg-slate-900 text-white'
@@ -978,7 +862,10 @@ export default function SurveyorSessionWorkspace() {
               {Object.entries(classGroups).map(([classId, group]) => (
                 <button
                   key={classId}
-                  onClick={() => setSelectedClassFilter(classId)}
+                  onClick={() => {
+                    setSelectedClassFilter(classId);
+                    setFindingsPage(1);
+                  }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                     selectedClassFilter === classId
                       ? 'bg-blue-600 text-white shadow-sm'
@@ -998,12 +885,13 @@ export default function SurveyorSessionWorkspace() {
                 <Layers className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                 <h3 className="font-semibold text-slate-700 text-sm">Belum Ada Objek Terdeteksi</h3>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-                  Upload media gambar/video atau gunakan kamera live untuk mendeteksi kondisi infrastruktur dengan AI.
+                  Upload media gambar/video untuk mendeteksi kondisi infrastruktur dengan AI.
                 </p>
               </div>
             ) : (
+              <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sam3Groups.map(({ media, result, dets }) => {
+                {findingsPaged.first.map(({ media, result, dets }) => {
                   const worst = dets.some((d) => d.feasibility === 'tidak_layak')
                     ? 'tidak_layak'
                     : dets.some((d) => d.feasibility === 'cukup_layak')
@@ -1052,7 +940,7 @@ export default function SurveyorSessionWorkspace() {
                   );
                 })}
 
-                {vlmDetections.map((det) => {
+                {findingsPaged.second.map((det) => {
                   let parsedBbox = { x: 0, y: 0, width: 0, height: 0 };
                   try {
                     parsedBbox = JSON.parse(det.bbox);
@@ -1142,6 +1030,14 @@ export default function SurveyorSessionWorkspace() {
                   );
                 })}
               </div>
+              <Pagination
+                page={findingsPaged.page}
+                pageSize={FINDINGS_PAGE_SIZE}
+                total={findingsPaged.total}
+                onPageChange={setFindingsPage}
+                itemLabel="kartu temuan"
+              />
+              </>
             )}
           </div>
         )}
@@ -1154,7 +1050,7 @@ export default function SurveyorSessionWorkspace() {
                 <UploadCloud className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                 <h3 className="font-semibold text-slate-700 text-sm">Belum Ada File Media</h3>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1 mb-4">
-                  Upload file foto (JPG, PNG) atau video (MP4) untuk sesi survei ini.
+                  Upload file foto (JPG, PNG) atau video (MP4, maks {formatDuration(getMaxVideoSeconds())}) untuk sesi survei ini.
                 </p>
                 {canUploadMedia && (
                   <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm">
@@ -1295,106 +1191,7 @@ export default function SurveyorSessionWorkspace() {
           </div>
         )}
 
-        {/* TAB 3: LIVE CAMERA MODE (US-003) */}
-        {activeTab === 'live' && canUploadMedia && (
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xs">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-              <div>
-                <h3 className="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
-                  <Camera className="w-5 h-5 text-emerald-600 shrink-0" />
-                  Mode Deteksi Kamera Live (Near-Realtime)
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  AI mengambil sampel frame berkala untuk overlay bounding box. Tekan tombol <strong>Simpan Frame</strong> untuk memasukkannya ke survei.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                {liveActive ? (
-                  <button
-                    type="button"
-                    onClick={stopLiveCamera}
-                    className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <Square className="w-3.5 h-3.5" />
-                    Matikan Kamera
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={startLiveCamera}
-                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <Play className="w-3.5 h-3.5" />
-                    Nyalakan Kamera
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Video Viewport & Canvas Overlay */}
-            <div className="relative w-full max-w-2xl mx-auto h-[260px] sm:h-[340px] md:h-[400px] bg-slate-950 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
-              <video
-                ref={videoRef}
-                playsInline
-                muted
-                className={`w-full h-full object-contain ${liveActive ? 'block' : 'hidden'}`}
-              />
-              <canvas ref={canvasRef} className="hidden" />
-
-              {!liveActive && (
-                <div className="text-center text-slate-500 p-6">
-                  <Camera className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 text-slate-600" />
-                  <p className="text-xs font-medium">Kamera sedang nonaktif.</p>
-                  <button
-                    onClick={startLiveCamera}
-                    className="mt-3 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer"
-                  >
-                    Mulai Kamera Live
-                  </button>
-                </div>
-              )}
-
-              {/* Bounding Box Overlays on Live Video */}
-              {liveActive && (
-                <div className="absolute inset-0 pointer-events-none">
-                  {liveOverlayDetections.map((det) => (
-                    <div
-                      key={det.id}
-                      style={{
-                        left: `${det.bbox.x * 100}%`,
-                        top: `${det.bbox.y * 100}%`,
-                        width: `${det.bbox.width * 100}%`,
-                        height: `${det.bbox.height * 100}%`,
-                      }}
-                      className="absolute border-2 border-emerald-400 bg-emerald-500/20 rounded-xs transition-all"
-                    >
-                      <div className="absolute -top-6 left-0 px-2 py-0.5 rounded bg-emerald-600 text-white text-[9px] sm:text-[10px] font-bold whitespace-nowrap shadow-xs">
-                        {det.className} ({det.feasibility.replace('_', ' ')})
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Explicit Save Actions */}
-            {liveActive && (
-              <div className="mt-4 flex justify-center">
-                <button
-                  type="button"
-                  onClick={saveCurrentLiveFrame}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
-                >
-                  <Camera className="w-4 h-4" />
-                  Simpan Frame Ini ke Sesi Survei
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 4: VERSION HISTORY */}
+        {/* TAB 3: VERSION HISTORY */}
         {activeTab === 'history' && (
           <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xs space-y-4">
             <h3 className="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
@@ -1451,7 +1248,7 @@ export default function SurveyorSessionWorkspace() {
         )}
       </div>
 
-      {/* MODAL: CONFLICT RESOLUTION (US-006 & Section 6.2) */}
+      {/* MODAL: CONFLICT RESOLUTION (US-005 & Section 6.2) */}
       {conflictModalOpen && activeConflictDetection && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
@@ -1493,7 +1290,7 @@ export default function SurveyorSessionWorkspace() {
         </div>
       )}
 
-      {/* MODAL: EDIT METADATA (US-005) */}
+      {/* MODAL: EDIT METADATA (US-004) */}
       {editModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <form onSubmit={handleSaveMetadata} className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">

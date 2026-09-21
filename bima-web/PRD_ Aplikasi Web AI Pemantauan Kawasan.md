@@ -1,410 +1,215 @@
-# PRD: Aplikasi Web AI Pemantauan Kawasan
+# PRD: Aplikasi Web AI Pemantauan Kawasan (BIMA Vision)
+
+| | |
+|---|---|
+| **Versi dokumen** | 2.1 (disinkronkan dengan kode + keputusan produk 2026-09-21) |
+| **Tanggal** | 2026-09-21 |
+| **Basis** | Kode di branch `main` (termasuk perubahan working tree yang belum di-commit: provider SAM3, `media-storage`, `AuditTimeline`) |
+| **Pengganti** | PRD v1.0 (lihat riwayat git: commit `fe14d40`) |
+
+Dokumen ini adalah PRD v1.0 yang dicocokkan dengan implementasi `web/` dan `ai-service/` saat ini. Aturan bisnis dan user story dari v1.0 dipertahankan. Yang berubah adalah **penandaan status implementasi** di setiap kebutuhan, ditambah bagian baru untuk hal yang sudah dibangun tetapi belum ada di PRD (terutama provider SAM3 lokal).
+
+Dokumen pendamping (semua di [`docs/`](docs/README.md)):
+
+- [`docs/prd-gap-analysis.md`](docs/prd-gap-analysis.md): daftar selisih PRD vs kode beserta backlog prioritas.
+- [`docs/architecture.md`](docs/architecture.md), [`docs/data-model.md`](docs/data-model.md), [`docs/api-reference.md`](docs/api-reference.md), [`docs/ai-service.md`](docs/ai-service.md), [`docs/operations.md`](docs/operations.md).
+
+**Legenda status** yang dipakai di seluruh dokumen:
+
+| Simbol | Arti |
+|---|---|
+| ✅ | Sesuai PRD dan sudah terimplementasi |
+| 🟡 | Terimplementasi sebagian (catatan menjelaskan bagian yang kurang) |
+| 🔄 | Terimplementasi, tetapi dengan cara yang berbeda dari PRD v1.0 |
+| ❌ | Belum terimplementasi |
+| ➕ | Fitur baru yang sudah ada di kode tetapi tidak ada di PRD v1.0 |
+
+## Keputusan Produk (2026-09-21)
+
+Diputuskan oleh tim dan sudah tercermin di seluruh dokumen ini:
+
+| # | Keputusan | Dampak |
+|---|---|---|
+| K1 | **Autentikasi memakai JWT + bcrypt buatan sendiri**, bukan Supabase Auth. Supabase hanya untuk PostgreSQL dan Storage | US-010, FR-58, FR-68 menjadi ✅ (bukan lagi penyimpangan) |
+| K2 | **Video dibatasi maksimal 2 menit** (dapat diubah lewat `NEXT_PUBLIC_MAX_VIDEO_SECONDS`, mis. `60` untuk 1 menit) | FR-87/88 sebagian terpenuhi. Divalidasi di server (ffprobe) dan di browser |
+| K3 | **Konflik kelas harus bekerja juga pada hasil SAM3** | Diimplementasikan (FR-25) |
+| K4 | **Hasil per kelas memakai pagination** | Diimplementasikan (US-002, US-007) |
+| K5 | **Halaman `/admin/*` dan `/surveyor/*` dijaga proxy (middleware)** | Diimplementasikan (FR-A11) |
+| K6 | **`JWT_SECRET` hanya dari environment**, tanpa nilai bawaan di kode | Diimplementasikan (FR-A9) |
+| K7 | **File asli tidak disimpan**; hanya hasil kompresi yang disimpan | FR-86 terpenuhi menurut keputusan ini; Open Question terjawab |
+
+## Ringkasan Perubahan dari PRD v1.0
+
+1. ➕ **Provider AI ketiga: `sam3`** (SAM 3 / 3.1 lokal berbasis text prompt) berjalan di `ai-service` sebagai job asinkron dengan polling. Provider `OpenRouter` (VLM) dan `onpremise` tetap ada.
+2. ✅ **Autentikasi bukan Supabase Auth (keputusan K1).** Sistem memakai tabel `User` sendiri, password bcrypt, dan sesi JWT di cookie `bima_session` (umur dari `SESSION_MAX_AGE_SECONDS`). Supabase dipakai untuk **PostgreSQL** dan **Storage** saja.
+3. 🔄 **Upload media melewati server Next.js.** File dikompres dengan `ffmpeg` (gambar → WebP maks 1280px, video → H.264 maks 720p tanpa audio) lalu diunggah ke bucket Supabase `img` / `vids`. **File asli tidak disimpan (keputusan K7).** Video dibatasi 2 menit (K2).
+4. 🔄 **FastAPI tidak menulis ke database.** Hasil deteksi dikembalikan ke Next.js, yang menyimpan `MediaSegment` dan `Detection` dalam satu transaksi.
+5. 🟡 **Pemrosesan video pada jalur VLM masih placeholder**: durasi diasumsikan 15 detik dan bytes video dikirim sebagai satu gambar. Jalur SAM3 memproses video sungguhan, tetapi menghasilkan satu `MediaSegment` per video (bukan potongan 10 detik). Karena video dibatasi 2 menit, pemecahan segmen bukan lagi prioritas.
+6. ➕ Kelayakan pada jalur SAM3 ditentukan **heuristik luas area** (bukan penilaian model), lalu dapat dikoreksi admin.
+7. ➕ Ada `AuditLog` menyeluruh (aksi surveyor dan admin) dan komponen `AuditTimeline`.
+8. ✅ Sejak v2.1: konflik kelas pada SAM3, pagination temuan, proteksi halaman (proxy), batas durasi video, dan `JWT_SECRET` wajib dari env sudah diimplementasikan.
+9. 🟡 Masih belum ada: filter multi-kelas di dashboard, UI kelas saling eksklusif, preview/test deteksi kelas, limit ukuran file (byte), dan penyimpanan raw AI response.
 
 ## 1. Introduction/Overview
 
-Aplikasi web berbasis AI untuk membantu proses survei kondisi infrastruktur di lapangan, seperti rambu jalan rusak, jalan berlubang, dan objek lain yang ditentukan admin. Surveyor membuat sesi survei terlebih dahulu dengan nama, lokasi, tanggal, dan waktu mulai. Selama sesi berlangsung, surveyor dapat mengupload banyak gambar atau video. Setiap media diproses secara asynchronous oleh AI tanpa mengakhiri sesi survei. Surveyor dapat terus menambahkan media selama sesi masih berstatus berlangsung.
+Aplikasi web berbasis AI untuk membantu survei kondisi infrastruktur di lapangan, seperti rambu jalan rusak, jalan berlubang, marka pudar, manhole, dan objek lain yang ditentukan admin. Surveyor membuat sesi survei (nama, lokasi, tanggal, waktu mulai), lalu mengupload banyak gambar atau video ke sesi tersebut. Setiap media diproses AI tanpa mengakhiri sesi, dan surveyor dapat terus menambah media selama sesi berlangsung.
 
-Sistem juga menyediakan mode live video. AI mengambil sampel frame secara berkala dan menampilkan hasil deteksi secara near-realtime. Hasil live detection hanya ditampilkan sementara dan tidak otomatis menjadi data survei. Surveyor harus secara eksplisit menyimpan frame atau klip yang ingin dimasukkan ke sesi survei.
+Ada dua keluarga model AI, dipilih admin lewat **Model AI aktif (default)**:
 
-Setelah semua media selesai dikumpulkan dan diproses, surveyor menekan tombol terpisah untuk mengakhiri sesi. Sistem mengunci sesi dari upload dan live capture baru. Surveyor kemudian dapat mereview hasil, memperbaiki konflik kelas yang perlu direview, dan menekan tombol submit untuk mengirim hasil ke admin.
+- **VLM** (`OpenRouter` atau `onpremise`): model bahasa-visi menghasilkan kelas, bounding box, kondisi, dan kelayakan berdasarkan prompt yang dibangun dari definisi kelas. Default awal: Qwen3 VL 8B Instruct.
+- **SAM3 lokal** (`sam3`) ➕: segmentasi berbasis text prompt (`samPrompt` per kelas) yang berjalan di GPU mesin server. Menghasilkan bounding box dan confidence. Kelayakan dihitung dari luas area relatif terhadap frame.
 
-Sistem menggunakan model vision language yang dikonfigurasi admin. Model default awal adalah Qwen3 VL 8B Instruct. Model harus menghasilkan data deteksi terstruktur yang berisi kelas objek, bounding box, kondisi, dan tingkat kelayakan. Semua provider AI, baik OpenRouter maupun model on-premise, harus dikonversi ke schema output internal yang sama.
-
-Setiap hasil survei harus direview dan disetujui oleh admin sebelum menjadi data final. Admin dapat mengoreksi data deteksi sesuai hak edit yang ditentukan sistem, menyetujui hasil, atau menolak hasil dengan alasan. Jika ditolak, surveyor dapat membuat revisi melalui alur versioning dan melakukan re-submit tanpa mengubah versi sebelumnya.
-
-Masalah yang diselesaikan adalah proses pendataan kondisi infrastruktur di lapangan yang biasanya dilakukan secara manual. Surveyor tidak perlu mencatat setiap objek secara manual. AI membantu mendeteksi objek, mengidentifikasi kelas, mengevaluasi kondisi, dan menentukan tingkat kelayakan berdasarkan kriteria yang telah ditentukan admin. Setiap hasil tetap memiliki bukti visual, data lokasi, riwayat perubahan, dan jejak proses review.
+Semua provider dikonversi ke skema `Detection` internal yang sama. Setiap hasil punya bukti visual, lokasi, riwayat perubahan, dan jejak review.
 
 ## 2. Goals
 
-- Surveyor dapat membuat satu sesi survei yang berisi banyak gambar, video, dan hasil capture dari live mode.
-- Upload media dan proses AI dapat terus dilakukan selama sesi masih berlangsung tanpa otomatis mengakhiri atau mengirim survei.
-- Setiap file asli memiliki lifecycle yang terpisah dari lifecycle sesi survei.
-- Proses AI berjalan asynchronous sehingga upload tidak menunggu seluruh proses ekstraksi dan inferensi selesai.
-- Hasil deteksi digabung dalam satu sesi survei dan dikelompokkan berdasarkan kelas tanpa membuat submission terpisah untuk setiap file atau batch.
-- Setiap objek hasil deteksi direpresentasikan sebagai satu data Detection yang dapat ditelusuri kembali ke media sumber dan versi processing-nya.
-- Surveyor dapat menggunakan mode live video untuk melihat overlay deteksi secara near-realtime.
-- Hasil live detection tidak otomatis disimpan sebagai data survei. Surveyor harus menyimpan capture secara eksplisit.
-- Surveyor dapat mengedit metadata sesi dan menghapus media yang tidak sesuai sebelum mengirim hasil ke admin.
-- Sistem dapat mencegah submit jika masih terdapat media yang belum selesai diproses atau konflik kelas yang belum diselesaikan.
-- Sistem mendukung deteksi konflik antar kelas yang bersifat saling eksklusif berdasarkan konfigurasi kelas.
-- Surveyor dapat mengakhiri sesi secara terpisah dari proses upload dan submit.
-- Sistem memiliki alur approval sehingga hasil survei hanya menjadi data final setelah disetujui admin.
-- Hasil yang ditolak dapat direvisi dan di-submit kembali melalui versi baru tanpa mengubah riwayat versi sebelumnya.
-- Admin dapat mengelola kelas deteksi melalui konfigurasi dan prompt engineering tanpa melakukan retraining model.
-- Admin dapat mengelola model AI yang digunakan melalui OpenRouter maupun endpoint on-premise.
-- Setiap hasil deteksi menyimpan referensi versi kelas dan konfigurasi model yang digunakan saat proses inferensi.
-- Admin memiliki dashboard untuk melihat rekap hasil survei yang telah disetujui secara keseluruhan maupun per kelas.
-- Sistem menggunakan state machine eksplisit untuk memastikan aksi tidak dapat melewati tahapan lifecycle yang ditentukan.
+| # | Goal | Status |
+|---|---|---|
+| G1 | Satu sesi survei berisi banyak gambar dan video | ✅ |
+| G2 | Upload dan proses AI berlanjut tanpa mengakhiri atau mengirim survei | ✅ |
+| G3 | Lifecycle media terpisah dari lifecycle sesi | ✅ |
+| G4 | Proses AI asynchronous, upload tidak menunggu inferensi | 🟡 SAM3 berjalan sebagai job di background. Jalur VLM: route `process` menunggu respons worker (frontend tidak terblokir) |
+| G5 | Hasil digabung per sesi dan dikelompokkan per kelas | ✅ Dengan pagination (12 kartu per halaman) |
+| G6 | Satu objek = satu `Detection`, dapat ditelusuri ke media sumber dan versi processing | ✅ |
+| G7 | Surveyor dapat mengedit metadata sesi dan menghapus media sebelum submit | ✅ |
+| G8 | Submit diblokir jika ada media belum selesai atau konflik belum diselesaikan | ✅ |
+| G9 | Deteksi konflik antar kelas saling eksklusif | ✅ Jalur VLM dan SAM3 (gambar dan video). Pengaturan kelas eksklusif masih lewat API |
+| G10 | Akhiri sesi terpisah dari upload dan submit | ✅ |
+| G11 | Approval admin sebelum data menjadi final | ✅ |
+| G12 | Revisi lewat versi baru tanpa mengubah versi lama | ✅ (lihat catatan immutability di 3.6) |
+| G13 | Admin mengelola kelas lewat konfigurasi dan prompt, tanpa retraining | ✅ |
+| G14 | Admin mengelola model AI (OpenRouter, on-premise, SAM3) | ✅ |
+| G15 | Detection menyimpan referensi versi kelas dan konfigurasi model | 🟡 Referensi ada, tetapi tidak menyimpan snapshot prompt penuh |
+| G16 | Dashboard rekap hasil yang disetujui | ✅ |
+| G17 | State machine eksplisit | ✅ |
 
 ## 3. Core Domain Rules
 
 ### 3.1 SurveySession
 
-SurveySession adalah container utama untuk seluruh aktivitas satu survei.
+Container utama satu survei. Field (lihat [`docs/data-model.md`](docs/data-model.md)):
 
-Satu SurveySession memiliki:
-
-- Nama survei.
-- Lokasi survei berupa titik, area, atau polygon.
-- Tanggal survei.
-- Waktu mulai.
-- Waktu selesai.
-- Status sesi.
-- Surveyor pemilik sesi.
-- Satu atau lebih MediaAsset.
-- Satu atau lebih SubmissionVersion.
+- `name`, `locationType` (`point` | `polygon`), `locationGeojson`, `locationAddress`.
+- `surveyDate`, `startedAt`, `finishedAt`, `status`.
+- Pemilik (`surveyorId`), `mediaAssets[]`, `submissions[]`, `detections[]`.
 
 ### 3.2 MediaAsset
 
-MediaAsset merepresentasikan satu file media asli yang diupload atau disimpan dari live capture.
+Satu file media yang diupload. Field penting: `fileType` (`image` | `video`), `fileUrl` (URL publik bucket), `storagePath`, `durationSeconds`, `status`, `errorMessage`, `idempotencyKey` (unik).
 
-Contoh:
+Status yang terdefinisi: `queued`, `uploading`, `uploaded`, `processing`, `completed`, `failed`, `deleted`.
 
-- Satu file JPG menghasilkan satu MediaAsset.
-- Satu file PNG menghasilkan satu MediaAsset.
-- Satu file video MP4 menghasilkan satu MediaAsset.
-- Satu klip yang disimpan dari live mode menghasilkan satu MediaAsset.
+Catatan implementasi:
 
-MediaAsset memiliki lifecycle processing sendiri dan tidak menggunakan status SurveySession.
-
-Status MediaAsset:
-
-- queued.
-- uploading.
-- uploaded.
-- processing.
-- completed.
-- failed.
-- deleted.
-
-Kegagalan processing satu MediaAsset tidak boleh otomatis mengubah status SurveySession.
-
-Surveyor dapat melakukan retry processing pada MediaAsset yang gagal jika media masih berada dalam sesi yang dapat diedit.
+- Alur upload langsung menetapkan `uploaded`. Status `queued` dan `uploading` ada di state machine tetapi **tidak dipakai** oleh alur saat ini (upload dilakukan satu request ke server, bukan resumable).
+- Penghapusan media adalah **hard delete** (baris `MediaAsset`, `MediaSegment`, `Detection`, dan file di bucket dihapus). Status `deleted` disediakan tetapi tidak ditulis oleh route hapus.
+- Kegagalan satu media tidak mengubah status sesi ✅.
+- **Batas durasi video** (K2): maksimal 120 detik. Server mengukur durasi asli dengan `ffprobe` sebelum kompresi dan menolak dengan HTTP 400 bila lebih panjang atau tidak terbaca. Browser memeriksa lebih dulu agar file besar tidak diunggah sia-sia. Batas diatur `NEXT_PUBLIC_MAX_VIDEO_SECONDS` (butuh build ulang).
 
 ### 3.3 MediaSegment
 
-MediaSegment adalah unit media yang diproses AI.
+Unit hasil pemrosesan per media.
 
-Untuk gambar:
+- Gambar: satu segmen ✅.
+- Video jalur **SAM3**: satu segmen yang mencakup seluruh durasi (`startTime=0`, `endTime=durasi`). `mediaUrl` menunjuk ke **video hasil anotasi** (overlay) dan `extractionMetadata` memuat ringkasan (fps, puncak per kelas, prompt, dsb.) ➕.
+- Video jalur **VLM**: `plan_video_segments` merencanakan segmen ≤10 detik, tetapi durasi diasumsikan 15 detik dan tidak ada ekstraksi frame nyata 🟡. Lihat 12.2.
 
-- Satu MediaAsset memiliki satu MediaSegment.
-
-Untuk video:
-
-- Satu MediaAsset dapat memiliki beberapa MediaSegment.
-- Setiap MediaSegment memiliki durasi maksimal 10 detik.
-- Video yang lebih panjang dari 10 detik otomatis dibagi menjadi beberapa MediaSegment.
-
-Contoh video berdurasi 27 detik:
-
-- Segment 1: detik 0 sampai 10.
-- Segment 2: detik 10 sampai 20.
-- Segment 3: detik 20 sampai 27.
-
-MediaSegment menyimpan informasi minimal:
-
-- Parent MediaAsset.
-- Urutan segment.
-- Waktu mulai.
-- Waktu selesai.
-- Path media sumber atau hasil segment.
-- Status processing.
-- Metadata ekstraksi frame.
+Aturan PRD "video > 10 detik dibagi menjadi segmen ≤10 detik" ❌ belum terpenuhi secara nyata. Durasi video dibatasi maksimal **2 menit** (K2), sehingga satu segmen SAM3 paling banyak mencakup 2 menit.
 
 ### 3.4 Detection
 
-Satu Detection merepresentasikan satu objek hasil deteksi setelah proses deduplication.
-
-Satu MediaSegment dapat memiliki banyak Detection.
-
-Detection minimal menyimpan:
-
-- ID Detection.
-- Referensi MediaAsset.
-- Referensi MediaSegment.
-- Referensi kelas.
-- Snapshot atau referensi versi kelas yang digunakan.
-- Nama kelas saat detection dibuat.
-- Bounding box.
-- Kondisi.
-- Tingkat kelayakan.
-- Timestamp atau frame index jika sumber berasal dari video.
-- Lokasi detection jika tersedia.
-- Referensi konfigurasi model.
-- Referensi prompt atau prompt version.
-- Metadata processing.
-- Status conflict jika ada.
-
-Bounding box menggunakan normalized coordinate agar tidak bergantung pada resolusi media.
-
-Format internal:
+Satu objek hasil deteksi. Menyimpan `classId`, `classVersionId`, `className` (snapshot nama), `bbox` (JSON, normalized 0–1), `condition`, `feasibility` (`layak` | `cukup_layak` | `tidak_layak`), `timestampSeconds`, `frameIndex`, `locationGeojson` (default = lokasi sesi), `modelConfigId`, `modelName`, `promptVersion`, `hasConflict`, `conflictResolved`, `conflictDetails`, `isDeleted`. Format bbox internal:
 
 ```json
-{
-  "x": 0.12,
-  "y": 0.34,
-  "width": 0.25,
-  "height": 0.18
-}
+{ "x": 0.12, "y": 0.34, "width": 0.25, "height": 0.18 }
 ```
 
-Nilai koordinat berada dalam rentang 0 sampai 1.
+`promptVersion` berisi string tetap (`v1.0` untuk VLM, `sam3` untuk SAM3), bukan snapshot prompt.
 
 ### 3.5 Raw AI Response
 
-Raw response dari AI boleh disimpan untuk kebutuhan audit dan debugging.
+PRD: boleh disimpan untuk audit. Implementasi: ❌ **tidak disimpan di database**. Debug lokal ada di `ai-service/openrouter_debug.log` (file log, di-gitignore, hanya untuk pengembangan). Data aplikasi bersumber dari `Detection` yang sudah dinormalisasi ✅.
 
-Raw AI response bukan sumber utama data aplikasi.
+### 3.6 Submission dan SubmissionVersion
 
-Data utama untuk dashboard, pagination, review, approval, dan reporting harus menggunakan struktur Detection yang telah dinormalisasi.
+Setiap submit/re-submit membuat `SubmissionVersion` dengan `versionNumber` bertambah dan `snapshotData` (JSON: metadata sesi, media, detection, ringkasan). Status versi: `menunggu_review` | `disetujui` | `ditolak`. Menyimpan `rejectReason`, `reviewNotes`, `reviewerId`, `submittedAt`, `reviewedAt`.
 
-### 3.6 Live Detection
+**Catatan penting immutability** 🟡: `snapshotData` tidak pernah diubah setelah dibuat. Namun koreksi admin (`admin-edit`) dan dashboard bekerja pada baris `Detection` yang hidup, bukan pada snapshot. Artinya angka dashboard mencerminkan koreksi admin, sedangkan snapshot menyimpan kondisi saat submit. Ini perlu diputuskan secara eksplisit (lihat Open Questions).
 
-Live detection memiliki dua jenis data:
+### 3.7 Versioning Kelas dan Model
 
-1. Temporary detection.
-
-Hasil hanya ditampilkan sebagai overlay dan tidak masuk ke data survei.
-
-2. Saved capture.
-
-Frame atau klip yang secara eksplisit disimpan surveyor menjadi MediaAsset dan masuk ke pipeline processing yang sama dengan media upload biasa.
-
-### 3.7 Submission dan SubmissionVersion
-
-Satu SurveySession dapat memiliki satu atau lebih SubmissionVersion.
-
-Setiap SubmissionVersion adalah snapshot hasil survei pada saat submit atau re-submit.
-
-Versi yang telah masuk ke proses review bersifat immutable.
-
-Revisi setelah reject tidak boleh mengubah data pada SubmissionVersion sebelumnya.
-
-Sistem membuat versi baru yang menjadi editable revision.
-
-Pada satu waktu, hanya satu SubmissionVersion dari SurveySession yang dapat aktif dalam antrean review.
-
-### 3.8 Class dan Model Versioning
-
-Perubahan konfigurasi kelas tidak boleh mengubah interpretasi data historis.
-
-Perubahan konfigurasi model juga tidak boleh mengubah informasi model yang digunakan pada Detection lama.
-
-Setiap Detection harus dapat ditelusuri ke:
-
-- ClassDefinitionVersion yang digunakan.
-- ModelConfig yang digunakan.
-- Model name.
-- Prompt version atau prompt snapshot.
-- Waktu processing.
+- `ClassDefinitionVersion` menyimpan snapshot JSON kelas setiap kali kelas dibuat atau diubah ✅ (termasuk `samPrompt` dan `samColor`).
+- `Detection` mengacu ke `classVersionId` (versi terbaru saat processing) dan `modelConfigId` ✅. `modelConfigId` dan `classVersionId` bernilai `SetNull` bila rujukan dihapus.
+- Model yang sudah punya deteksi historis tidak di-hard-delete, hanya dinonaktifkan ✅.
 
 ## 4. Survey Session State Machine
 
-SurveySession memiliki state machine eksplisit.
+Status: `berlangsung`, `selesai_menunggu_submit`, `menunggu_review`, `disetujui`, `ditolak`, `perlu_perbaikan`. Sumber kebenaran: [`web/src/lib/state-machine.ts`](web/src/lib/state-machine.ts).
 
-Status utama:
+```
+berlangsung ──Akhiri Survei──▶ selesai_menunggu_submit ──Submit──▶ menunggu_review
+                                                                     │        │
+                                                                Approve      Reject
+                                                                     ▼        ▼
+                                                                disetujui   ditolak
+                                                                              │ Buat Revisi
+                                                                              ▼
+                                            menunggu_review ◀──Re-submit── perlu_perbaikan
+```
 
-- `berlangsung`
-- `selesai_menunggu_submit`
-- `menunggu_review`
-- `disetujui`
-- `ditolak`
-- `perlu_perbaikan`
+Guard (✅ sesuai PRD):
 
-### 4.1 Berlangsung
+- **Submit / Re-submit** ditolak jika ada media `queued`/`uploading`/`processing`, ada media `failed`, atau ada `Detection` dengan `hasConflict && !conflictResolved`.
+- **Approve/Reject** hanya admin. **Reject** wajib `rejectReason` tidak kosong.
 
-Status awal setelah sesi dibuat.
+Perbedaan kecil dari PRD (🔄):
 
-Aksi yang diizinkan:
+| Aksi | PRD v1.0 | Implementasi |
+|---|---|---|
+| Upload media | hanya `berlangsung` | `berlangsung` **dan** `perlu_perbaikan` |
+| Edit metadata sesi | `berlangsung`, `selesai_menunggu_submit` | ditambah `perlu_perbaikan` |
+| Hapus media, retry processing | `berlangsung`, `selesai_menunggu_submit` | ditambah `perlu_perbaikan` |
+| Hapus sesi | selama belum pernah disubmit | sama (route menolak sesi yang sudah punya submission) |
+| Pembuat sesi | surveyor | surveyor **atau admin** |
 
-- Upload media.
-- Menyimpan capture dari live mode.
-- Menjalankan live mode.
-- Mengedit metadata.
-- Menghapus media.
-- Menghapus sesi.
-- Melakukan retry processing.
-- Menunggu processing media selesai.
-
-Aksi yang tidak diizinkan:
-
-- Submit ke admin.
-
-### 4.2 Selesai Menunggu Submit
-
-Surveyor telah menekan tombol `Akhiri Survei`.
-
-Sistem mencatat waktu selesai.
-
-Aksi yang tidak lagi diizinkan:
-
-- Upload media baru.
-- Menjalankan live mode.
-- Menyimpan capture baru dari live mode.
-
-Aksi yang tetap diizinkan:
-
-- Melihat hasil.
-- Mengedit metadata.
-- Menghapus media.
-- Melakukan retry processing jika masih diperlukan.
-- Mereview konflik kelas.
-- Submit setelah seluruh validasi terpenuhi.
-
-### 4.3 Menunggu Review
-
-Surveyor telah melakukan submit.
-
-Data SubmissionVersion yang sedang direview bersifat immutable.
-
-Aksi surveyor yang tidak diizinkan:
-
-- Mengubah metadata versi yang sedang direview.
-- Upload media.
-- Menghapus media.
-- Mengubah hasil detection.
-
-Admin dapat:
-
-- Melihat detail.
-- Mengoreksi field yang secara eksplisit diizinkan.
-- Approve.
-- Reject.
-- Memeriksa riwayat versi.
-
-### 4.4 Disetujui
-
-Admin menyetujui SubmissionVersion.
-
-Data menjadi final.
-
-Data muncul pada dashboard dan rekap hasil.
-
-Tidak ada perubahan langsung terhadap versi yang telah disetujui.
-
-### 4.5 Ditolak
-
-Admin menolak SubmissionVersion.
-
-Versi yang ditolak tetap immutable.
-
-Surveyor dapat melihat:
-
-- Alasan reject.
-- Catatan admin.
-- Data versi yang ditolak.
-
-Surveyor belum langsung mengubah versi yang ditolak.
-
-Surveyor harus memulai aksi `Buat Revisi`.
-
-### 4.6 Perlu Perbaikan
-
-Sistem membuat revision draft baru berdasarkan SubmissionVersion yang ditolak.
-
-Revision draft dapat menggunakan data versi sebelumnya sebagai referensi.
-
-Surveyor dapat melakukan tindakan yang diizinkan dalam proses revisi.
-
-Setelah revisi selesai, surveyor mengakhiri revisi dan mengirim SubmissionVersion baru untuk review.
-
-Versi lama tetap tersimpan.
-
-### 4.7 Transition yang Diizinkan
-
-`berlangsung` ke `selesai_menunggu_submit` melalui `Akhiri Survei`.
-
-`selesai_menunggu_submit` ke `menunggu_review` melalui `Submit`.
-
-`menunggu_review` ke `disetujui` melalui `Approve`.
-
-`menunggu_review` ke `ditolak` melalui `Reject`.
-
-`ditolak` ke `perlu_perbaikan` melalui `Buat Revisi`.
-
-`perlu_perbaikan` ke `menunggu_review` melalui `Re-submit`.
-
-Tidak ada transition lain yang diperbolehkan.
+Surveyor tidak dapat mengubah data pada `menunggu_review` dan `disetujui` ✅. `ditolak` → surveyor harus menekan `Buat Revisi` ✅.
 
 ## 5. Media Processing State Machine
 
-Status MediaAsset:
+Tabel transisi yang diizinkan (`validateMediaAssetTransition`):
 
-- `queued`
-- `uploading`
-- `uploaded`
-- `processing`
-- `completed`
-- `failed`
-- `deleted`
+| Dari | Ke |
+|---|---|
+| `queued` | `uploading`, `failed`, `deleted` |
+| `uploading` | `uploaded`, `failed`, `deleted` |
+| `uploaded` | `processing`, `failed`, `deleted` |
+| `processing` | `completed`, `failed`, `deleted` |
+| `completed` | `processing` (re-process), `deleted` |
+| `failed` | `processing`, `queued`, `deleted` |
 
-Transition normal:
-
-`queued` ke `uploading`.
-
-`uploading` ke `uploaded`.
-
-`uploaded` ke `processing`.
-
-`processing` ke `completed`.
-
-Jika processing gagal:
-
-`processing` ke `failed`.
-
-Media yang gagal dapat kembali diproses melalui retry.
-
-Retry tidak boleh menghasilkan Detection duplikat.
-
-Media yang dihapus berubah menjadi `deleted`.
-
-Media yang telah dihapus tidak boleh ikut masuk dalam perhitungan hasil sesi.
+Retry menghapus `Detection` dan `MediaSegment` lama milik media itu lalu menulis ulang dalam satu transaksi, sehingga **tidak menghasilkan Detection duplikat** ✅. `idempotencyKey` dibuat acak per upload dan bersifat unik, tetapi tidak dipakai untuk menolak request ganda 🟡.
 
 ## 6. Deduplication dan Conflict Rules
 
 ### 6.1 Deduplication
 
-Deduplication dilakukan dalam scope satu SurveySession.
-
-Untuk video:
-
-- Sistem membandingkan Detection pada frame yang berdekatan secara temporal.
-- Sistem dapat menggunakan IoU bounding box.
-- Sistem mempertimbangkan kedekatan waktu.
-- Sistem dapat menggunakan tracking temporal.
-- Objek yang sama pada frame berdekatan tidak boleh dihitung sebagai temuan baru.
-
-Deduplication antar MediaSegment yang berasal dari video yang sama juga harus mempertimbangkan hubungan temporal.
-
-Untuk gambar atau media yang tidak memiliki hubungan temporal:
-
-- Sistem tidak boleh otomatis menghapus Detection hanya berdasarkan kemiripan visual.
-- Deduplication lintas gambar memerlukan strategi tambahan yang dapat diimplementasikan secara terpisah.
+- **Jalur VLM, video**: `deduplicate_temporal_detections` (IoU 0.45, jendela waktu 3 detik) 🟡 (bergantung pada ekstraksi frame yang masih placeholder).
+- **Jalur SAM3, video**: tidak ada dedup antar frame. Sistem hanya menyimpan instance pada **frame puncak** tiap kelas (`_peaks`) dan membatasi 100 deteksi per kelas.
+- Lintas gambar: tidak ada dedup otomatis ✅ (sesuai PRD).
 
 ### 6.2 Conflict Antar Kelas
 
-Overlap bounding box tidak selalu berarti konflik.
+Konflik = dua Detection di media/frame yang sama, kelas berbeda, IoU ≥ threshold, dan kedua kelas saling eksklusif (`conflict_detector.py`: `detect_class_conflicts` untuk gambar dan VLM, `detect_video_conflicts` untuk video SAM3).
 
-Konflik hanya terjadi jika:
-
-- Dua Detection berada pada media atau frame yang sama.
-- Kedua Detection memiliki kelas berbeda.
-- Nilai IoU memenuhi atau melebihi threshold yang ditentukan.
-- Kedua kelas tersebut ditandai sebagai mutually exclusive dalam konfigurasi kelas.
-
-Default IoU threshold untuk conflict adalah 0.5.
-
-Threshold harus dapat dikonfigurasi.
-
-Surveyor harus menyelesaikan conflict sebelum submit.
-
-Admin tetap dapat mengoreksi hasil conflict pada tahap review.
+- Default threshold 0.5, dapat diatur per kelas (`conflictIouThreshold`) lewat API ✅.
+- 🟡 **UI admin belum memiliki kontrol** untuk `mutuallyExclusiveWith` maupun `conflictIouThreshold`. Nilainya hanya dapat diisi lewat API/database.
+- ✅ **Jalur SAM3 mendeteksi konflik** (K3). Web mengirim `mutually_exclusive_with` dan `conflict_iou_threshold` tiap kelas, lalu menyimpan `hasConflict` dan `conflictDetails`. Gambar: dua temuan pada gambar yang sama. Video: temuan berasal dari frame puncak tiap kelas sehingga konflik dievaluasi **per frame** dari seluruh rekaman instance (hanya instance dengan confidence ≥ `SAM3_FINDING_CONF`); temuan kelas yang paling cocok (IoU tertinggi, lalu frame terdekat) ditandai konflik dan `conflictDetails` memuat `conflict_frame_index` dan `conflict_timestamp_seconds`.
+- Kedua detektor kini mensyaratkan **frame yang sama** (`frame_index` sama) sesuai aturan PRD, dan mempertahankan konflik dengan IoU terkuat bila sebuah temuan berkonflik dengan lebih dari satu temuan lain.
+- Surveyor menyelesaikan konflik lewat `resolve-conflict` sebelum submit ✅. Admin dapat mengoreksi kelas saat review ✅.
 
 ## 7. AI Output Contract
 
-Semua provider AI harus menghasilkan output yang dikonversi ke DetectionSchema internal.
-
-Contoh:
+Semua provider mengembalikan `DetectionSchema` ✅ (`ai-service/schemas.py`):
 
 ```json
 {
@@ -412,620 +217,430 @@ Contoh:
     {
       "class_id": "uuid",
       "class_name": "jalan_berlubang",
-      "bbox": {
-        "x": 0.12,
-        "y": 0.34,
-        "width": 0.25,
-        "height": 0.18
-      },
+      "bbox": { "x": 0.12, "y": 0.34, "width": 0.25, "height": 0.18 },
       "condition": "aspal rusak dengan lubang terlihat",
-      "feasibility": "tidak_layak"
+      "feasibility": "tidak_layak",
+      "confidence": 0.9,
+      "timestamp_seconds": null,
+      "frame_index": null,
+      "has_conflict": false,
+      "conflict_details": null
     }
   ]
 }
 ```
 
-Aturan:
+Aturan: hanya kelas dari active class list (dijaga lewat prompt 🟡), array kosong jika tidak ada objek, dan lapisan provider yang bertanggung jawab atas konversi ✅.
 
-- Model hanya boleh mengembalikan kelas yang terdapat pada active class list.
-- Jika model tidak menemukan objek, model harus mengembalikan array `detections` kosong.
-- Backend provider layer bertanggung jawab mengubah response provider menjadi schema internal.
-- Frontend dan business logic utama tidak boleh bergantung langsung pada format OpenRouter atau format provider on-premise.
+Provider yang tersedia:
+
+| Provider | Nilai `provider` | Perilaku | Status |
+|---|---|---|---|
+| OpenRouter | `OpenRouter` | VLM via API OpenRouter, butuh API key | ✅ |
+| On-premise | `onpremise` | VLM di endpoint sendiri (`endpoint_url`, key opsional) | ✅ |
+| SAM3 lokal | `sam3` | Segmentasi text-prompt di GPU server; butuh `SAM3_CHECKPOINT`, torch, ultralytics | ➕ |
+| Mock | `mock` | `MockVisionProvider` ada di kode tetapi tidak tersambung ke `get_provider` | dead code |
 
 ## 8. User Stories
 
+Kriteria "Typecheck/lint passes" dan "Verify in browser" dipindahkan ke bagian *Definition of Done* di akhir dokumen dan berlaku untuk semua story. Centang `[x]` = terpenuhi di kode. `[~]` = sebagian. `[ ]` = belum.
+
 ### US-001: Membuat sesi survei
 
-**Description:** Sebagai surveyor, saya ingin membuat data sesi survei terlebih dahulu sebelum mulai mengupload media, supaya semua gambar, video, dan capture yang saya kumpulkan selama survei tergabung dalam satu sesi.
+- [x] Surveyor mengisi nama survei.
+- [x] Lokasi ditentukan di peta OpenStreetMap (Leaflet).
+- [x] Lokasi berupa titik: pin manual, pencarian alamat (Nominatim `search`), atau GPS browser (dengan reverse geocode).
+- [x] Lokasi dapat berupa area/polygon (`locationType = polygon`).
+- [x] Tanggal survei diisi.
+- [x] Waktu mulai tercatat otomatis (`startedAt`).
+- [x] Status awal `berlangsung`.
+- [x] Jika GPS ditolak, pin manual dan pencarian alamat tetap tersedia.
+- [x] Transisi status divalidasi state machine.
 
-**Acceptance Criteria:**
+### US-002: Upload gambar dan video dalam sesi
 
-- [ ] Surveyor mengisi nama survei.
-- [ ] Surveyor menentukan lokasi survei di peta OpenStreetMap.
-- [ ] Lokasi dapat berupa titik koordinat melalui pin manual, pencarian alamat, atau autofill GPS.
-- [ ] Lokasi dapat berupa area atau polygon.
-- [ ] Surveyor mengisi tanggal survei.
-- [ ] Waktu mulai survei tercatat otomatis saat sesi dibuat.
-- [ ] Sesi survei berstatus `berlangsung` setelah dibuat.
-- [ ] Jika izin GPS ditolak atau GPS tidak tersedia, surveyor tetap dapat menggunakan pin manual atau pencarian alamat.
-- [ ] Sesi survei memiliki state machine yang memvalidasi transition status.
-- [ ] Typecheck/lint passes.
-- [ ] Verify in browser using dev-browser skill.
+- [~] Upload banyak file. UI menerima `image/jpeg`, `image/png`, `video/mp4`. Server menerima semua `image/*` dan video (`mp4|mov|webm|mkv`). **Video maksimal 2 menit** (K2). Belum ada batas ukuran byte atau jumlah media.
+- [x] Satu file = satu `MediaAsset`.
+- [x] Gambar → satu `MediaSegment`.
+- [ ] Video > 10 detik dibagi menjadi segmen ≤10 detik (lihat 3.3; durasi dibatasi 2 menit).
+- [~] Upload dan AI asynchronous: SAM3 berjalan sebagai job background (route mengembalikan `202` lalu UI polling). Jalur VLM menunggu worker dalam satu request server.
+- [x] Frontend tidak menunggu seluruh proses AI untuk melanjutkan.
+- [x] Status media tampil per media (UI polling media yang `processing`).
+- [x] Kegagalan media tidak mengubah status sesi.
+- [x] Retry media gagal, tanpa Detection duplikat.
+- [x] Hasil dikonversi ke skema `Detection`, lengkap dengan kelas, bbox, kondisi, kelayakan, referensi media, metadata model.
+- [x] Hasil digabung akumulatif per sesi dan dikelompokkan per kelas.
+- [~] Dedup objek yang sama antar frame berdekatan (hanya jalur VLM; SAM3 memakai frame puncak).
+- [x] Tidak ada submission terpisah per batch.
+- [x] Hasil per kelas dengan **pagination** (K4): filter kelas berupa chip, kartu temuan 12 per halaman. Pagination dilakukan di browser atas data yang sudah dimuat; pagination sisi server belum diperlukan pada skala prototipe.
+- [x] Media yang dihapus tidak lagi dihitung.
 
-### US-002: Upload gambar dan video dalam sesi survei
+### US-003: Mengakhiri sesi
 
-**Description:** Sebagai surveyor, saya ingin mengupload gambar atau video ke sesi survei yang sedang berlangsung supaya AI dapat mendeteksi objek dan kondisinya secara otomatis. Upload ini tidak mengakhiri atau mengirim sesi survei ke admin.
+- [x] Tombol `Akhiri Survei` terpisah dari upload dan submit.
+- [x] Hanya pada status `berlangsung`.
+- [x] Mencatat waktu selesai dan status menjadi `selesai_menunggu_submit`.
+- [x] Setelah diakhiri: upload media baru diblokir.
+- [ ] Konfirmasi sebelum mengakhiri (tombol langsung memanggil API tanpa dialog konfirmasi).
+- [~] Pemberitahuan jika masih ada media diproses: API mengembalikan `warnings` (jumlah media `queued/uploading/processing` dan `failed`), tetapi belum menghalangi atau meminta konfirmasi.
+- [x] Submit ditolak selama media `uploading`/`processing`.
+- [x] Media `failed` dapat diproses ulang atau dihapus sebelum submit.
 
-**Acceptance Criteria:**
+### US-004: Edit dan hapus sebelum submit
 
-- [ ] Surveyor dapat mengupload banyak file JPG, PNG, atau MP4 ke dalam satu sesi.
-- [ ] Setiap file upload menjadi satu MediaAsset.
-- [ ] Jika MediaAsset berupa gambar, sistem membuat satu MediaSegment untuk processing.
-- [ ] Jika MediaAsset berupa video lebih dari 10 detik, sistem otomatis membaginya menjadi beberapa MediaSegment maksimal 10 detik.
-- [ ] Proses upload dan AI berjalan asynchronous.
-- [ ] Frontend tidak menunggu seluruh proses AI selesai untuk melanjutkan penggunaan aplikasi.
-- [ ] Setiap MediaAsset memiliki status `queued`, `uploading`, `uploaded`, `processing`, `completed`, `failed`, atau `deleted`.
-- [ ] Kegagalan satu MediaAsset tidak mengubah status SurveySession.
-- [ ] Surveyor dapat melakukan retry pada media yang gagal diproses.
-- [ ] Retry tidak boleh menghasilkan Detection duplikat.
-- [ ] Sistem menampilkan status processing untuk setiap media.
-- [ ] Hasil AI dikonversi ke schema Detection internal.
-- [ ] Setiap Detection menyimpan kelas, bounding box, kondisi, tingkat kelayakan, referensi media, dan metadata model.
-- [ ] Hasil Detection dari seluruh media dalam sesi digabung secara akumulatif dan dikelompokkan per kelas.
-- [ ] Sistem melakukan deduplication untuk objek yang sama pada frame video berdekatan.
-- [ ] Sistem tidak membuat submission terpisah untuk setiap batch.
-- [ ] Hasil ditampilkan per kelas dengan pagination.
-- [ ] Setiap media yang dihapus tidak lagi dihitung dalam ringkasan sesi.
-- [ ] Typecheck/lint passes.
-- [ ] Verify in browser using dev-browser skill.
+- [x] Edit nama, lokasi, tanggal saat `berlangsung`, `selesai_menunggu_submit`, dan `perlu_perbaikan`.
+- [x] Hapus `MediaAsset` beserta segmen, detection, dan file di bucket.
+- [x] Jumlah temuan per kelas ikut diperbarui.
+- [~] Hapus sesi selama belum pernah disubmit: didukung API (`DELETE /api/sessions/{id}`), **belum ada tombol di UI**.
+- [x] Konfirmasi sebelum hapus media (dialog `confirm`). Penghapusan permanen.
+- [x] Sesi `menunggu_review` dan `disetujui` tidak dapat diedit surveyor.
+- [x] Surveyor dapat mengoreksi kelas/kondisi/kelayakan `Detection` (dan menghapus detection) selama sesi masih editable ➕. Bounding box tidak dapat diedit ✅ (sesuai Non-Goals).
 
-### US-003: Deteksi live video dengan AI overlay
+### US-005: Submit untuk review
 
-**Description:** Sebagai surveyor, saya ingin menyalakan kamera di dalam sesi survei yang sedang berlangsung dan melihat AI menghighlight objek dari kelas yang telah ditentukan admin secara near-realtime.
+- [x] Ringkasan sesi berstatus `selesai_menunggu_submit`, dikelompokkan per kelas (jumlah, kondisi, kelayakan, lokasi).
+- [x] Submit aktif hanya jika tidak ada konflik belum selesai, tidak ada media `uploading`/`processing`, dan tidak ada media `failed`.
+- [x] Submit membuat `SubmissionVersion` (snapshot) dan status menjadi `menunggu_review`.
+- [x] Riwayat sesi dan riwayat versi (tab History) beserta status, waktu submit, hasil review.
 
-**Acceptance Criteria:**
+### US-006: Revisi dan re-submit
 
-- [ ] Surveyor dapat mengaktifkan kamera device melalui browser selama sesi berstatus `berlangsung`.
-- [ ] Sistem mengambil sampel frame secara berkala.
-- [ ] Interval sampling dapat dikonfigurasi.
-- [ ] Sistem tidak mengirim setiap frame mentah ke model.
-- [ ] Bounding box dan label kelas ditampilkan sebagai overlay di atas video.
-- [ ] Overlay bersifat near-realtime.
-- [ ] UI menjelaskan bahwa mode ini bukan realtime frame-by-frame penuh.
-- [ ] Detection dari live mode bersifat temporary secara default.
-- [ ] Temporary detection tidak otomatis masuk ke data survei.
-- [ ] Surveyor dapat secara eksplisit menyimpan frame atau klip.
-- [ ] Frame atau klip yang disimpan menjadi MediaAsset.
-- [ ] MediaAsset dari live capture masuk ke pipeline processing yang sama dengan upload biasa.
-- [ ] Klip lebih dari 10 detik otomatis dibagi menjadi MediaSegment maksimal 10 detik.
-- [ ] Typecheck/lint passes.
-- [ ] Verify in browser using dev-browser skill.
+- [x] Reject → status `ditolak`. Surveyor melihat alasan dan catatan admin.
+- [x] `Buat Revisi` → status `perlu_perbaikan`. Versi lama tetap utuh.
+- [x] Surveyor dapat menghapus media, menambah media, retry, dan koreksi detection.
+- [x] Re-submit membuat `SubmissionVersion` baru. Versi lama tetap terlihat oleh surveyor dan admin.
+- [x] Hanya satu versi aktif dalam antrean (dijamin oleh state machine sesi).
+- [~] "Revision draft" bukan entitas terpisah. Revisi bekerja pada baris `Detection`/`MediaAsset` yang sama, dan yang immutable hanyalah snapshot.
 
-### US-004: Mengakhiri sesi survei
+### US-007: Review dan approval
 
-**Description:** Sebagai surveyor, saya ingin menekan tombol terpisah untuk mengakhiri sesi survei setelah semua media selesai dikumpulkan.
+- [x] Daftar sesi `menunggu_review` (filter status), dengan penanda re-submit (`versionNumber > 1`).
+- [x] Detail `SubmissionVersion` dengan media, bbox overlay, kondisi, kelayakan, lokasi.
+- [x] Hasil per kelas dengan pagination (kartu temuan 12 per halaman).
+- [x] Admin dapat melihat dan menyelesaikan konflik kelas (termasuk konflik dari hasil SAM3).
+- [x] Hak edit admin terdefinisi: **kelas, kondisi, kelayakan, catatan**. Bounding box tidak dapat diedit.
+- [x] Semua perubahan tercatat di `AuditLog` dan tampil di `AuditTimeline`.
+- [x] Approve dan Reject. Reject wajib memilih alasan dari daftar tetap (6 opsi di UI: kualitas buram, deteksi salah kelas, lokasi tidak sesuai, media duplikat, tidak memenuhi kriteria kelayakan, lainnya) ditambah catatan bebas.
+- [x] Setelah approve, data final dan masuk dashboard.
 
-**Acceptance Criteria:**
+### US-008: Dashboard rekap
 
-- [ ] Ada tombol `Akhiri Survei` yang terpisah dari tombol upload dan submit.
-- [ ] Tombol hanya muncul saat sesi berstatus `berlangsung`.
-- [ ] Sistem mencatat waktu selesai saat surveyor mengakhiri sesi.
-- [ ] Status berubah menjadi `selesai_menunggu_submit`.
-- [ ] Setelah sesi diakhiri, surveyor tidak dapat upload media baru.
-- [ ] Setelah sesi diakhiri, surveyor tidak dapat menyalakan live mode.
-- [ ] Sistem menampilkan konfirmasi sebelum sesi diakhiri.
-- [ ] Jika masih ada MediaAsset berstatus `uploading` atau `processing`, sistem harus memberi tahu surveyor.
-- [ ] Surveyor tidak dapat submit selama masih ada media berstatus `uploading` atau `processing`.
-- [ ] Media dengan status `failed` dapat diproses ulang atau dihapus sebelum submit.
-- [ ] Typecheck/lint passes.
-- [ ] Verify in browser using dev-browser skill.
+- [x] Hanya sesi berstatus `disetujui`.
+- [x] Menampilkan jumlah sesi, total temuan, temuan kritis (`tidak_layak`), dan temuan baik (`layak`).
+- [x] Jumlah temuan per kelas (`class-summary`) dan sebaran lokasi di peta (`map-points`).
+- [x] Filter rentang tanggal dan satu kelas, serta filter kelayakan pada peta.
+- [ ] Filter **beberapa kelas** sekaligus.
+- Catatan 🔄: dashboard menghitung dari `Detection` hidup pada sesi `disetujui`, bukan dari `snapshotData` versi yang disetujui.
 
-### US-005: Mengedit dan menghapus data survei sebelum submit
+### US-009: Hasil per kelas
 
-**Description:** Sebagai surveyor, saya ingin dapat mengedit metadata sesi atau menghapus media yang tidak sesuai sebelum mengirim hasil ke admin.
+- [x] Pemilihan kelas, hitungan per kelayakan, lintas sesi yang disetujui.
+- [x] Tampilan peta (titik/area). Fallback lokasi sesi bila detection tanpa koordinat sendiri (`Detection.locationGeojson` diisi lokasi sesi).
+- [~] Tampilan list per kelas tersedia lewat endpoint `class-summary`. Pemilihan beberapa kelas belum ada di UI.
 
-**Acceptance Criteria:**
+### US-010: Manajemen user
 
-- [ ] Selama sesi berstatus `berlangsung`, surveyor dapat mengedit nama survei, lokasi, dan tanggal.
-- [ ] Selama sesi berstatus `selesai_menunggu_submit`, surveyor dapat mengedit nama survei, lokasi, dan tanggal.
-- [ ] Surveyor dapat menghapus MediaAsset beserta seluruh MediaSegment dan Detection yang berasal dari media tersebut.
-- [ ] Penghapusan media memperbarui jumlah temuan per kelas secara otomatis.
-- [ ] Surveyor dapat menghapus seluruh SurveySession selama belum pernah disubmit.
-- [ ] Sistem menampilkan konfirmasi sebelum penghapusan.
-- [ ] Penghapusan bersifat permanen untuk MVP.
-- [ ] Setelah sesi masuk `menunggu_review`, data versi yang sedang direview tidak dapat diedit surveyor.
-- [ ] Setelah sesi `disetujui`, data final tidak dapat diedit langsung.
-- [ ] Setelah sesi `ditolak`, surveyor harus membuat revisi baru dan tidak boleh mengubah versi yang ditolak.
-- [ ] Typecheck/lint passes.
-- [ ] Verify in browser using dev-browser skill.
+- [x] Tambah, edit, nonaktifkan user; role `surveyor` atau `admin`; reset password oleh admin.
+- [x] User nonaktif tidak dapat login dan sesi cookie-nya ditolak di API (`isActive` dicek saat login dan pada tiap `getCurrentUser`, dengan cache selama `USER_CACHE_TTL_MS`). Proxy halaman hanya memeriksa tanda tangan dan masa berlaku JWT, jadi user yang baru dinonaktifkan masih melihat kerangka halaman sampai token kedaluwarsa, tetapi semua data ditolak API.
+- [x] **Autentikasi custom (bcrypt + JWT), keputusan K1.** Password di-hash bcrypt (cost 10). Sesi berupa JWT HS256 (umur dari `SESSION_MAX_AGE_SECONDS`) di cookie `httpOnly` `bima_session`. `JWT_SECRET` wajib dari environment tanpa nilai bawaan (K6). Proxy Next.js memeriksa cookie pada halaman, dan `requireAuth()` memeriksa ulang user di database pada tiap API.
+- Tidak ada hard delete user.
 
-### US-006: Submit sesi survei untuk direview
+### US-011: Manajemen kelas
 
-**Description:** Sebagai surveyor, saya ingin mereview ringkasan sesi yang sudah diakhiri lalu menekan submit untuk mengirim hasil ke admin.
+- [x] Buat, edit, nonaktifkan kelas. Kelas yang sudah dipakai data historis tidak di-hard-delete.
+- [x] Nama, deskripsi visual, kriteria kondisi, kriteria kelayakan (`layak`, `cukup_layak`, `tidak_layak`).
+- [x] Deskripsi kelas menjadi bagian dari prompt VLM. Tidak ada threshold confidence numerik untuk kelayakan pada jalur VLM.
+- [x] Versioning otomatis (`ClassDefinitionVersion`) setiap perubahan.
+- [x] ➕ `samPrompt` (frasa noun bahasa Inggris) dan `samColor` (#RRGGBB) untuk provider SAM3.
+- [~] Kelas saling eksklusif dan `conflictIouThreshold`: didukung API dan basis data, **belum ada kontrol UI**.
+- [ ] Preview/test deteksi kelas sebelum dipakai surveyor.
 
-**Acceptance Criteria:**
+### US-012: Manajemen model AI
 
-- [ ] Surveyor dapat melihat ringkasan sesi yang berstatus `selesai_menunggu_submit`.
-- [ ] Ringkasan dikelompokkan per kelas.
-- [ ] Ringkasan menampilkan jumlah Detection.
-- [ ] Ringkasan menampilkan kondisi.
-- [ ] Ringkasan menampilkan tingkat kelayakan.
-- [ ] Ringkasan menampilkan lokasi sesi.
-- [ ] Submit hanya aktif jika seluruh conflict class telah diselesaikan.
-- [ ] Submit hanya aktif jika tidak ada MediaAsset berstatus `uploading` atau `processing`.
-- [ ] Media berstatus `failed` harus dihapus atau berhasil diproses ulang sebelum submit.
-- [ ] Saat submit, sistem membuat SubmissionVersion immutable.
-- [ ] Status sesi berubah menjadi `menunggu_review`.
-- [ ] Surveyor dapat melihat riwayat sesi beserta statusnya.
-- [ ] Surveyor dapat melihat riwayat SubmissionVersion.
-- [ ] Setiap versi menampilkan status, waktu submit, dan hasil review.
-- [ ] Typecheck/lint passes.
-- [ ] Verify in browser using dev-browser skill.
+- [x] Model default awal Qwen3 VL 8B Instruct (`qwen/qwen3-vl-8b-instruct`).
+- [x] Tambah konfigurasi; provider `OpenRouter`, `onpremise`, ➕ `sam3` (dengan `samMode`: `optimized` | `fast`).
+- [x] API key dienkripsi AES-256-CBC. API tidak mengembalikan nilai penuh (hanya `apiKeyMasked`).
+- [x] Satu model default aktif; tes koneksi; soft delete untuk model yang sudah punya data historis.
+- [x] Enkripsi memakai `ENCRYPTION_SECRET_KEY` dari env tanpa nilai bawaan di kode; bila kosong, fitur yang membutuhkannya berhenti dengan galat yang menyebut nama variabelnya.
 
-### US-007: Revisi dan re-submit sesi yang ditolak
+### Definition of Done (berlaku untuk semua story)
 
-**Description:** Sebagai surveyor, saya ingin memperbaiki hasil survei yang ditolak tanpa mengubah riwayat versi sebelumnya.
+- `npm run typecheck` dan `npm run lint` (web) lulus. `pytest` (ai-service) lulus.
+- Diverifikasi manual di browser pada mode production (`npm run build && npm start`).
+- Perubahan skema lewat Prisma Migrate.
 
-**Acceptance Criteria:**
+## 9. Functional Requirements (status per kebutuhan)
 
-- [ ] Jika admin menolak hasil, status sesi berubah menjadi `ditolak`.
-- [ ] Surveyor dapat melihat alasan reject.
-- [ ] Surveyor dapat melihat catatan bebas dari admin jika tersedia.
-- [ ] Surveyor dapat menekan aksi `Buat Revisi`.
-- [ ] Sistem membuat revision draft baru.
-- [ ] Status sesi berubah menjadi `perlu_perbaikan`.
-- [ ] Versi yang sebelumnya ditolak tetap immutable.
-- [ ] Data lokasi dan kelas dari versi sebelumnya dapat digunakan sebagai referensi.
-- [ ] Surveyor dapat menghapus media dan menambahkan media baru sesuai aturan revisi.
-- [ ] Surveyor dapat melakukan retry processing pada media yang gagal.
-- [ ] Surveyor tidak dapat mengubah raw data pada SubmissionVersion sebelumnya.
-- [ ] Setelah revisi selesai dan dikirim, sistem membuat SubmissionVersion baru.
-- [ ] Versi sebelumnya tetap dapat dilihat oleh surveyor dan admin.
-- [ ] Pada satu waktu hanya satu versi yang dapat masuk ke antrean review.
-- [ ] Typecheck/lint passes.
-- [ ] Verify in browser using dev-browser skill.
+### Sesi dan lokasi
 
-### US-008: Review dan approval hasil survei
+| ID | Kebutuhan | Status | Catatan |
+|---|---|---|---|
+| FR-1 | Buat SurveySession (nama, lokasi, tanggal, waktu mulai, pemilik, status awal) | ✅ | Admin juga bisa membuat |
+| FR-2 | Lokasi titik atau polygon | ✅ | |
+| FR-3 | Pin manual, pencarian alamat, geolocation | ✅ | Nominatim (publik, tanpa API key) |
+| FR-4 | Fallback manual jika GPS gagal | ✅ | |
 
-**Description:** Sebagai admin, saya ingin mereview hasil sesi survei dan menyetujui atau menolaknya sebelum menjadi data final.
+### Media dan pemrosesan
 
-**Acceptance Criteria:**
+| ID | Kebutuhan | Status | Catatan |
+|---|---|---|---|
+| FR-5 | Satu sesi banyak MediaAsset | ✅ | |
+| FR-6 | Satu MediaAsset = satu file | ✅ | |
+| FR-7 | Gambar = satu segmen | ✅ | |
+| FR-8 | Video >10 dtk dibagi segmen ≤10 dtk | ❌ | SAM3: satu segmen. VLM: hanya rencana, durasi diasumsikan 15 dtk. Durasi dibatasi 2 menit (K2) |
+| FR-9 | Proses AI asynchronous | 🟡 | SAM3 job background. VLM menunggu worker dalam satu request |
+| FR-10 | Lifecycle 7 status media | 🟡 | `queued`/`uploading`/`deleted` tidak dipakai alur saat ini |
+| FR-11 | Gagal media tidak mengubah status sesi | ✅ | |
+| FR-12 | Retry idempotent | 🟡 | Hapus-lalu-tulis-ulang dalam transaksi. `idempotencyKey` tidak dipakai untuk dedup request |
+| FR-13 | Retry tidak menduplikasi Detection | ✅ | |
+| FR-14 | Satu segmen banyak Detection | ✅ | |
+| FR-15 | Satu Detection = satu objek unik setelah dedup | 🟡 | Dedup hanya jalur VLM video |
+| FR-16 | Detection menyimpan kelas, bbox, kondisi, kelayakan, referensi, metadata | ✅ | |
+| FR-17 | Bbox normalized 0–1 | ✅ | Divalidasi Pydantic (`ge=0, le=1`) |
+| FR-18 | Boleh menyimpan raw AI response | ❌ | Tidak disimpan di DB |
+| FR-19 | Raw response bukan sumber utama | ✅ | |
+| FR-20 | Semua provider → DetectionSchema | ✅ | |
+| FR-21 | Model hanya mengembalikan kelas aktif | 🟡 | Dijaga prompt. Kelas tak dikenal pada penyimpanan tidak difilter eksplisit di jalur VLM |
+| FR-22 | Dedup Detection pada frame video berdekatan | 🟡 | Jalur VLM saja |
+| FR-23 | Dedup memakai IoU, waktu, hubungan temporal | 🟡 | IoU 0.45, jendela 3 dtk |
+| FR-24 | Tidak menghapus Detection lintas gambar hanya karena mirip | ✅ | |
+| FR-25 | Deteksi konflik IoU + mutually exclusive | ✅ | VLM dan SAM3 (K3). Video SAM3: dievaluasi per frame |
+| FR-26 | Threshold konflik default 0.5, dapat dikonfigurasi | 🟡 | Per kelas via API. Belum ada UI. Payload proses memakai 0.5 tetap |
+| FR-27 | Konflik harus diselesaikan sebelum submit | ✅ | |
 
-- [ ] Admin melihat daftar sesi berstatus `menunggu_review`.
-- [ ] Admin dapat membedakan submission awal dan re-submit.
-- [ ] Admin dapat membuka detail SubmissionVersion.
-- [ ] Hasil ditampilkan per kelas dengan pagination.
-- [ ] Admin dapat melihat media, bounding box, kondisi, tingkat kelayakan, dan lokasi.
-- [ ] Admin dapat melihat conflict kelas yang sebelumnya diselesaikan surveyor.
-- [ ] Admin dapat mengoreksi class pada conflict jika diperlukan.
-- [ ] Hak edit admin terhadap field Detection harus didefinisikan secara eksplisit oleh sistem.
-- [ ] Perubahan yang dilakukan admin harus dicatat dalam audit trail.
-- [ ] Admin dapat approve.
-- [ ] Admin dapat reject.
-- [ ] Saat reject, admin wajib memilih alasan dari daftar pilihan.
-- [ ] Admin dapat menambahkan catatan bebas.
-- [ ] Admin dapat melihat riwayat SubmissionVersion.
-- [ ] Setelah approve, data menjadi final dan masuk dashboard.
-- [ ] Typecheck/lint passes.
-- [ ] Verify in browser using dev-browser skill.
+### Lifecycle sesi dan submission
 
-### US-009: Dashboard rekap hasil survei
+| ID | Kebutuhan | Status | Catatan |
+|---|---|---|---|
+| FR-28 | Aksi `Akhiri Survei` terpisah | ✅ | Tanpa dialog konfirmasi |
+| FR-29 | Catat waktu selesai, status `selesai_menunggu_submit` | ✅ | |
+| FR-30 | Blokir upload setelah diakhiri | ✅ | |
+| FR-31 | Edit metadata dan hapus media saat `berlangsung`/`selesai_menunggu_submit` | ✅ | Plus `perlu_perbaikan` |
+| FR-32 | Hapus media menghapus segmen dan detection | ✅ | |
+| FR-33 | Rekap otomatis setelah media dihapus | ✅ | |
+| FR-34 | Submit hanya dari `selesai_menunggu_submit` | ✅ | Re-submit dari `perlu_perbaikan` |
+| FR-35 | Submit diblokir bila ada media `uploading`/`processing` | ✅ | Termasuk `queued` |
+| FR-36 | Media `failed` harus dihapus/diproses ulang | ✅ | |
+| FR-37 | Submit membuat SubmissionVersion immutable | ✅ | Snapshot JSON |
+| FR-38 | Status menjadi `menunggu_review` | ✅ | |
+| FR-39 | State machine eksplisit | ✅ | `lib/state-machine.ts` |
+| FR-40–44 | Transisi yang diizinkan | ✅ | |
+| FR-45 | Versi yang sudah direview immutable | 🟡 | Snapshot tetap. `Detection` hidup masih bisa dikoreksi admin |
+| FR-46 | Revisi tidak mengubah versi sebelumnya | ✅ | |
+| FR-47 | Riwayat semua versi | ✅ | |
+| FR-48 | Satu versi aktif per sesi | ✅ | |
 
-**Description:** Sebagai admin, saya ingin melihat rekap keseluruhan hasil survei yang sudah disetujui.
+### Review dan dashboard
 
-**Acceptance Criteria:**
+| ID | Kebutuhan | Status | Catatan |
+|---|---|---|---|
+| FR-49 | Admin melihat detail sesi dan riwayat versi | ✅ | |
+| FR-50 | Admin mengoreksi Detection sesuai hak edit | ✅ | Kelas, kondisi, kelayakan, catatan |
+| FR-51 | Perubahan admin dicatat audit trail | ✅ | `AuditLog` |
+| FR-52 | Reject dengan alasan dari daftar | 🟡 | Daftar tetap di UI. Server hanya memeriksa tidak kosong |
+| FR-53 | Catatan bebas | ✅ | |
+| FR-54 | Approve → data final | ✅ | |
+| FR-55 | Dashboard hanya data disetujui | 🔄 | Berbasis status sesi `disetujui`, bukan snapshot |
+| FR-56 | Filter tanggal dan kelas | 🟡 | Satu kelas |
 
-- [ ] Dashboard hanya menggunakan data SubmissionVersion yang telah disetujui.
-- [ ] Dashboard menampilkan total sesi survei.
-- [ ] Dashboard menampilkan jumlah temuan per tingkat kelayakan.
-- [ ] Dashboard menampilkan jumlah temuan per kelas.
-- [ ] Dashboard menampilkan sebaran lokasi di peta.
-- [ ] Admin dapat filter berdasarkan rentang tanggal.
-- [ ] Admin dapat filter berdasarkan satu atau lebih kelas.
-- [ ] Typecheck/lint passes.
-- [ ] Verify in browser using dev-browser skill.
+### Pengguna, kelas, model
 
-### US-010: Hasil survei per kelas
+| ID | Kebutuhan | Status | Catatan |
+|---|---|---|---|
+| FR-57 | Kelola user dan role | ✅ | |
+| FR-58 | ~~Supabase Auth~~ → autentikasi JWT + bcrypt buatan sendiri | ✅ | Keputusan K1 menggantikan kebutuhan lama |
+| FR-59 | Kelola kelas | ✅ | |
+| FR-60 | Versioning/snapshot kelas | ✅ | |
+| FR-61 | Konfigurasi kelas saling eksklusif | 🟡 | API saja |
+| FR-62 | Kelola konfigurasi model | ✅ | |
+| FR-63 | Kredensial terenkripsi | ✅ | AES-256-CBC; kunci dari `ENCRYPTION_SECRET_KEY`, tanpa fallback di kode |
+| FR-64 | Secret tidak diekspos ke frontend | ✅ | Masked |
+| FR-65 | ModelConfig historis tidak di-hard-delete | ✅ | Soft delete |
+| FR-66 | Detection menyimpan ClassDefinitionVersion | ✅ | |
+| FR-67 | Detection menyimpan ModelConfig dan info model | 🟡 | ID, nama model, `promptVersion` string tetap |
 
-**Description:** Sebagai admin, saya ingin melihat hasil survei yang dikelompokkan berdasarkan kelas objek.
+### Arsitektur dan penyimpanan
 
-**Acceptance Criteria:**
+| ID | Kebutuhan | Status | Catatan |
+|---|---|---|---|
+| FR-68 | Supabase untuk database dan storage (autentikasi tidak, lihat K1) | ✅ | |
+| FR-69 | Supabase Storage via S3-compatible API | 🔄 | Memakai `supabase-js` / REST, bucket publik `img` dan `vids` |
+| FR-70 | Upload langsung ke Storage tanpa transit server | ❌ | File melewati Next.js (kompresi ffmpeg) |
+| FR-71 | Processing job asynchronous | 🟡 | Lihat FR-9. Job SAM3 disimpan di memori proses (hilang saat restart) |
+| FR-72 | Idempotency untuk processing job | 🟡 | Lihat FR-12 |
+| FR-73 | Migrasi lewat Prisma Migrate | ✅ | 3 migrasi |
+| FR-74 | Prisma schema = source of truth | ✅ | |
+| FR-75 | Next.js menangani frontend, auth, workflow, CRUD, dashboard | ✅ | |
+| FR-76 | FastAPI: video splitting, ekstraksi frame, inferensi | 🟡 | Inferensi ✅, SAM3 ✅. Ekstraksi frame VLM placeholder. Kompresi media dilakukan di Next.js |
+| FR-77 | FastAPI tidak dapat diakses publik | ✅ | Bind `127.0.0.1` dan wajib header rahasia |
+| FR-78 | Autentikasi service-to-service | ✅ | `X-Internal-Secret`, perbandingan constant-time, fail-closed di FastAPI |
+| FR-79 | FastAPI boleh menulis Detection ke DB | 🔄 | Tidak; Next.js yang menyimpan hasil |
+| FR-80 | Transisi divalidasi di backend | ✅ | |
+| FR-81 | Abstraction layer provider AI | ✅ | `BaseVisionProvider` |
+| FR-82 | OpenRouter dan on-premise satu interface | 🟡 | SAM3 memakai jalur job terpisah |
+| FR-83 | Basemap OpenStreetMap | ✅ | |
+| FR-84 | Pencarian alamat Nominatim | ✅ | |
+| FR-85 | Frame temporary dapat dihapus setelah processing | 🟡 | Direktori kerja SAM3 dihapus otomatis. Frame VLM tidak disimpan |
+| FR-86 | Simpan media untuk menampilkan hasil Detection | ✅ | Menurut K7: hanya hasil kompresi yang disimpan, file asli tidak. SAM3 video menyimpan hasil anotasi |
+| FR-87 | Limit media lewat konfigurasi | 🟡 | Durasi video maks 2 menit lewat `NEXT_PUBLIC_MAX_VIDEO_SECONDS` (K2). Batas ukuran byte dan jumlah media belum ada |
+| FR-88 | Validasi format dan limit sebelum diproses | 🟡 | Tipe dan durasi divalidasi (browser + server). Limit ukuran belum ada |
 
-- [ ] Admin dapat memilih satu atau lebih kelas.
-- [ ] Hasil menampilkan jumlah Detection per tingkat kelayakan.
-- [ ] Hasil mencakup data lintas sesi yang telah disetujui.
-- [ ] Hasil dapat dilihat dalam bentuk list.
-- [ ] Hasil dapat dilihat dalam bentuk titik atau area di peta.
-- [ ] Jika Detection tidak memiliki koordinat individual, sistem menggunakan lokasi SurveySession sebagai fallback.
-- [ ] Typecheck/lint passes.
-- [ ] Verify in browser using dev-browser skill.
+### Kebutuhan baru ➕ (belum ada di PRD v1.0)
 
-### US-011: Manajemen user
-
-**Description:** Sebagai admin, saya ingin mengelola akun surveyor dan admin lain supaya akses sistem terkontrol.
-
-**Acceptance Criteria:**
-
-- [ ] Admin dapat menambah user.
-- [ ] Admin dapat mengedit user.
-- [ ] Admin dapat menonaktifkan user.
-- [ ] Admin dapat menetapkan role `surveyor` atau `admin`.
-- [ ] Autentikasi menggunakan Supabase Auth.
-- [ ] User nonaktif tidak dapat membuat sesi baru atau mengakses data yang tidak berhak diakses.
-- [ ] Typecheck/lint passes.
-- [ ] Verify in browser using dev-browser skill.
-
-### US-012: Manajemen kelas custom
-
-**Description:** Sebagai admin, saya ingin mengelola kelas objek deteksi tanpa melakukan retraining model.
-
-**Acceptance Criteria:**
-
-- [ ] Admin dapat membuat kelas baru.
-- [ ] Setiap kelas memiliki nama.
-- [ ] Setiap kelas memiliki deskripsi visual.
-- [ ] Setiap kelas memiliki kriteria tingkat kelayakan.
-- [ ] Tingkat kelayakan minimal terdiri dari `layak`, `cukup_layak`, dan `tidak_layak`.
-- [ ] Kriteria berupa deskripsi kualitatif.
-- [ ] Admin dapat menentukan kelas yang saling eksklusif.
-- [ ] Admin dapat menentukan apakah overlap dengan kelas tertentu harus dianggap conflict.
-- [ ] Deskripsi kelas menjadi bagian dari prompt AI.
-- [ ] Model menentukan tingkat kelayakan berdasarkan kriteria kualitatif.
-- [ ] Sistem tidak menggunakan confidence threshold numerik sebagai penentu utama tingkat kelayakan.
-- [ ] Admin dapat mengedit kelas.
-- [ ] Admin dapat menonaktifkan kelas.
-- [ ] Kelas yang telah digunakan data historis tidak boleh dihapus secara hard delete.
-- [ ] Sistem menggunakan versioning atau snapshot agar perubahan kelas tidak mengubah data historis.
-- [ ] Admin dapat melakukan preview atau test detection sebelum kelas digunakan surveyor.
-- [ ] Typecheck/lint passes.
-- [ ] Verify in browser using dev-browser skill.
-
-### US-013: Manajemen model AI
-
-**Description:** Sebagai admin, saya ingin mengatur model AI yang digunakan untuk detection.
-
-**Acceptance Criteria:**
-
-- [ ] Model default awal adalah Qwen3 VL 8B Instruct.
-- [ ] Admin dapat menambah konfigurasi model.
-- [ ] Admin dapat memilih provider `OpenRouter` atau `onpremise`.
-- [ ] Konfigurasi memiliki model name.
-- [ ] Konfigurasi memiliki endpoint URL jika diperlukan.
-- [ ] Secret seperti API key disimpan terenkripsi.
-- [ ] Secret tidak pernah dikembalikan penuh oleh API setelah disimpan.
-- [ ] UI hanya menampilkan status konfigurasi dan informasi yang telah dimasking.
-- [ ] Admin dapat mengaktifkan satu model sebagai default.
-- [ ] Sistem dapat menyimpan konfigurasi provider lain yang kompatibel dengan image input dan structured output.
-- [ ] Semua provider harus menghasilkan DetectionSchema internal yang sama.
-- [ ] Admin dapat melakukan test koneksi.
-- [ ] ModelConfig yang sudah digunakan pada data historis tidak boleh dihapus secara hard delete.
-- [ ] Sistem dapat menggunakan soft delete atau status inactive.
-- [ ] Typecheck/lint passes.
-- [ ] Verify in browser using dev-browser skill.
-
-## 9. Functional Requirements
-
-- FR-1: Sistem harus mengizinkan surveyor membuat SurveySession dengan nama, lokasi, tanggal, waktu mulai, surveyor pemilik, dan status awal `berlangsung`.
-- FR-2: Lokasi SurveySession dapat berupa titik koordinat atau area/polygon.
-- FR-3: Sistem harus mendukung pin manual, pencarian alamat, dan geolocation browser.
-- FR-4: Jika GPS tidak tersedia atau permission ditolak, surveyor harus tetap dapat menentukan lokasi secara manual.
-- FR-5: Satu SurveySession harus dapat memiliki banyak MediaAsset.
-- FR-6: Satu MediaAsset harus merepresentasikan satu file asli yang diupload atau disimpan dari live capture.
-- FR-7: Gambar memiliki satu MediaSegment untuk processing.
-- FR-8: Video lebih dari 10 detik harus otomatis dibagi menjadi beberapa MediaSegment dengan durasi maksimal 10 detik.
-- FR-9: Proses AI harus berjalan asynchronous dan tidak memblokir frontend sampai processing selesai.
-- FR-10: MediaAsset harus memiliki lifecycle `queued`, `uploading`, `uploaded`, `processing`, `completed`, `failed`, dan `deleted`.
-- FR-11: Kegagalan satu MediaAsset tidak boleh otomatis mengubah status SurveySession.
-- FR-12: Sistem harus mendukung retry processing yang idempotent.
-- FR-13: Retry tidak boleh membuat Detection duplikat.
-- FR-14: Satu MediaSegment dapat menghasilkan banyak Detection.
-- FR-15: Satu Detection harus merepresentasikan satu objek unik setelah deduplication.
-- FR-16: Detection harus menyimpan class, bbox, kondisi, tingkat kelayakan, referensi media, referensi model, dan metadata processing.
-- FR-17: Bounding box harus menggunakan normalized coordinate dalam rentang 0 sampai 1.
-- FR-18: Sistem boleh menyimpan raw AI response untuk audit dan debugging.
-- FR-19: Raw AI response tidak boleh menjadi sumber utama data aplikasi.
-- FR-20: Semua provider AI harus dikonversi ke DetectionSchema internal yang sama.
-- FR-21: Model hanya boleh mengembalikan kelas yang terdapat pada active class list.
-- FR-22: Sistem harus melakukan deduplication Detection pada frame video yang berdekatan.
-- FR-23: Deduplication harus mempertimbangkan IoU, kedekatan waktu, dan hubungan temporal.
-- FR-24: Sistem tidak boleh menghapus Detection lintas gambar hanya berdasarkan kemiripan visual tanpa aturan tambahan.
-- FR-25: Sistem harus mendeteksi conflict antar kelas berdasarkan IoU dan aturan mutually exclusive.
-- FR-26: Default IoU threshold untuk conflict adalah 0.5 dan harus dapat dikonfigurasi.
-- FR-27: Surveyor harus menyelesaikan conflict sebelum submit.
-- FR-28: Live detection harus menggunakan frame sampling berkala dan bersifat near-realtime.
-- FR-29: Live detection tidak boleh otomatis menjadi data SurveySession.
-- FR-30: Frame atau klip dari live mode hanya menjadi data survei jika secara eksplisit disimpan surveyor.
-- FR-31: Saved capture dari live mode harus menjadi MediaAsset.
-- FR-32: Sistem harus menyediakan aksi `Akhiri Survei` yang terpisah dari upload dan submit.
-- FR-33: `Akhiri Survei` harus mencatat waktu selesai dan mengubah status menjadi `selesai_menunggu_submit`.
-- FR-34: Setelah sesi diakhiri, sistem harus memblokir upload baru dan live capture baru.
-- FR-35: Surveyor tetap dapat mengedit metadata dan menghapus media selama status `berlangsung` atau `selesai_menunggu_submit`.
-- FR-36: Penghapusan MediaAsset harus menghapus seluruh MediaSegment dan Detection yang bergantung pada media tersebut.
-- FR-37: Rekap hasil harus diperbarui otomatis setelah media dihapus.
-- FR-38: Submit hanya dapat dilakukan dari status `selesai_menunggu_submit`.
-- FR-39: Submit tidak boleh dilakukan jika terdapat media berstatus `uploading` atau `processing`.
-- FR-40: Media berstatus `failed` harus dihapus atau berhasil diproses ulang sebelum submit.
-- FR-41: Submit harus membuat SubmissionVersion immutable.
-- FR-42: Setelah submit, status SurveySession berubah menjadi `menunggu_review`.
-- FR-43: Status SurveySession harus mengikuti state machine eksplisit.
-- FR-44: Status `berlangsung` hanya dapat berubah menjadi `selesai_menunggu_submit`.
-- FR-45: Status `selesai_menunggu_submit` hanya dapat berubah menjadi `menunggu_review`.
-- FR-46: Status `menunggu_review` hanya dapat berubah menjadi `disetujui` atau `ditolak`.
-- FR-47: Status `ditolak` dapat berubah menjadi `perlu_perbaikan` melalui aksi `Buat Revisi`.
-- FR-48: Status `perlu_perbaikan` dapat menghasilkan SubmissionVersion baru melalui re-submit.
-- FR-49: Versi yang sudah direview harus bersifat immutable.
-- FR-50: Revisi tidak boleh mengubah SubmissionVersion sebelumnya.
-- FR-51: Sistem harus menyimpan riwayat semua SubmissionVersion.
-- FR-52: Pada satu waktu hanya satu SubmissionVersion dari satu SurveySession yang boleh aktif dalam antrean review.
-- FR-53: Admin harus dapat melihat detail sesi dan riwayat versi.
-- FR-54: Admin harus dapat mengoreksi data Detection sesuai hak edit yang didefinisikan sistem.
-- FR-55: Perubahan admin harus dicatat dalam audit trail.
-- FR-56: Saat reject, admin harus memilih alasan dari daftar pilihan.
-- FR-57: Admin dapat menambahkan catatan bebas.
-- FR-58: Setelah approve, data menjadi final dan tersedia pada dashboard.
-- FR-59: Dashboard hanya menggunakan data yang telah disetujui.
-- FR-60: Sistem harus mendukung filter tanggal dan kelas.
-- FR-61: Admin harus dapat mengelola user dan role.
-- FR-62: Sistem harus menggunakan Supabase Auth untuk autentikasi.
-- FR-63: Admin harus dapat mengelola kelas deteksi.
-- FR-64: Perubahan kelas harus menggunakan versioning atau snapshot agar data historis tetap konsisten.
-- FR-65: Admin harus dapat mengonfigurasi mutually exclusive class.
-- FR-66: Admin harus dapat mengelola konfigurasi model.
-- FR-67: API key dan credential harus disimpan terenkripsi.
-- FR-68: Secret tidak boleh diekspos kembali ke frontend.
-- FR-69: ModelConfig yang telah digunakan pada data historis tidak boleh dihapus secara hard delete.
-- FR-70: Setiap Detection harus menyimpan referensi ClassDefinitionVersion.
-- FR-71: Setiap Detection harus menyimpan referensi ModelConfig dan informasi model yang digunakan.
-- FR-72: Sistem harus menggunakan Supabase untuk database dan autentikasi.
-- FR-73: Sistem harus menggunakan Supabase Storage melalui S3-compatible API untuk media.
-- FR-74: Upload media harus langsung menuju Supabase Storage dan tidak menggunakan server Next.js atau Python sebagai temporary storage.
-- FR-75: Processing job harus asynchronous.
-- FR-76: Sistem harus memiliki mekanisme idempotency untuk processing job.
-- FR-77: Perubahan database harus dikelola melalui Prisma Migrate.
-- FR-78: Prisma schema harus menjadi source of truth untuk struktur database.
-- FR-79: Next.js harus menangani frontend, auth integration, business workflow, admin CRUD, SurveySession lifecycle, Submission lifecycle, dan dashboard.
-- FR-80: FastAPI harus menangani video splitting, frame extraction, AI inference, dan live frame sampling.
-- FR-81: FastAPI tidak boleh dapat diakses langsung dari public browser.
-- FR-82: Komunikasi service-to-service harus menggunakan internal authentication.
-- FR-83: FastAPI dapat menulis data processing dan Detection sesuai kontrak data yang ditentukan.
-- FR-84: Transition SurveySession dan Submission harus divalidasi oleh state machine di backend.
-- FR-85: Backend harus memiliki abstraction layer untuk provider AI.
-- FR-86: OpenRouter dan on-premise provider harus menggunakan interface internal yang sama.
-- FR-87: Basemap menggunakan OpenStreetMap.
-- FR-88: Pencarian alamat menggunakan Nominatim atau provider geocoding kompatibel.
-- FR-89: Frame hasil ekstraksi yang hanya bersifat temporary harus dapat dihapus setelah processing selesai jika tidak diperlukan UI atau audit.
-- FR-90: Sistem harus menyimpan media asli dan preview yang diperlukan untuk menampilkan hasil Detection.
-- FR-91: Limit ukuran file harus dapat dikonfigurasi melalui environment configuration.
-- FR-92: Format dan limit media yang didukung harus divalidasi sebelum upload diproses.
+| ID | Kebutuhan | Status |
+|---|---|---|
+| FR-A1 | Provider `sam3` dengan `samPrompt`/`samColor` per kelas dan `samMode` (`optimized` optical-flow, `fast` phase-correlation) per model | ✅ |
+| FR-A2 | Job SAM3 berjalan di satu worker thread (GPU single-owner), progres dapat di-polling, hingga 200 job terakhir disimpan di memori | ✅ |
+| FR-A3 | Hasil SAM3: hanya instance ber-confidence ≥ `SAM3_FINDING_CONF` (default 0,4) dijadikan temuan; maksimal 100 per kelas; instance di bawah ambang tetap ada di ringkasan agar UI dapat menampilkannya | ✅ |
+| FR-A4 | Kelayakan SAM3 = heuristik luas area (≥1% → `tidak_layak`, ≥0,2% → `cukup_layak`, lainnya `layak`) yang dapat dikoreksi admin | ✅ |
+| FR-A5 | Video hasil anotasi SAM3 diunggah ke bucket `vids` dan dipakai sebagai media segmen | ✅ |
+| FR-A6 | Model SAM3 dibongkar dari GPU setelah idle (`SAM3_IDLE_UNLOAD_SECONDS`) | ✅ |
+| FR-A7 | Kompresi media saat upload (gambar WebP ≤1280 px, video H.264 ≤720p tanpa audio) | ✅ |
+| FR-A8 | `AuditLog` untuk aksi surveyor dan admin (upload, hapus, edit metadata, akhiri, submit, revisi, koreksi, resolve conflict, approve, reject, manajemen user/kelas/model) | ✅ |
+| FR-A9 | Sesi login = JWT (umur dari `SESSION_MAX_AGE_SECONDS`) di cookie `httpOnly` `bima_session`; flag `Secure` aktif di production (wajib HTTPS). `JWT_SECRET` wajib dari env, tanpa fallback; aplikasi gagal dengan pesan jelas bila kosong | ✅ |
+| FR-A10 | Seed data: `seed.ts` (admin, surveyor, kelas awal, model default) dan `seed-sam3.ts` (SAM prompt, model SAM3 sebagai default) | ✅ |
+| FR-A11 | Halaman `/admin/*` dan `/surveyor/*` diamankan di level route: tanpa JWT valid → redirect ke `/login`; role `surveyor` di `/admin/*` → redirect ke `/surveyor/sessions` (`src/proxy.ts`, Next.js 16) | ✅ |
+| FR-A15 | **Tidak ada nilai lingkungan yang di-hardcode di kode.** Secret, URL, host/port, path binary, batas, timeout, kredensial seed, dan endpoint layanan pihak ketiga hanya berasal dari environment. Variabel yang kosong menghentikan fitur terkait dengan galat yang menyebut nama variabelnya (`web/src/lib/env.ts`, `ai-service/config.py`). Daftar variabel: [`docs/operations.md`](docs/operations.md) | ✅ |
+| FR-A13 | Pagination temuan di halaman sesi surveyor dan review admin (12 kartu per halaman, atas data yang sudah dimuat) | ✅ |
+| FR-A14 | Batas durasi video 2 menit, divalidasi ffprobe di server dan di browser | ✅ |
+| FR-A12 | Rate limiting login | ❌ |
 
 ## 10. Non-Goals (Out of Scope)
 
-- Tidak membuat aplikasi mobile native Android atau iOS. Sistem berupa web responsif yang dapat digunakan melalui browser HP.
-- Tidak menyediakan mode offline penuh.
-- Upload, processing, dan submit memerlukan koneksi internet.
-- Tidak melakukan training atau fine-tuning model AI.
-- Kustomisasi kelas dilakukan melalui konfigurasi dan prompt engineering.
-- Tidak ada live tracking atau continuous GPS tracking surveyor.
-- Lokasi SurveySession dapat dipilih saat pembuatan dan diperbarui manual sebelum submit.
-- Tidak ada notifikasi otomatis melalui email atau push pada versi awal.
-- Tidak ada generate laporan PDF otomatis pada versi awal.
-- Tidak ada undo atau trash bin pada MVP.
-- Penghapusan yang telah dikonfirmasi bersifat permanen.
-- Surveyor tidak dapat mengedit bounding box Detection secara manual pada MVP.
-- Surveyor tidak dapat mengubah raw output AI secara langsung pada SubmissionVersion yang telah dibuat.
-- Deduplication lintas gambar yang tidak memiliki hubungan temporal tidak menjadi fitur utama MVP tanpa strategi identifikasi objek tambahan.
-- Realtime detection frame-by-frame penuh tidak menjadi target MVP.
-- Live mode menggunakan near-realtime sampling.
-- Full audit system di luar perubahan SubmissionVersion dan perubahan review tidak menjadi fokus utama MVP.
+Tetap berlaku dari v1.0:
+
+- Tidak ada aplikasi mobile native; sistem berupa web responsif.
+- Tidak ada mode offline penuh; upload, processing, dan submit butuh internet.
+- Tidak ada training atau fine-tuning model; kustomisasi lewat konfigurasi dan prompt.
+- Tidak ada pelacakan posisi GPS surveyor secara terus-menerus.
+- Tidak ada notifikasi email/push dan tidak ada laporan PDF otomatis.
+- Tidak ada undo/trash bin; penghapusan permanen.
+- Surveyor tidak dapat mengedit bounding box.
+- Dedup lintas gambar tanpa hubungan temporal bukan fitur MVP.
+
+Ditambahkan di v2.0/v2.1:
+
+- Video lebih dari 2 menit (K2).
+- Autentikasi eksternal (OAuth/SSO) dan Supabase Auth (K1).
+- Penyimpanan file media asli beresolusi penuh (K7).
 
 ## 11. Design Considerations
 
-- Tampilan surveyor harus dioptimalkan untuk penggunaan lapangan.
-- Tombol utama harus mudah dijangkau dan berukuran cukup besar.
-- Alur `Mulai Sesi`, `Upload Media`, `Live Detection`, `Akhiri Survei`, dan `Submit` harus dipisahkan secara visual.
-- Status SurveySession harus selalu terlihat.
-- Status setiap MediaAsset harus terlihat terpisah dari status SurveySession.
-- Surveyor harus dapat membedakan media yang sedang upload, processing, selesai, dan gagal.
-- Tombol `Akhiri Survei` dan `Submit` tidak boleh terlihat sebagai aksi yang sama.
-- Aksi delete harus menggunakan konfirmasi.
-- Penghapusan media dan sesi harus menjelaskan bahwa data akan dihapus permanen.
-- Tampilan admin mengutamakan tabel, filter, detail media, dan peta.
-- Hasil per kelas dapat menggunakan tab atau accordion.
-- Pagination digunakan untuk jumlah Detection yang besar.
-- Overlay live detection menggunakan canvas di atas elemen video.
-- UI conflict harus menunjukkan dua atau lebih Detection yang bertentangan secara jelas.
-- UI version history harus menunjukkan urutan SubmissionVersion, status, waktu, alasan reject, dan hasil review.
-- UI secret configuration hanya menampilkan status configured dan nilai yang telah dimasking.
-- UI harus menampilkan alasan mengapa submit tidak dapat dilakukan jika masih ada processing atau conflict yang belum selesai.
+Prinsip UI dari v1.0 tetap berlaku (fokus penggunaan lapangan, status sesi dan status media terlihat terpisah, `Akhiri Survei` dan `Submit` tidak tampak sama, konfirmasi hapus, overlay canvas). Yang sudah ada di UI saat ini:
+
+- Halaman surveyor: daftar sesi, buat sesi (peta), detail sesi dengan tiga tab: **Findings** (per kelas), **Media**, **History** (SubmissionVersion).
+- Halaman admin: Dashboard, Reviews (antrean dan detail), Kelas, Model AI, Users.
+- Komponen: `MapPicker`, `MediaInspectionModal` (inspeksi media dengan overlay bbox dan hasil SAM3 via `Sam3Result`), `AuditTimeline`, `LeafletDashboardMap`, `FindingLocationMap`.
+- Pagination temuan sudah ada (kartu per halaman). Belum ada: pesan alasan submit tidak aktif yang selengkap PRD (submit hanya memblokir dengan pesan error dari API), UI kelas saling eksklusif.
 
 ## 12. Technical Considerations
 
-### 12.1 Next.js
+### 12.1 Komponen
 
-Next.js bertanggung jawab untuk:
+| Komponen | Teknologi | Peran |
+|---|---|---|
+| `web/` | Next.js 16 (App Router), React 19, Tailwind, Prisma 6, Leaflet | UI, API bisnis, auth, storage, orkestrasi job |
+| `ai-service/` | Python, FastAPI, Pydantic, httpx, (opsional) torch + ultralytics + opencv | Inferensi VLM, job SAM3, dedup, konflik |
+| Database | PostgreSQL (Supabase, lewat pooler `DATABASE_URL` dan `DIRECT_URL` untuk migrasi) | Data aplikasi |
+| Storage | Supabase Storage, bucket `img` dan `vids` (publik) | Media terkompresi dan hasil anotasi |
 
-- Frontend surveyor.
-- Frontend admin.
-- API routes untuk business workflow.
-- Integrasi Supabase Auth.
-- SurveySession lifecycle.
-- Submission lifecycle.
-- State machine validation.
-- Admin CRUD.
-- User management.
-- Class management.
-- Model configuration management.
-- Dashboard dan read API.
+Detail lengkap ada di [`docs/architecture.md`](docs/architecture.md).
 
-### 12.2 FastAPI
+### 12.2 Alur pemrosesan (saat ini)
 
-FastAPI bertanggung jawab untuk:
+1. `POST /api/media/upload`: validasi sesi dan status, untuk video ukur durasi dengan ffprobe dan tolak bila > batas, kompres dengan ffmpeg, unggah ke bucket, buat `MediaAsset` (`uploaded`, `durationSeconds` dari ffprobe), catat audit.
+2. `POST /api/media/{id}/process` (dipicu UI atau `retry`): tandai `processing`, ambil kelas aktif dan model default aktif.
+3. **Jika provider `sam3`**: filter kelas ber-`samPrompt`, jalankan `runSam3Job` di background (balas `202`). Job memanggil `POST /api/v1/sam3/jobs`, polling tiap 3 detik (maksimal 1 jam), lalu menulis `MediaSegment` dan `Detection` dalam satu transaksi.
+4. **Jika provider VLM**: kirim `POST /api/v1/process-media` ke FastAPI, terima segmen dan detection, simpan dalam satu transaksi (hapus data lama media itu terlebih dahulu).
+5. Media menjadi `completed` atau `failed` (dengan `errorMessage`).
 
-- Video splitting.
-- Frame extraction.
-- Frame sampling.
-- AI inference.
-- Provider abstraction.
-- Konversi provider response menjadi DetectionSchema.
-- Deduplication pipeline.
-- Live sampling pipeline.
-- Processing job execution.
+Batasan yang diketahui pada langkah 4:
 
-FastAPI tidak boleh menjadi endpoint publik langsung untuk browser.
+- Untuk video, worker memakai durasi tetap 15 detik dan mengirim bytes video (base64) sebagai satu "gambar" ke model untuk tiap titik sampel. Ini **bukan ekstraksi frame nyata** dan harus diganti (ffmpeg di FastAPI) atau video pada jalur VLM ditolak eksplisit.
+- Indeks segmen pada Detection dihitung dari `timestamp / 10`.
 
 ### 12.3 Database
 
-Prisma schema menjadi source of truth struktur database.
-
-Migrasi harus:
-
-- Dibuat melalui Prisma Migrate.
-- Disimpan dalam source control.
-- Dijalankan berurutan pada development, staging, dan production.
-- Tidak dibuat manual melalui Supabase dashboard jika perubahan tersebut memengaruhi schema.
-
-Backend Python harus mengikuti schema dan kontrak data yang sama.
+Prisma schema adalah source of truth. Migrasi di `web/prisma/migrations/`: `init_supabase_schema`, `add_sam_prompt`, `add_model_sam_mode`. Field JSON disimpan sebagai `String` (`bbox`, `snapshotData`, `mutuallyExclusiveWith`, `conflictDetails`, `extractionMetadata`, `locationGeojson`) sehingga tidak dapat di-query dengan operator JSON PostgreSQL.
 
 ### 12.4 Storage
 
-Supabase Storage digunakan untuk:
+- Upload: Next.js membuat file sementara, ffmpeg mengompres, lalu `supabase-js` (service role) mengunggah ke `sessions/{sessionId}/{uuid}.{webp|mp4}`.
+- Bucket publik, URL publik disimpan di `MediaAsset.fileUrl`. Penghapusan media menghapus objek terkait (`removeStoredFile`).
+- FastAPI mengunggah video anotasi SAM3 ke `vids` lewat REST Supabase (`services/storage.py`).
+- Data lama berformat `/uploads/...` (lokal) masih dapat dibaca oleh worker (kompatibilitas).
 
-- File gambar asli.
-- File video asli.
-- Saved capture dari live mode.
-- Preview hasil yang diperlukan.
+### 12.5 Abstraksi provider
 
-Upload dilakukan langsung dari client ke Supabase Storage menggunakan S3-compatible API atau mekanisme upload resmi Supabase.
+`BaseVisionProvider.detect(image_base64, active_classes, timestamp_seconds, frame_index) -> DetectionSchema`. Implementasi: `OpenRouterProvider` (parsing bbox multi-format, log debug), `OnPremiseProvider`. SAM3 di luar interface ini (job berbasis file).
 
-Server Next.js dan FastAPI tidak digunakan sebagai temporary storage untuk upload file besar.
+### 12.6 Konstruksi prompt (VLM)
 
-Saat MediaAsset dihapus:
+Instruksi sistem tetap, instruksi skema output, daftar kelas aktif dengan deskripsi visual, kriteria kondisi, kriteria kelayakan, dan aturan saling eksklusif. Untuk SAM3, prompt adalah frasa singkat `samPrompt` per kelas.
 
-- Object Storage terkait harus ikut dihapus sesuai aturan lifecycle.
-- MediaSegment dan Detection terkait harus ditandai atau dihapus sesuai kebutuhan versioning.
+### 12.7 Keamanan
 
-### 12.5 AI Provider Abstraction
+| Topik | Kondisi |
+|---|---|
+| Password | bcrypt (cost 10) ✅ |
+| Sesi | JWT HS256 (umur dari `SESSION_MAX_AGE_SECONDS`), cookie `httpOnly`, `sameSite=lax`, `secure` di production ✅ |
+| Secret model | AES-256-CBC, kunci dari `ENCRYPTION_SECRET_KEY` ✅ (tanpa fallback di kode) |
+| `JWT_SECRET` | wajib dari env, tanpa fallback ✅ (K6). Nilai lama yang pernah ada di kode/riwayat git harus dianggap bocor dan tidak boleh dipakai |
+| `INTERNAL_API_SECRET` dan `ENCRYPTION_SECRET_KEY` (sisi web) | wajib dari env, tanpa fallback ✅ |
+| `INTERNAL_API_SECRET` (FastAPI) | wajib, service menolak start tanpanya ✅ |
+| CORS FastAPI | origin dari env, `allow_credentials=False`, metode `GET`/`POST` ✅ |
+| Auth saat database bermasalah | `getCurrentUser` jatuh kembali ke payload JWT yang valid (fail-open) 🟡 |
+| Rate limit login | belum ada ❌ |
+| SSRF pada `file_url` di FastAPI | belum ada allowlist ❌ |
+| Proteksi halaman | `src/proxy.ts` memeriksa JWT (tanda tangan dan masa berlaku) ✅. API tetap memeriksa ulang ke database |
 
-Sistem harus memiliki interface internal untuk provider AI.
+Daftar lengkap temuan review kode dan statusnya ada di [`docs/prd-gap-analysis.md`](docs/prd-gap-analysis.md).
 
-Contoh tanggung jawab:
+### 12.8 Model Lokasi
 
-```text
-detect(input, activeClasses, promptConfig) -> DetectionSchema
-```
-
-Implementasi provider dapat berupa:
-
-- OpenRouter provider.
-- On-premise provider.
-- Provider tambahan di masa depan.
-
-Business logic utama tidak boleh bergantung pada format API provider tertentu.
-
-### 12.6 Prompt Construction
-
-Prompt AI terdiri dari:
-
-- System instruction tetap.
-- Output schema instruction.
-- Daftar active classes.
-- Deskripsi visual setiap kelas.
-- Kriteria kondisi.
-- Kriteria tingkat kelayakan.
-- Aturan mutually exclusive class jika relevan.
-
-AI hanya boleh memilih kelas dari active class list.
-
-### 12.7 Processing Job
-
-Setelah upload selesai:
-
-1. Sistem membuat processing job.
-2. Media berubah ke status `uploaded` atau `processing`.
-3. Worker FastAPI memproses job.
-4. Video dibagi menjadi MediaSegment jika diperlukan.
-5. Frame diekstraksi atau diambil berdasarkan sampling.
-6. Provider AI dipanggil.
-7. Response dikonversi menjadi DetectionSchema.
-8. Deduplication dijalankan.
-9. Detection disimpan.
-10. Media berubah menjadi `completed`.
-
-Jika gagal:
-
-1. Media berubah menjadi `failed`.
-2. Error dicatat.
-3. Surveyor dapat melakukan retry jika diizinkan.
-
-Processing job harus menggunakan idempotency key.
-
-### 12.8 Model dan Secret Security
-
-API key dan credential:
-
-- Dienkripsi sebelum disimpan.
-- Tidak dikirim ke frontend.
-- Tidak dikembalikan penuh setelah disimpan.
-- Hanya dapat digunakan oleh backend service yang membutuhkan credential.
-- Tidak boleh ditulis ke application log.
-
-### 12.9 Location Model
-
-SurveySession menyimpan lokasi utama.
-
-Detection dapat memiliki koordinat individual jika tersedia.
-
-Jika Detection tidak memiliki koordinat individual:
-
-- Sistem menggunakan lokasi SurveySession sebagai fallback untuk tampilan peta.
+`SurveySession` menyimpan lokasi utama (GeoJSON). `Detection` menyimpan salinan `locationGeojson` (default lokasi sesi), sehingga peta selalu memiliki koordinat ✅.
 
 ## 13. Success Metrics
 
-- Surveyor dapat menyelesaikan satu sesi dari pembuatan sampai submit tanpa input manual berlebihan.
-- Sistem dapat menampilkan status processing setiap media dengan jelas.
-- Tidak ada duplicate Detection akibat retry processing.
-- Riwayat SubmissionVersion tetap utuh setelah re-submit.
-- Data final tidak dapat berubah akibat perubahan class atau model configuration di masa depan.
-- Admin dapat membedakan submission awal dan revisi.
-- Dashboard hanya menampilkan data yang telah disetujui.
-- Rasio conflict yang tidak terselesaikan sebelum submit harus 0.
-- P95 waktu processing gambar ditargetkan berada dalam batas yang dapat diterima untuk penggunaan lapangan.
-- P95 waktu processing video 10 detik ditargetkan berada dalam batas yang dapat diterima untuk penggunaan lapangan.
-- Target angka latency spesifik harus ditentukan setelah benchmark model dan provider.
-- Tingkat akurasi kelas dan kelayakan dievaluasi melalui rasio approval, reject, dan koreksi admin.
-- Sistem mencatat seberapa sering admin mengubah class atau tingkat kelayakan untuk mengevaluasi kualitas AI.
-- Minim kasus surveyor salah mengakhiri sesi sebelum semua media selesai dikumpulkan.
-- Data yang masuk ke tahap review sudah bersih dan dapat diverifikasi melalui bukti visual.
+Tidak berubah dari v1.0:
+
+- Surveyor menyelesaikan satu sesi dari pembuatan sampai submit tanpa input manual berlebihan.
+- Status processing setiap media jelas.
+- Nol Detection duplikat akibat retry.
+- Riwayat `SubmissionVersion` utuh setelah re-submit.
+- Data final tidak berubah karena perubahan konfigurasi kelas atau model di masa depan.
+- Dashboard hanya berisi data yang disetujui.
+- Konflik belum selesai sebelum submit = 0.
+- P95 waktu processing gambar dan video 10 detik ditentukan setelah benchmark. Sebagai acuan awal, SAM3 pada video berjalan berupa menit sehingga UI harus memakai polling (sudah).
+- Kualitas AI dievaluasi dari rasio approve/reject dan frekuensi koreksi admin. Datanya sudah ada di `AuditLog` (`CORRECT_DETECTION`, `REJECT_SURVEY`), tetapi belum ada laporan.
 
 ## 14. Open Questions
 
-- Daftar alasan reject di sisi admin berisi apa saja?
-- Apakah daftar alasan reject bersifat fixed atau dapat dikelola admin?
-- Field Detection apa saja yang boleh diedit admin pada tahap review?
-- Apakah admin boleh mengubah kondisi?
-- Apakah admin boleh mengubah tingkat kelayakan?
-- Apakah admin boleh mengubah bounding box pada versi berikutnya?
-- Apakah revision draft dapat kembali menambahkan media baru setelah SurveySession sebelumnya sudah ditolak?
-- Apakah semua media dari versi lama otomatis direferensikan oleh revision draft atau surveyor memilih media yang dipakai kembali?
-- Apakah SurveySession berstatus `berlangsung` dapat ditinggalkan dan dilanjutkan di hari lain?
-- Apakah sistem perlu batas waktu maksimum satu sesi survei?
-- Apakah `selesai_menunggu_submit` dapat dibuka kembali menjadi `berlangsung` jika surveyor lupa menambahkan media?
-- Jika iya, apakah waktu selesai lama diganti atau disimpan sebagai riwayat?
-- Apakah surveyor perlu memberikan alasan saat menghapus media?
-- Berapa maksimal ukuran file gambar?
-- Berapa maksimal ukuran file video?
-- Berapa jumlah maksimum MediaAsset dalam satu SurveySession?
-- Apakah format media selain JPG, PNG, dan MP4 akan didukung?
-- Berapa interval default frame sampling pada live mode?
-- Berapa threshold IoU default untuk deduplication video?
-- Apakah threshold IoU conflict berbeda dengan threshold deduplication?
-- Apakah Detection lintas media berbeda perlu dideduplicate pada masa depan?
-- Berapa lama media asli harus disimpan?
-- Berapa lama raw AI response harus disimpan?
-- Apakah extracted frame yang digunakan sebagai bukti perlu disimpan permanen?
-- Model on-premise apa yang akan digunakan pada deployment awal?
-- Apakah endpoint on-premise memerlukan authentication tambahan selain endpoint URL?
-- Apakah secret encryption menggunakan application-managed encryption key atau managed secret system?
-- Apakah semua user admin memiliki hak yang sama untuk mengubah model configuration dan class configuration?
-- Apakah perubahan class perlu approval sebelum aktif digunakan surveyor?
-- Apakah perubahan model default boleh dilakukan ketika masih terdapat processing job yang sedang berjalan?
+### Terjawab oleh implementasi
+
+| Pertanyaan v1.0 | Jawaban saat ini |
+|---|---|
+| Daftar alasan reject? Fixed atau dikelola admin? | Fixed: 6 opsi di UI (lihat US-007). Belum dapat dikelola admin |
+| Field Detection yang boleh diedit admin? | Kelas, kondisi, kelayakan (dan catatan). Bbox tidak |
+| Format media didukung? | UI: JPG, PNG, MP4. Server juga menerima MOV/WebM/MKV |
+| Encryption key? | Application-managed lewat `ENCRYPTION_SECRET_KEY` |
+| Perlu menyimpan file asli? | Tidak. Hanya hasil kompresi yang disimpan (K7) |
+| Maksimal durasi video? | 2 menit (K2). Ukuran byte dan jumlah media belum ditetapkan |
+| Autentikasi Supabase Auth atau sendiri? | Sendiri: JWT + bcrypt (K1) |
+| Model on-premise awal? | Belum ditentukan. Provider `onpremise` menerima `endpoint_url` bebas |
+| Bolehkah revision draft menambah media baru? | Ya |
+
+### Masih terbuka
+
+1. Haruskah dashboard dan pelaporan membaca `snapshotData` versi yang disetujui (benar-benar immutable), atau tetap `Detection` hidup?
+2. Apakah koreksi admin setelah approve tetap diizinkan? Saat ini tidak ada larangan di level data selain status sesi.
+3. Berapa maksimal ukuran byte gambar/video dan jumlah media per sesi (FR-87)? (Durasi video sudah 2 menit.)
+4. Berapa lama file terkompresi disimpan?
+5. Perlukah raw AI response disimpan (FR-18), dan berapa lama?
+6. Apakah video pada jalur VLM akan dibangun ulang dengan ekstraksi frame nyata, atau jalur VLM dibatasi untuk gambar dan video hanya untuk SAM3?
+7. Dengan batas 2 menit, apakah video SAM3 tetap satu segmen, atau tetap dipecah ≤10 detik?
+8. Apakah kelayakan berbasis luas area pada SAM3 cukup, atau perlu kriteria per kelas?
+9. Apakah `sameSite`/`Secure` cookie dan akses lewat HTTPS Tailscale menjadi bentuk deployment standar (lihat [`docs/operations.md`](docs/operations.md))?
+10. Apakah semua admin memiliki hak yang sama atas konfigurasi model dan kelas, dan apakah perubahan kelas memerlukan approval?
+11. Apakah mengganti model default saat ada job berjalan diizinkan? (Job SAM3 membaca konfigurasi saat dimulai sehingga tidak terpengaruh.)
+12. Perlukah batas waktu maksimum sesi, dan bolehkah `selesai_menunggu_submit` dibuka kembali?

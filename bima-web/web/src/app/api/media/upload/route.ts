@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import crypto from 'crypto';
-import { compressAndUpload } from '@/lib/media-storage';
+import { compressAndUpload, MediaLimitError } from '@/lib/media-storage';
 
 export async function POST(request: Request) {
   try {
@@ -64,7 +64,8 @@ export async function POST(request: Request) {
         fileType: isVideo ? 'video' : 'image',
         fileUrl: stored.fileUrl,
         storagePath: stored.storagePath,
-        durationSeconds: durationSeconds ? parseFloat(String(durationSeconds)) : null,
+        // Prefer the duration measured by ffprobe over the client-supplied one.
+        durationSeconds: stored.durationSeconds ?? (durationSeconds ? parseFloat(String(durationSeconds)) : null),
         status: 'uploaded',
         idempotencyKey,
       },
@@ -97,6 +98,9 @@ export async function POST(request: Request) {
   } catch (error: any) {
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (error instanceof MediaLimitError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
     console.error('Media upload registration error:', error);
     return NextResponse.json({ error: 'Gagal mendaftarkan media asset.' }, { status: 500 });

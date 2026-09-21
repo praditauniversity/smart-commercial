@@ -2,9 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { decryptSecret } from '@/lib/security';
-
-const FASTAPI_SERVICE_URL = process.env.FASTAPI_SERVICE_URL || 'http://127.0.0.1:8000';
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET || 'bima-research-internal-secret-2026';
+import { requireEnv } from '@/lib/env';
 
 export async function POST(
   _request: Request,
@@ -13,6 +11,8 @@ export async function POST(
   try {
     await requireAuth(['admin']);
     const { id } = await params;
+    const FASTAPI_SERVICE_URL = requireEnv('FASTAPI_SERVICE_URL');
+    const INTERNAL_API_SECRET = requireEnv('INTERNAL_API_SECRET');
 
     const model = await prisma.modelConfig.findUnique({ where: { id } });
     if (!model) {

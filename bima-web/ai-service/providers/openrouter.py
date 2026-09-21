@@ -9,13 +9,15 @@ from schemas import DetectionSchema, DetectionItem, BBox, ClassDef, ModelConfigP
 from providers.base import BaseVisionProvider
 from services.visual_grid import apply_visual_grid_overlay, grid_to_normalized_bbox
 
+from config import optional_env, require_env
+
 logger = logging.getLogger(__name__)
 
 class OpenRouterProvider(BaseVisionProvider):
     def __init__(self, config: ModelConfigPayload):
         super().__init__(config)
-        self.endpoint_url = config.endpoint_url or "https://openrouter.ai/api/v1/chat/completions"
-        self.model_name = config.model_name or "qwen/qwen3-vl-8b-instruct"
+        self.endpoint_url = config.endpoint_url or require_env("OPENROUTER_ENDPOINT_URL")
+        self.model_name = config.model_name
         self.api_key = config.api_key or ""
 
     def _apply_grid_to_image(self, image_base64: str) -> str:
@@ -222,9 +224,11 @@ class OpenRouterProvider(BaseVisionProvider):
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://bima-research.local",
             "X-Title": "Aplikasi Pemantauan Kawasan AI",
         }
+        referer = optional_env("OPENROUTER_HTTP_REFERER")
+        if referer:
+            headers["HTTP-Referer"] = referer
 
         user_text = (
             "Analisis gambar ini dengan teliti. Temukan semua objek fasilitas dan titik kerusakan fisik sesuai daftar kelas.\n"
@@ -396,5 +400,5 @@ class OpenRouterProvider(BaseVisionProvider):
             "Content-Type": "application/json"
         }
         async with httpx.AsyncClient(timeout=15.0) as client:
-            res = await client.get("https://openrouter.ai/api/v1/auth/key", headers=headers)
+            res = await client.get(require_env("OPENROUTER_AUTH_KEY_URL"), headers=headers)
             return res.status_code == 200

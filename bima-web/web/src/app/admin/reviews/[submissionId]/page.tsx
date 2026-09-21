@@ -7,6 +7,8 @@ import MediaBoxOverlay, { OverlayDetection } from '@/components/MediaBoxOverlay'
 import MediaInspectionModal from '@/components/MediaInspectionModal';
 import { Sam3Chips, getSam3Result } from '@/components/Sam3Result';
 import AuditTimeline from '@/components/AuditTimeline';
+import Pagination from '@/components/Pagination';
+import { FINDINGS_PAGE_SIZE, paginateTwo } from '@/lib/pagination';
 import { useToast } from '@/components/ToastProvider';
 import { DetailWorkspaceSkeleton } from '@/components/SkeletonLoaders';
 import {
@@ -36,6 +38,7 @@ export default function AdminReviewDetailPage() {
   const [classes, setClasses] = useState<any[]>([]);
   const [inspectingMediaId, setInspectingMediaId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'detections' | 'media'>('detections');
+  const [findingsPage, setFindingsPage] = useState(1);
 
   // Modals
   const [approveModalOpen, setApproveModalOpen] = useState(false);
@@ -180,6 +183,8 @@ export default function AdminReviewDetailPage() {
       dets: detections.filter((d: any) => d.mediaAssetId === mediaId),
     }))
     .filter((g) => g.dets.length > 0);
+
+  const findingsPaged = paginateTwo(sam3Groups, vlmDetections, findingsPage, FINDINGS_PAGE_SIZE);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col pb-24 sm:pb-16">
@@ -326,8 +331,9 @@ export default function AdminReviewDetailPage() {
                 <p className="font-semibold text-slate-700 text-sm">Tidak ada temuan deteksi pada survei ini.</p>
               </div>
             ) : (
+              <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sam3Groups.map(({ mediaId, result, media, dets }) => {
+                {findingsPaged.first.map(({ mediaId, result, media, dets }) => {
                   const worst = dets.some((d: any) => d.feasibility === 'tidak_layak')
                     ? 'tidak_layak'
                     : dets.some((d: any) => d.feasibility === 'cukup_layak')
@@ -384,7 +390,7 @@ export default function AdminReviewDetailPage() {
                   );
                 })}
 
-                {vlmDetections.map((det) => {
+                {findingsPaged.second.map((det: any) => {
                   const mediaObj = snapshot.mediaAssets?.find((m: any) => m.id === det.mediaAssetId);
                   const overlayItem: OverlayDetection = {
                     id: det.id,
@@ -456,6 +462,14 @@ export default function AdminReviewDetailPage() {
                   );
                 })}
               </div>
+              <Pagination
+                page={findingsPaged.page}
+                pageSize={FINDINGS_PAGE_SIZE}
+                total={findingsPaged.total}
+                onPageChange={setFindingsPage}
+                itemLabel="kartu temuan"
+              />
+              </>
             )}
           </div>
         )}
@@ -576,7 +590,7 @@ export default function AdminReviewDetailPage() {
         </div>
       )}
 
-      {/* REJECT MODAL (US-008 with mandatory reject reasons) */}
+      {/* REJECT MODAL (US-007 with mandatory reject reasons) */}
       {rejectModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">

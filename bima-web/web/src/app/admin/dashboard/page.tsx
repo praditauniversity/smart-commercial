@@ -226,7 +226,7 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* Per-Class Summary Table (US-010) */}
+            {/* Per-Class Summary Table (US-009) */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">

@@ -16,11 +16,10 @@ import httpx
 # Load environment variables from .env (same directory as this file)
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
+from config import require_env, require_env_int
 from schemas import (
     ProcessMediaRequest,
     ProcessMediaResponse,
-    LiveFrameRequest,
-    LiveFrameResponse,
     TestConnectionRequest,
     TestConnectionResponse,
     MediaSegmentResult,
@@ -38,10 +37,6 @@ from services.sam3_service import run_sam3_job
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ai_service")
 
-# Base URL of the Next.js web app, used as a fallback to fetch /uploads/* files
-# that are not on this machine's filesystem.
-WEB_BASE_URL = os.getenv("WEB_BASE_URL", "http://127.0.0.1:3000").rstrip("/")
-
 app = FastAPI(
     title="AI Kawasan Vision & Processing Service",
     description="FastAPI processing service for video splitting, vision LLM inference, deduplication, and conflict detection.",
@@ -51,7 +46,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     # Service-to-service only; the web app calls this service server-side, never from a browser.
-    allow_origins=[o.strip() for o in os.getenv("AI_SERVICE_ALLOWED_ORIGINS", "http://localhost:3000").split(",") if o.strip()],
+    allow_origins=[o.strip() for o in require_env("AI_SERVICE_ALLOWED_ORIGINS").split(",") if o.strip()],
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "X-Internal-Secret"],
@@ -193,31 +188,6 @@ async def test_connection(
             latency_ms=round((time.time() - start_time) * 1000, 2)
         )
 
-@app.post("/api/v1/live-frame", response_model=LiveFrameResponse)
-async def process_live_frame(
-    req: LiveFrameRequest,
-    _: bool = Depends(verify_internal_secret)
-):
-    """
-    Near-realtime frame processing for live camera mode overlay.
-    Results are temporary and do NOT automatically enter SurveySession.
-    If provider credentials are missing, returns empty detections without fake fallback.
-    """
-    if not req.ai_model_config or not req.ai_model_config.api_key:
-        # Do NOT generate fake detections if API key is not configured
-        return LiveFrameResponse(detections=[])
-
-    try:
-        provider = get_provider(req.ai_model_config)
-        result = await provider.detect(
-            image_base64=req.frame_base64,
-            active_classes=req.active_classes
-        )
-        return LiveFrameResponse(detections=result.detections)
-    except Exception as e:
-        logger.warning(f"Live frame detection skipped due to error: {e}")
-        return LiveFrameResponse(detections=[])
-
 @app.post("/api/v1/process-media", response_model=ProcessMediaResponse)
 async def process_media(
     req: ProcessMediaRequest,
@@ -256,11 +226,12 @@ async def process_media(
                     image_base64 = base64.b64encode(f.read()).decode("utf-8")
             else:
                 async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.get(f"{WEB_BASE_URL}{req.file_url}")
+                    web_base_url = require_env("WEB_BASE_URL").rstrip("/")  # only needed for legacy /uploads/ files
+                    resp = await client.get(f"{web_base_url}{req.file_url}")
                     if resp.status_code == 200:
                         image_base64 = base64.b64encode(resp.content).decode("utf-8")
                     else:
-                        raise ValueError(f"Gagal membaca file {req.file_url} dari filesystem atau {WEB_BASE_URL}.")
+                        raise ValueError(f"Gagal membaca file {req.file_url} dari filesystem atau {web_base_url}.")
         elif os.path.exists(req.file_url):
             with open(req.file_url, "rb") as f:
                 image_base64 = base64.b64encode(f.read()).decode("utf-8")
@@ -356,4 +327,4 @@ async def process_media(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host=require_env("AI_SERVICE_HOST"), port=require_env_int("AI_SERVICE_PORT"))

@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { verifyJwtToken, UserJwtPayload } from './security';
 import prisma from './prisma';
+import { requireEnvNumber } from './env';
 
 // In-memory short TTL cache to avoid redundant roundtrips to Tokyo on every API request
 interface CachedUser {
@@ -9,7 +10,6 @@ interface CachedUser {
 }
 
 const userCache = new Map<string, CachedUser>();
-const USER_CACHE_TTL_MS = 60 * 1000; // 60 seconds
 
 export async function getCurrentUser(): Promise<UserJwtPayload | null> {
   const cookieStore = await cookies();
@@ -46,7 +46,7 @@ export async function getCurrentUser(): Promise<UserJwtPayload | null> {
 
     userCache.set(payload.userId, {
       user: userPayload,
-      expiresAt: now + USER_CACHE_TTL_MS,
+      expiresAt: now + requireEnvNumber('USER_CACHE_TTL_MS'),
     });
 
     return userPayload;

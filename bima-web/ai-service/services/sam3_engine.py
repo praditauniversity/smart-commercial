@@ -22,9 +22,11 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
+from config import (optional_env, optional_env_float, optional_env_int, require_env, require_env_float,
+                    require_env_int)
+
 logger = logging.getLogger("ai_service.sam3")
 
-FFMPEG_PATH = os.getenv("FFMPEG_PATH", "/usr/bin/ffmpeg")
 
 # Default overlay palette (BGR) used when a class has no color configured.
 DEFAULT_COLORS_BGR = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 0, 255), (255, 255, 0)]
@@ -63,20 +65,6 @@ def ui_scale(h: int, w: int) -> float:
     return float(min(1.5, max(0.6, max(h, w) / 960.0)))
 
 
-def _env_float(name: str, default: float) -> float:
-    try:
-        return float(os.getenv(name, default))
-    except ValueError:
-        return default
-
-
-def _env_int(name: str, default: int) -> int:
-    try:
-        return int(os.getenv(name, default))
-    except ValueError:
-        return default
-
-
 class Sam3Engine:
     """Owns the single SAM predictor. All GPU work is serialized through ``lock``."""
 
@@ -85,13 +73,27 @@ class Sam3Engine:
         self._predictor = None
         self._torch = None
         self._idle_timer: Optional[threading.Timer] = None
+
+    # Settings are read from the environment when used (no built-in values, and the service still starts
+    # without SAM3 configured as long as no SAM3 job runs).
+    @property
+    def idle_unload_seconds(self) -> float:
         # Seconds of inactivity after which the model is unloaded to free GPU memory (<0 = never unload).
         # The reload cost is paid by the next job (~10 s), so a short grace period avoids thrashing
         # when several media are uploaded back to back.
-        self.idle_unload_seconds = _env_float("SAM3_IDLE_UNLOAD_SECONDS", 30.0)
-        self.checkpoint = os.getenv("SAM3_CHECKPOINT", "sam3_1.pt")
-        self.imgsz = _env_int("SAM3_IMGSZ", 1036)
-        self.conf = _env_float("SAM3_CONF", 0.25)
+        return require_env_float("SAM3_IDLE_UNLOAD_SECONDS")
+
+    @property
+    def checkpoint(self) -> str:
+        return require_env("SAM3_CHECKPOINT")
+
+    @property
+    def imgsz(self) -> int:
+        return require_env_int("SAM3_IMGSZ")
+
+    @property
+    def conf(self) -> float:
+        return require_env_float("SAM3_CONF")
 
     # ------------------------------------------------------------------ model
     def _ensure_loaded(self) -> None:
@@ -369,8 +371,8 @@ class Sam3Engine:
         if image is None:
             raise ValueError("File gambar tidak bisa dibaca.")
         h, w = image.shape[:2]
-        max_side = _env_int("SAM3_IMAGE_MAX_SIDE", 1280)
-        min_side = _env_int("SAM3_IMAGE_MIN_SIDE", 640)
+        max_side = require_env_int("SAM3_IMAGE_MAX_SIDE")
+        min_side = require_env_int("SAM3_IMAGE_MIN_SIDE")
         if max(h, w) > max_side:
             scale = max_side / max(h, w)
             image = cv2.resize(image, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
@@ -405,12 +407,13 @@ class Sam3Engine:
             mode = DEFAULT_VIDEO_MODE
         preset = VIDEO_PRESETS[mode]
         # Optional env overrides (SAM3_DETECT_INTERVAL / SAM3_PROPAGATION / SAM3_FLOW_SCALE) win over the preset.
-        detect_interval = max(1, _env_int("SAM3_DETECT_INTERVAL", preset["detect_interval"]))
-        propagation = os.getenv("SAM3_PROPAGATION", preset["propagation"]).lower()  # hold | phase | flow
-        flow_scale = _env_float("SAM3_FLOW_SCALE", preset["flow_scale"])
-        max_side = _env_int("SAM3_VIDEO_MAX_SIDE", 960)
-        max_frames = _env_int("SAM3_VIDEO_MAX_FRAMES", 0) or None  # 0 = whole video
-        post_workers = max(1, _env_int("SAM3_POST_WORKERS", 6))
+        # The overrides are optional; the algorithm presets above are code, not environment values.
+        detect_interval = max(1, optional_env_int("SAM3_DETECT_INTERVAL") or preset["detect_interval"])
+        propagation = (optional_env("SAM3_PROPAGATION") or preset["propagation"]).lower()  # hold | phase | flow
+        flow_scale = optional_env_float("SAM3_FLOW_SCALE") or preset["flow_scale"]
+        max_side = require_env_int("SAM3_VIDEO_MAX_SIDE")
+        max_frames = require_env_int("SAM3_VIDEO_MAX_FRAMES") or None  # 0 = whole video
+        post_workers = max(1, require_env_int("SAM3_POST_WORKERS"))
         prefetch = 12
 
         cap = cv2.VideoCapture(in_path)
@@ -428,9 +431,9 @@ class Sam3Engine:
         out_h = max(2, int(orig_h * scale) // 2 * 2)
 
         ffmpeg = subprocess.Popen(
-            [FFMPEG_PATH, "-hide_banner", "-loglevel", "error", "-y",
+            [require_env("FFMPEG_PATH"), "-hide_banner", "-loglevel", "error", "-y",
              "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{out_w}x{out_h}", "-r", f"{fps:.3f}", "-i", "-",
-             "-c:v", "libx264", "-preset", "slow", "-crf", "28", "-pix_fmt", "yuv420p",
+             "-c:v", "libx264", "-preset", "slow", "-crf", str(require_env_int("SAM3_OUTPUT_CRF")), "-pix_fmt", "yuv420p",
              "-an", "-movflags", "+faststart", out_path],
             stdin=subprocess.PIPE, stderr=subprocess.PIPE,
         )
@@ -564,7 +567,8 @@ class Sam3Engine:
         return self._summarize(class_prompts, frame_records, mode="video", width=out_w, height=out_h,
                                seconds=seconds,
                                extra={"frames": processed, "fps": fps, "duration": processed / fps if fps else 0,
-                                      "sam_calls": sam_calls, "algorithm": mode, "_peaks": peaks})
+                                      "sam_calls": sam_calls, "algorithm": mode, "_peaks": peaks,
+                                      "_frame_records": frame_records})
 
     # --------------------------------------------------------------- summary
     @staticmethod

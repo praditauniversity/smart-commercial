@@ -17,6 +17,7 @@ import {
   Compass,
 } from 'lucide-react';
 import type { FlyToCommand } from './LeafletMapInner';
+import { mapConfig } from '@/lib/public-config';
 
 const LeafletMapInner = dynamic(() => import('./LeafletMapInner'), {
   ssr: false,
@@ -105,7 +106,7 @@ export default function MapPicker({
   const fetchAddressFromCoords = async (lat: number, lng: number): Promise<string> => {
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+        `${mapConfig.nominatimUrl()}/reverse?format=json&lat=${lat}&lon=${lng}`
       );
       if (res.ok) {
         const data = await res.json();
@@ -274,7 +275,7 @@ export default function MapPicker({
 
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        `${mapConfig.nominatimUrl()}/search?format=json&q=${encodeURIComponent(
           searchQuery
         )}&limit=1`
       );

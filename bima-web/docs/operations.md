@@ -1,0 +1,259 @@
+# Operasional: Menjalankan, Deploy, dan Troubleshooting
+
+Panduan ini mencakup dua mode: **development** (laptop) dan **server tetap** (satu PC Linux yang menjalankan aplikasi terus-menerus, diakses lewat Tailscale). Bagian server tetap mencerminkan konfigurasi yang dipakai saat ini. Nilai spesifik lingkungan ditulis sebagai `<placeholder>`.
+
+## 1. Prasyarat
+
+| Kebutuhan | Versi/keterangan |
+|---|---|
+| Node.js | 22 (dipakai saat ini) dan npm |
+| Python | 3.10+ |
+| ffmpeg | Build dengan `libx264` dan `libwebp` (`/usr/bin/ffmpeg`). Build anaconda **tidak** punya libx264 |
+| Database | Proyek Supabase (PostgreSQL) + bucket Storage `img` dan `vids` (publik) |
+| GPU (opsional) | Untuk provider `sam3`: CUDA, torch, ultralytics, bobot SAM 3.1 |
+| Tailscale (opsional) | Untuk akses jarak jauh dengan HTTPS |
+
+## 2. Variabel lingkungan
+
+### `web/.env` (contoh: `web/.env.example`)
+
+**Aturan:** tidak ada nilai lingkungan yang di-hardcode di kode. Setiap variabel di bawah wajib ada; bila kosong, fitur yang memakainya berhenti dengan galat yang menyebut nama variabelnya (`src/lib/env.ts`). Variabel `NEXT_PUBLIC_*` ditanam ke browser saat `npm run build`, jadi ubah nilainya lalu build ulang dan restart.
+
+| Variabel | Fungsi |
+|---|---|
+| `DATABASE_URL`, `DIRECT_URL` | PostgreSQL: pooler untuk aplikasi, koneksi langsung untuk migrasi |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase (klien) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Hanya server: upload/hapus objek Storage. **Rahasia** |
+| `JWT_SECRET` | Penandatangan sesi login. **Rahasia**, acak dan panjang (`openssl rand -base64 48`) |
+| `ENCRYPTION_SECRET_KEY` | Kunci enkripsi API key model. **Rahasia** |
+| `INTERNAL_API_SECRET` | Rahasia bersama dengan ai-service. **Harus sama** di kedua `.env`. **Rahasia** |
+| `FASTAPI_SERVICE_URL` | URL ai-service dari sisi server web (loopback, mis. `http://127.0.0.1:8000`) |
+| `SESSION_MAX_AGE_SECONDS` | Umur sesi login (JWT dan cookie), dalam detik |
+| `USER_CACHE_TTL_MS` | Lama cache pemeriksaan `isActive` user di API, dalam ms |
+| `FFMPEG_PATH`, `FFPROBE_PATH` | Path ffmpeg dan ffprobe (butuh libx264 dan libwebp) |
+| `FFPROBE_TIMEOUT_MS`, `FFMPEG_IMAGE_TIMEOUT_MS`, `FFMPEG_VIDEO_TIMEOUT_MS` | Batas waktu proses media, ms |
+| `MEDIA_IMAGE_MAX_SIDE`, `MEDIA_IMAGE_QUALITY` | Sisi terpanjang dan kualitas WebP gambar |
+| `MEDIA_VIDEO_MAX_HEIGHT`, `MEDIA_VIDEO_CRF` | Tinggi maksimum dan CRF H.264 video |
+| `NEXT_PUBLIC_MAX_VIDEO_SECONDS` | Batas durasi video dalam detik (mis. `120` = 2 menit) |
+| `SAM3_POLL_INTERVAL_MS`, `SAM3_MAX_WAIT_MS` | Interval polling dan batas tunggu job SAM3, ms |
+| `DEFAULT_CONFLICT_IOU_THRESHOLD` | Ambang IoU konflik kelas bila kelas tidak menentukan sendiri |
+| `ALLOWED_DEV_ORIGINS` | Host/IP yang boleh membuka server dev (dipisah koma; kosong = tidak ada) |
+| `NEXT_PUBLIC_MAP_TILE_URL`, `NEXT_PUBLIC_MAP_ATTRIBUTION` | Tile peta dan teks atribusinya |
+| `NEXT_PUBLIC_NOMINATIM_URL` | Base URL geocoding (Nominatim) |
+| `NEXT_PUBLIC_MARKER_ICON_URL`, `_ICON_RETINA_URL`, `_ICON_RED_URL`, `_SHADOW_URL` | Gambar marker peta |
+| `NEXT_PUBLIC_OPENROUTER_ENDPOINT_URL`, `NEXT_PUBLIC_ONPREMISE_ENDPOINT_URL` | Isi awal endpoint pada form Model AI |
+| `NEXT_PUBLIC_DEFAULT_MODEL_NAME`, `NEXT_PUBLIC_DEFAULT_SAM3_MODEL_NAME` | Isi awal nama model pada form Model AI (dan seed) |
+| `OPEN_ROUTER_API_KEY` | Opsional: bootstrap API key OpenRouter bila model belum punya |
+| `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_SURVEYOR_EMAIL`, `SEED_SURVEYOR_PASSWORD`, `SEED_ONPREMISE_MODEL_NAME` | Hanya untuk `npm run seed` dan skrip `prisma/test_*.ts`. Tentukan kredensial sendiri, tidak ada nilai bawaan |
+| `NEXT_PUBLIC_API_URL` | Tersisa di `.env.example`; tidak dipakai kode `src/` saat ini |
+
+> **Nilai rahasia yang pernah tertulis di kode atau riwayat git harus dianggap bocor** (termasuk nilai bawaan lama `JWT_SECRET`, `ENCRYPTION_SECRET_KEY`, `INTERNAL_API_SECRET`). Siapa pun yang mengetahuinya dapat menerbitkan cookie sesi admin palsu atau memanggil ai-service. Ganti dengan nilai acak baru, lalu restart. Mengganti `JWT_SECRET` membuat semua pengguna login ulang; mengganti `ENCRYPTION_SECRET_KEY` membuat API key model yang tersimpan tidak terbaca lagi dan harus diisi ulang di menu Model AI.
+
+### `ai-service/.env` (contoh: `ai-service/.env.example`)
+
+Lihat tabel lengkap di [`ai-service.md`](ai-service.md#3-konfigurasi-ai-serviceenv). Sama seperti web, tidak ada nilai bawaan di kode: `INTERNAL_API_SECRET`, `AI_SERVICE_ALLOWED_ORIGINS`, `AI_SERVICE_HOST`, `AI_SERVICE_PORT` selalu wajib, dan variabel SAM3/OpenRouter wajib saat provider itu dipakai.
+
+**Aturan URL antar-service:** karena web dan ai-service berjalan di mesin yang sama dan saling memanggil dari sisi server, gunakan **loopback** (`127.0.0.1`), bukan IP jaringan. Dengan begitu tidak ada yang perlu diedit saat IP atau nama host berubah.
+
+| Variabel | Nilai yang disarankan |
+|---|---|
+| `web/.env` → `FASTAPI_SERVICE_URL` | `http://127.0.0.1:8000` |
+| `ai-service/.env` → `WEB_BASE_URL` | `http://127.0.0.1:3000` |
+| `ai-service/.env` → `AI_SERVICE_ALLOWED_ORIGINS` | Origin web yang dipakai pengguna (mis. `https://<host>.<tailnet>.ts.net:8443`), hanya bila ai-service perlu dipanggil dari browser (saat ini tidak) |
+
+## 3. Development
+
+```bash
+# Terminal 1: AI service
+cd ai-service && source venv/bin/activate && python main.py
+
+# Terminal 2: Web
+cd web
+npm install
+cp .env.example .env            # isi nilainya
+npx prisma generate
+npx prisma migrate deploy       # terapkan migrasi ke database
+npm run seed                    # akun dan kelas awal
+npm run seed:sam3               # opsional: SAM prompt dan model SAM3
+npm run dev
+```
+
+Web di `http://localhost:3000`. Pada mode dev cookie login tidak bertanda `Secure`, jadi login bekerja lewat HTTP biasa. `next.config.ts` memuat `allowedDevOrigins` (IP LAN) untuk mengakses server dev dari perangkat lain.
+
+Tes dan pemeriksaan:
+
+```bash
+cd ai-service && pytest
+cd web && npm run typecheck && npm run lint
+```
+
+## 4. Server tetap (production di satu mesin)
+
+Tujuannya: web dan ai-service hidup selama komputer menyala, otomatis start saat boot, tetap jalan walau sesi SSH/terminal/VS Code Remote ditutup, dan URL tidak berubah.
+
+### 4.1 Build
+
+```bash
+cd web
+npm ci
+npx prisma generate
+npx prisma migrate deploy
+npm run build
+```
+
+Mode production membutuhkan `npm run build` ulang setiap kode web berubah. Mode dev (`npm run dev`) tidak.
+
+### 4.2 Service systemd (level user)
+
+Buat dua file di `~/.config/systemd/user/`. Sesuaikan path Python dan direktori.
+
+`bima-ai.service`
+
+```ini
+[Unit]
+Description=Bima AI service (FastAPI)
+After=network.target
+
+[Service]
+WorkingDirectory=<path-repo>/ai-service
+ExecStart=<path-python>/python main.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
+```
+
+`bima-web.service`
+
+```ini
+[Unit]
+Description=Bima web (Next.js)
+After=network.target bima-ai.service
+
+[Service]
+WorkingDirectory=<path-repo>/web
+ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -H 0.0.0.0 -p 3000
+Environment=NODE_ENV=production
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
+```
+
+Aktifkan:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now bima-ai.service bima-web.service
+loginctl enable-linger $USER          # agar start saat boot tanpa login
+```
+
+Verifikasi bahwa service berjalan di luar sesi terminal dan bertahan saat reboot:
+
+```bash
+systemctl --user is-active bima-ai bima-web       # active active
+systemctl --user is-enabled bima-ai bima-web      # enabled enabled
+loginctl show-user $USER -p Linger                # Linger=yes
+ss -tlnp | grep -E ':(3000|8000)\b'               # 3000 di 0.0.0.0, 8000 di 127.0.0.1
+```
+
+Port: Next.js **3000** (semua antarmuka), FastAPI **8000** (hanya loopback, tidak boleh dibuka ke jaringan). Jika port 3000 sudah dipakai proses lain di mesin, ubah `-p` di unit web dan sesuaikan `WEB_BASE_URL`.
+
+### 4.3 Akses jarak jauh dengan HTTPS (Tailscale)
+
+**Kenapa harus HTTPS:** di production cookie sesi `bima_session` bertanda `Secure`. Browser menolak menyimpan cookie `Secure` dari halaman `http://` (kecuali `localhost`). Gejalanya: login "berhasil", halaman berpindah ke dashboard, tetapi pengguna tetap dianggap belum login (dashboard kosong, tombol "Masuk" masih ada). Jangan melonggarkan flag `Secure`; gunakan HTTPS.
+
+Setup satu kali:
+
+1. Admin console Tailscale → DNS → aktifkan **MagicDNS** dan **HTTPS Certificates**.
+2. Pada server: `sudo tailscale set --operator=$USER` (agar tidak perlu sudo berikutnya).
+3. Publikasikan Next.js lewat port HTTPS 8443 (Tailscale hanya mengizinkan HTTPS di 443, 8443, 10000):
+
+```bash
+tailscale serve --bg --https=8443 3000
+tailscale serve status
+```
+
+Hasilnya:
+
+```
+https://<host>.<tailnet>.ts.net:8443  →  http://127.0.0.1:3000
+```
+
+- Port 3000 tidak berubah dan tetap melayani HTTP. Port 8443 hanyalah "gerbang HTTPS" tambahan yang meneruskan ke 3000. Aplikasi lain di mesin (port lain) tidak tersentuh.
+- Konfigurasi `tailscale serve --bg` disimpan Tailscale dan bertahan setelah reboot; layanan `tailscaled` harus `enabled`.
+- Untuk mematikan: `tailscale serve --https=8443 off`.
+
+**Cara mengakses:**
+
+| Dari mana | URL | Login berfungsi? |
+|---|---|---|
+| Perangkat dengan Tailscale aktif (di mana pun, termasuk WiFi yang sama dengan server) | `https://<host>.<tailnet>.ts.net:8443` | ✅ |
+| Perangkat tanpa Tailscale, di LAN | `http://<ip-lan>:3000` | Halaman terbuka, tetapi login gagal (cookie `Secure` ditolak) |
+| Server itu sendiri | `http://localhost:3000` | ✅ (localhost dikecualikan browser) |
+
+Selalu tulis awalan `https://`. Membuka `http://<host>:8443` menghasilkan pesan "Client sent an HTTP request to an HTTPS server".
+
+Pengguna lain harus berada di tailnet yang sama atau node server dibagikan kepada mereka (Tailscale → Machines → Share). Tanpa itu URL tidak akan terbuka.
+
+### 4.4 Setelah komputer mati/menyala lagi
+
+Berjalan otomatis jika: `tailscaled` enabled, kedua service `enabled`, `Linger=yes`, hasil build `web/.next` ada, dan server punya internet (database dan storage berada di Supabase). URL tetap sama karena berbasis nama MagicDNS. Setelah reboot pertama, jalankan langkah verifikasi di 4.2.
+
+Jika disk dienkripsi atau boot menunggu login lokal, service baru mulai setelah itu.
+
+### 4.5 Memperbarui aplikasi
+
+```bash
+git pull
+cd web && npm ci && npx prisma migrate deploy && npm run build
+systemctl --user restart bima-web
+systemctl --user restart bima-ai      # bila ai-service atau .env-nya berubah
+```
+
+> ⚠️ **Jangan restart saat ada media sedang diproses.** Job SAM3 dijalankan dari proses Next.js dan statusnya ada di memori ai-service. Restart `bima-web` membuat media yang sedang `processing` tertahan di status itu, sedangkan restart `bima-ai` membuatnya menjadi `failed` (job tidak ditemukan). Pulihkan dengan **Retry** pada media terkait, atau, bila tertahan `processing`, memanggil ulang proses lewat `POST /api/media/{id}/retry`. Belum ada sapuan otomatis.
+
+Perubahan `.env` hanya terbaca setelah service di-restart. Variabel `NEXT_PUBLIC_*` tertanam saat build, jadi perlu `npm run build` ulang.
+
+## 5. Log dan pemantauan
+
+```bash
+journalctl --user -u bima-web -f
+journalctl --user -u bima-ai -f
+systemctl --user status bima-web bima-ai
+curl -s http://127.0.0.1:8000/health
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/login
+```
+
+- `ai-service/openrouter_debug.log` berisi jejak debug OpenRouter (di-gitignore; berpotensi memuat data survei, jangan dibagikan).
+- Riwayat aksi pengguna ada di tabel `AuditLog` (ditampilkan lewat `AuditTimeline`).
+
+## 6. Troubleshooting
+
+| Gejala | Penyebab umum | Tindakan |
+|---|---|---|
+| `ModuleNotFoundError: No module named 'fastapi'` | Dependensi belum terpasang di environment Python yang dipakai | `python -m pip install -r requirements.txt` di environment yang sama. Jangan pakai `sudo python` (memakai Python lain) |
+| ai-service menolak start: `INTERNAL_API_SECRET ... required` | Variabel kosong | Isi di `ai-service/.env` (sama dengan web) |
+| Login berhasil tetapi tetap dianggap belum login | Situs diakses lewat `http://` sementara cookie `Secure` | Akses lewat `https://` (4.3) atau `http://localhost` |
+| Membuka `/admin/*` langsung kembali ke `/login` | Belum login atau sesi kedaluwarsa (proxy halaman bekerja) | Login. Surveyor yang membuka `/admin/*` dialihkan ke `/surveyor/sessions` |
+| Semua halaman/login galat 500, atau fitur berhenti dengan pesan "Environment variable X belum diisi" | Variabel wajib kosong di `web/.env` atau `ai-service/.env` | Isi variabel yang disebut (lihat `.env.example`), restart service (dan `npm run build` bila `NEXT_PUBLIC_*`). Pesan lengkap ada di `journalctl --user -u bima-web` / `bima-ai` |
+| Upload video ditolak: "melebihi batas 2 menit" | Durasi video > `NEXT_PUBLIC_MAX_VIDEO_SECONDS` | Potong video, atau naikkan batas lalu build ulang |
+| Upload video ditolak: durasi tidak terbaca / `ffprobe tidak bisa dijalankan` | File rusak atau `FFPROBE_PATH` salah | Periksa file; set `FFPROBE_PATH` (`which ffprobe`) |
+| `Client sent an HTTP request to an HTTPS server` | Membuka `http://...:8443` | Gunakan `https://...:8443` |
+| Port 3000 tidak bisa dijangkau | Service web tidak jalan atau firewall | `systemctl --user status bima-web`; `ss -tlnp \| grep 3000` |
+| Media tertahan `processing` | Restart saat job berjalan, atau ai-service mati | Retry media; cek `journalctl` kedua service |
+| Media `failed`: "SAM3 Error: Job tidak ditemukan" | ai-service restart saat job berjalan | Retry |
+| Media `failed`: "Tidak ada kelas aktif dengan SAM Prompt" | Belum ada kelas aktif ber-`samPrompt` | Isi SAM Prompt di menu Kelas atau `npm run seed:sam3` |
+| Media `failed`: API key OpenRouter belum dikonfigurasi | Model aktif tanpa key | Isi API key di menu Model AI |
+| `test-connection` SAM3: torch/ultralytics belum terpasang | Dependensi opsional belum diinstal | Instal torch, torchvision, ultralytics, opencv-python, numpy |
+| Kompresi gagal: `ffmpeg tidak bisa dijalankan` | Path ffmpeg salah atau tanpa libx264 | Set `FFMPEG_PATH` ke `/usr/bin/ffmpeg` |
+
+## 7. Keamanan operasional (ringkas)
+
+- Jangan commit `.env`, bobot SAM, atau service role key (sudah di-gitignore; hanya `*.env.example` yang dilacak).
+- Ganti password akun seed sebelum dipakai bersama.
+- ai-service hanya boleh mendengarkan loopback. Jangan diekspos lewat `tailscale serve` atau firewall.
+- Bagikan kredensial pengguna lewat kanal pribadi, bukan repositori atau catatan bersama.
+- Daftar celah keamanan yang masih terbuka: [`prd-gap-analysis.md`](prd-gap-analysis.md#3-keamanan-dan-hardening).

@@ -41,7 +41,7 @@ class ClassDef(BaseModel):
 class ModelConfigPayload(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
     provider: str = "OpenRouter" # OpenRouter | onpremise | sam3 | mock
-    model_name: str = "qwen/qwen3-vl-8b-instruct"
+    model_name: str  # always sent by the web app from the ModelConfig row
     endpoint_url: Optional[str] = None
     api_key: Optional[str] = None
     sam_mode: Optional[str] = None  # sam3 video algorithm: "optimized" (default) | "fast"
@@ -55,7 +55,7 @@ class ProcessMediaRequest(BaseModel):
     active_classes: List[ClassDef]
     ai_model_config: ModelConfigPayload
     idempotency_key: Optional[str] = None
-    conflict_threshold: float = 0.5
+    conflict_threshold: float  # default IoU threshold for class conflicts; sent by the web app from its environment
 
 class MediaSegmentResult(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
@@ -74,16 +74,6 @@ class ProcessMediaResponse(BaseModel):
     detections: List[DetectionItem] = Field(default_factory=list)
     segments: List[MediaSegmentResult] = Field(default_factory=list)
     error_message: Optional[str] = None
-
-class LiveFrameRequest(BaseModel):
-    model_config = ConfigDict(protected_namespaces=())
-    frame_base64: str
-    active_classes: List[ClassDef]
-    ai_model_config: Optional[ModelConfigPayload] = None
-
-class LiveFrameResponse(BaseModel):
-    model_config = ConfigDict(protected_namespaces=())
-    detections: List[DetectionItem] = Field(default_factory=list)
 
 class TestConnectionRequest(BaseModel):
     model_config = ConfigDict(protected_namespaces=())

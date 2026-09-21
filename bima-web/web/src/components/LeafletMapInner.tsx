@@ -12,6 +12,7 @@ import {
   useMap,
 } from 'react-leaflet';
 import L from 'leaflet';
+import { mapConfig } from '@/lib/public-config';
 
 export interface FlyToCommand {
   lat: number;
@@ -113,8 +114,8 @@ export default function LeafletMapInner({
   useEffect(() => {
     // 1. Survey Target Pin: Vivid Red Marker Icon
     const redPinIcon = L.icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconUrl: mapConfig.markerIconRedUrl(),
+      shadowUrl: mapConfig.markerShadowUrl(),
       iconSize: [28, 45],
       iconAnchor: [14, 45],
       popupAnchor: [1, -40],
@@ -154,8 +155,8 @@ export default function LeafletMapInner({
       style={{ width: '100%', height: '100%' }}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution={mapConfig.attribution()}
+        url={mapConfig.tileUrl()}
       />
 
       <MapClickHandler onMapClick={onMapClick} />

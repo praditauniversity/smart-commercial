@@ -1,3 +1,5 @@
+import 'dotenv/config';
+import { requireEnv } from '../src/lib/env';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -7,11 +9,11 @@ async function main() {
   console.log('Seeding database with initial admin, surveyor, classes, and model config...');
 
   // 1. Users
-  const adminPasswordHash = await bcrypt.hash('admin123', 10);
-  const surveyorPasswordHash = await bcrypt.hash('surveyor123', 10);
+  const adminPasswordHash = await bcrypt.hash(requireEnv('SEED_ADMIN_PASSWORD'), 10);
+  const surveyorPasswordHash = await bcrypt.hash(requireEnv('SEED_SURVEYOR_PASSWORD'), 10);
 
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@bima.id' },
+    where: { email: requireEnv('SEED_ADMIN_EMAIL') },
     update: {
       name: 'Admin Utama Kawasan',
       passwordHash: adminPasswordHash,
@@ -19,7 +21,7 @@ async function main() {
       isActive: true,
     },
     create: {
-      email: 'admin@bima.id',
+      email: requireEnv('SEED_ADMIN_EMAIL'),
       name: 'Admin Utama Kawasan',
       passwordHash: adminPasswordHash,
       role: 'admin',
@@ -28,7 +30,7 @@ async function main() {
   });
 
   const surveyor = await prisma.user.upsert({
-    where: { email: 'surveyor@bima.id' },
+    where: { email: requireEnv('SEED_SURVEYOR_EMAIL') },
     update: {
       name: 'Bima Surveyor Lapangan',
       passwordHash: surveyorPasswordHash,
@@ -36,7 +38,7 @@ async function main() {
       isActive: true,
     },
     create: {
-      email: 'surveyor@bima.id',
+      email: requireEnv('SEED_SURVEYOR_EMAIL'),
       name: 'Bima Surveyor Lapangan',
       passwordHash: surveyorPasswordHash,
       role: 'surveyor',
@@ -145,7 +147,7 @@ async function main() {
 
   // 3. Model Config
   const defaultModel = await prisma.modelConfig.findFirst({
-    where: { modelName: 'qwen/qwen3-vl-8b-instruct' },
+    where: { modelName: requireEnv('NEXT_PUBLIC_DEFAULT_MODEL_NAME') },
   });
 
   if (!defaultModel) {
@@ -153,8 +155,8 @@ async function main() {
       data: {
         name: 'Qwen3 VL 8B Vision (Default)',
         provider: 'OpenRouter',
-        modelName: 'qwen/qwen3-vl-8b-instruct',
-        endpointUrl: 'https://openrouter.ai/api/v1/chat/completions',
+        modelName: requireEnv('NEXT_PUBLIC_DEFAULT_MODEL_NAME'),
+        endpointUrl: requireEnv('NEXT_PUBLIC_OPENROUTER_ENDPOINT_URL'),
         encryptedApiKey: null,
         isDefault: true,
         isActive: true,
@@ -163,7 +165,7 @@ async function main() {
   }
 
   const onPremiseModel = await prisma.modelConfig.findFirst({
-    where: { modelName: 'qwen3-vl-8b-local' },
+    where: { modelName: requireEnv('SEED_ONPREMISE_MODEL_NAME') },
   });
 
   if (!onPremiseModel) {
@@ -171,8 +173,8 @@ async function main() {
       data: {
         name: 'On-Premise Local Vision Endpoint',
         provider: 'onpremise',
-        modelName: 'qwen3-vl-8b-local',
-        endpointUrl: 'http://localhost:8000/v1/vision',
+        modelName: requireEnv('SEED_ONPREMISE_MODEL_NAME'),
+        endpointUrl: requireEnv('NEXT_PUBLIC_ONPREMISE_ENDPOINT_URL'),
         encryptedApiKey: null,
         isDefault: false,
         isActive: true,

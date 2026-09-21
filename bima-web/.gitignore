@@ -27,7 +27,9 @@ web/coverage/
 web/.vercel/
 web/*.tsbuildinfo
 web/next-env.d.ts
-
+skils/
+web/Agent.md
+web/CLAUDE.md
 # ===== Uploaded media (runtime data, not source) =====
 web/public/uploads/
 

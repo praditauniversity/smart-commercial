@@ -1,3 +1,5 @@
+import 'dotenv/config';
+import { requireEnv } from '../src/lib/env';
 import { PrismaClient } from '@prisma/client';
 import { encryptSecret, decryptSecret } from '../src/lib/security';
 
@@ -9,7 +11,7 @@ async function runEndToEndVerification() {
   console.log('====================================================');
 
   // Load API Key
-  const apiKey = process.env.OPEN_ROUTER_API_KEY || '';
+  const apiKey = process.env.OPEN_ROUTER_API_KEY; // optional: without it the real API calls are skipped
   if (!apiKey) {
     console.warn('OPEN_ROUTER_API_KEY is not set in environment. Skipping real API calls.');
   }
@@ -89,18 +91,18 @@ async function runEndToEndVerification() {
     ai_model_config: {
       provider: defaultModel.provider,
       model_name: defaultModel.modelName,
-      endpoint_url: defaultModel.endpointUrl || 'https://openrouter.ai/api/v1/chat/completions',
+      endpoint_url: defaultModel.endpointUrl || requireEnv('NEXT_PUBLIC_OPENROUTER_ENDPOINT_URL'),
       api_key: apiKey,
     },
     idempotency_key: 'e2e-test-' + Date.now(),
     conflict_threshold: 0.5,
   };
 
-  const aiResp = await fetch('http://127.0.0.1:8000/api/v1/process-media', {
+  const aiResp = await fetch(`${requireEnv('FASTAPI_SERVICE_URL')}/api/v1/process-media`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Internal-Secret': 'bima-research-internal-secret-2026',
+      'X-Internal-Secret': requireEnv('INTERNAL_API_SECRET'),
     },
     body: JSON.stringify(workerPayload),
   });

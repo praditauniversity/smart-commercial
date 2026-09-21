@@ -717,7 +717,7 @@ export default function MediaInspectionModal({
                         <div className="mb-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] sm:text-[11px] bg-slate-50 p-2.5 rounded-lg text-slate-500">
                           <div>
                             <span className="text-slate-400 block text-[9px]">Model AI:</span>
-                            <span className="font-mono text-slate-700 font-semibold truncate block">{det.modelName || 'qwen3-vl-8b'}</span>
+                            <span className="font-mono text-slate-700 font-semibold truncate block">{det.modelName || '-'}</span>
                           </div>
                           <div>
                             <span className="text-slate-400 block text-[9px]">Bounding Box:</span>
