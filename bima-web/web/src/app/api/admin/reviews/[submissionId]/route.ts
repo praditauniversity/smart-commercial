@@ -29,6 +29,7 @@ export async function GET(
             },
             mediaAssets: {
               where: { status: { not: 'deleted' } },
+              include: { segments: true },
             },
           },
         },

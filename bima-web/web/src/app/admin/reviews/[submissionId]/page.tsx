@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import MediaBoxOverlay, { OverlayDetection } from '@/components/MediaBoxOverlay';
 import MediaInspectionModal from '@/components/MediaInspectionModal';
+import { Sam3Chips, getSam3Result } from '@/components/Sam3Result';
+import AuditTimeline from '@/components/AuditTimeline';
 import { useToast } from '@/components/ToastProvider';
 import { DetailWorkspaceSkeleton } from '@/components/SkeletonLoaders';
 import {
@@ -14,14 +16,12 @@ import {
   MapPin,
   Layers,
   Edit2,
-  FileText,
   ChevronLeft,
   Loader2,
   X,
   User as UserIcon,
   Eye,
   FileImage,
-  ArrowRight,
 } from 'lucide-react';
 
 export default function AdminReviewDetailPage() {
@@ -163,6 +163,23 @@ export default function AdminReviewDetailPage() {
   const snapshot = submission.parsedSnapshot || {};
   const detections: any[] = snapshot.detections || [];
   const isPendingReview = submission.status === 'menunggu_review';
+
+  // SAM3 media get ONE card per photo/video (class pills + counts); VLM findings keep one card per object.
+  // The snapshot is frozen at submit time, so the SAM3 result (segments) comes from the live session media.
+  const sam3ByMediaId = new Map<string, any>();
+  for (const m of submission.session?.mediaAssets || []) {
+    const r = getSam3Result(m);
+    if (r) sam3ByMediaId.set(m.id, r);
+  }
+  const vlmDetections = detections.filter((d: any) => !sam3ByMediaId.has(d.mediaAssetId));
+  const sam3Groups = Array.from(sam3ByMediaId.entries())
+    .map(([mediaId, result]) => ({
+      mediaId,
+      result,
+      media: snapshot.mediaAssets?.find((m: any) => m.id === mediaId) || submission.session?.mediaAssets?.find((m: any) => m.id === mediaId),
+      dets: detections.filter((d: any) => d.mediaAssetId === mediaId),
+    }))
+    .filter((g) => g.dets.length > 0);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col pb-24 sm:pb-16">
@@ -310,7 +327,64 @@ export default function AdminReviewDetailPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {detections.map((det) => {
+                {sam3Groups.map(({ mediaId, result, media, dets }) => {
+                  const worst = dets.some((d: any) => d.feasibility === 'tidak_layak')
+                    ? 'tidak_layak'
+                    : dets.some((d: any) => d.feasibility === 'cukup_layak')
+                    ? 'cukup_layak'
+                    : 'layak';
+                  return (
+                    <div
+                      key={mediaId}
+                      onClick={() => setInspectingMediaId(mediaId)}
+                      className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-md hover:border-blue-300 transition-all flex flex-col justify-between cursor-pointer group"
+                    >
+                      <div className="relative h-48 bg-slate-950">
+                        {media?.fileType === 'video' ? (
+                          <video src={result.url} muted className="w-full h-48 object-contain" />
+                        ) : (
+                          <img src={result.url} alt={media?.fileName || ''} className="w-full h-48 object-contain" />
+                        )}
+                        <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-xs text-white px-2.5 py-1 rounded-full text-[10px] font-semibold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-xs">
+                          <Eye className="w-3.5 h-3.5" />
+                          Lihat Data & Peta
+                        </div>
+                      </div>
+
+                      <div className="p-4 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                            {media?.fileName || 'Media'}
+                          </h4>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                              worst === 'tidak_layak'
+                                ? 'bg-rose-100 text-rose-800'
+                                : worst === 'cukup_layak'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-emerald-100 text-emerald-800'
+                            }`}
+                          >
+                            {worst.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <Sam3Chips result={result} />
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                          <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                            {dets.length} temuan · Lokasi Terpetakan
+                          </span>
+                          <span className="text-blue-600 font-semibold flex items-center gap-1 group-hover:underline">
+                            <Eye className="w-3.5 h-3.5" />
+                            Lihat Data
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {vlmDetections.map((det) => {
                   const mediaObj = snapshot.mediaAssets?.find((m: any) => m.id === det.mediaAssetId);
                   const overlayItem: OverlayDetection = {
                     id: det.id,
@@ -448,214 +522,8 @@ export default function AdminReviewDetailPage() {
           </div>
         )}
 
-        {/* Histori Tindakan & Jejak Audit (Audit Trail) */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                <FileText className="w-4 h-4 text-blue-600" />
-                Histori Tindakan & Jejak Perubahan Data (Audit Trail)
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Rekaman kronologis seluruh aktivitas penolakan admin, revisi surveyor, perubahan foto/titik peta, dan re-submit.
-              </p>
-            </div>
-            <span className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold">
-              {auditLogs.length} Catatan Jejak
-            </span>
-          </div>
-
-          {auditLogs.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-              <FileText className="w-8 h-8 mx-auto text-slate-300 mb-1" />
-              <p className="text-xs font-medium text-slate-600">Belum ada riwayat aktivitas yang tercatat pada sesi ini.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {auditLogs.map((log) => {
-                let parsedChanges: any = null;
-                try {
-                  parsedChanges = typeof log.changes === 'string' ? JSON.parse(log.changes) : log.changes;
-                } catch {}
-
-                const getActionBadge = (action: string) => {
-                  switch (action) {
-                    case 'ADMIN_REJECT_SURVEY':
-                      return <span className="px-2.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-md font-medium text-xs">Penolakan Admin</span>;
-                    case 'ADMIN_APPROVE_SURVEY':
-                      return <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md font-medium text-xs">Persetujuan Admin</span>;
-                    case 'SURVEYOR_EDIT_DETECTION':
-                      return <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md font-medium text-xs">Edit Temuan</span>;
-                    case 'ADMIN_CORRECT_DETECTION':
-                      return <span className="px-2.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md font-medium text-xs">Koreksi Admin</span>;
-                    case 'SURVEYOR_START_REVISION':
-                      return <span className="px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-md font-medium text-xs">Mulai Revisi</span>;
-                    case 'SURVEYOR_RESUBMIT_REVISION':
-                      return <span className="px-2.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md font-medium text-xs">Revisi Dikirim Kembali</span>;
-                    case 'SURVEYOR_SUBMIT_SURVEY':
-                      return <span className="px-2.5 py-0.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-md font-medium text-xs">Pengajuan Survei</span>;
-                    case 'SURVEYOR_UPLOAD_MEDIA':
-                      return <span className="px-2.5 py-0.5 bg-cyan-50 text-cyan-700 border border-cyan-200 rounded-md font-medium text-xs">Upload Media</span>;
-                    case 'SURVEYOR_DELETE_MEDIA':
-                      return <span className="px-2.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-md font-medium text-xs">Hapus Media</span>;
-                    case 'SURVEYOR_DELETE_DETECTION':
-                      return <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md font-medium text-xs">Hapus Temuan</span>;
-                    case 'UPDATE_SESSION_METADATA':
-                      return <span className="px-2.5 py-0.5 bg-slate-50 text-slate-700 border border-slate-200 rounded-md font-medium text-xs">Perubahan Info Sesi</span>;
-                    case 'RESOLVE_CONFLICT':
-                      return <span className="px-2.5 py-0.5 bg-teal-50 text-teal-700 border border-teal-200 rounded-md font-medium text-xs">Resolusi Konflik</span>;
-                    default:
-                      return <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded font-medium text-xs">{action}</span>;
-                  }
-                };
-
-                // Compute exact differences to avoid rendering unchanged fields
-                const isClassDiff = Boolean(
-                  parsedChanges?.updated?.className &&
-                  parsedChanges.previous?.className &&
-                  parsedChanges.updated.className !== parsedChanges.previous.className
-                );
-
-                const isConditionDiff = Boolean(
-                  parsedChanges?.updated?.condition &&
-                  parsedChanges.updated.condition.trim() !== (parsedChanges.previous?.condition || '').trim()
-                );
-
-                const isFeasibilityDiff = Boolean(
-                  parsedChanges?.updated?.feasibility &&
-                  parsedChanges.previous?.feasibility &&
-                  parsedChanges.updated.feasibility !== parsedChanges.previous.feasibility
-                );
-
-                const isLocationDiff = Boolean(
-                  parsedChanges?.updated?.locationCoordinates &&
-                  JSON.stringify(parsedChanges.updated.locationCoordinates) !== JSON.stringify(parsedChanges.previous?.locationCoordinates)
-                );
-
-                const hasFieldDiffs = isClassDiff || isConditionDiff || isFeasibilityDiff || isLocationDiff;
-
-                return (
-                  <div key={log.id} className="py-4 space-y-2 text-xs">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {getActionBadge(log.action)}
-                        <span className="text-slate-800 font-bold">
-                          {log.actor?.name || 'Sistem / Admin'}
-                        </span>
-                        <span className="text-slate-400 text-[11px]">
-                          ({log.actor?.role === 'admin' ? 'Admin' : 'Surveyor Lapangan'} • {log.actor?.email || '-'})
-                        </span>
-                      </div>
-                      <span className="text-slate-500 text-[11px] font-mono">
-                        {new Date(log.createdAt).toLocaleString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        })}
-                      </span>
-                    </div>
-
-                    {/* Change Details */}
-                    {parsedChanges && (
-                      <div className="p-3 bg-slate-50/80 border border-slate-200/80 rounded-xl text-slate-700 text-xs space-y-2">
-                        {parsedChanges.actionDescription && (
-                          <div className="font-semibold text-slate-900 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
-                            {parsedChanges.actionDescription}
-                          </div>
-                        )}
-
-                        {parsedChanges.rejectReason && (
-                          <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-900 space-y-1">
-                            <div className="font-bold flex items-center gap-1.5">
-                              <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                              Alasan Penolakan: {parsedChanges.rejectReason}
-                            </div>
-                            {parsedChanges.reviewNotes && (
-                              <div className="text-[11px] text-rose-800 pl-5.5">
-                                Catatan Admin: &quot;{parsedChanges.reviewNotes}&quot;
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {parsedChanges.notes && !parsedChanges.rejectReason && (
-                          <div className="text-slate-700">
-                            <strong>Catatan:</strong> {parsedChanges.notes}
-                          </div>
-                        )}
-
-                        {/* List only the fields that actually changed */}
-                        {hasFieldDiffs && (
-                          <div className="bg-white rounded-lg border border-slate-200 p-2.5 space-y-2 mt-1">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                              Rincian Data yang Diperbarui:
-                            </div>
-
-                            {isClassDiff && (
-                              <div className="flex flex-wrap items-center gap-2 text-xs">
-                                <span className="font-semibold text-slate-500 min-w-[70px]">Kelas:</span>
-                                <span className="line-through text-slate-400">{parsedChanges.previous.className}</span>
-                                <ArrowRight className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                                <span className="font-bold text-slate-900 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                                  {parsedChanges.updated.className}
-                                </span>
-                              </div>
-                            )}
-
-                            {isConditionDiff && (
-                              <div className="flex flex-wrap items-start gap-2 text-xs">
-                                <span className="font-semibold text-slate-500 min-w-[70px] shrink-0 pt-0.5">Kondisi:</span>
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="line-through text-slate-400 text-[11px]">
-                                    &quot;{parsedChanges.previous?.condition || '-'}&quot;
-                                  </span>
-                                  <ArrowRight className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                                  <span className="font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                                    &quot;{parsedChanges.updated.condition}&quot;
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-
-                            {isFeasibilityDiff && (
-                              <div className="flex flex-wrap items-center gap-2 text-xs">
-                                <span className="font-semibold text-slate-500 min-w-[70px]">Kelayakan:</span>
-                                <span className="line-through text-slate-400">{parsedChanges.previous.feasibility}</span>
-                                <ArrowRight className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                                <span className="font-bold text-slate-900 uppercase bg-slate-100 px-2 py-0.5 rounded">
-                                  {parsedChanges.updated.feasibility}
-                                </span>
-                              </div>
-                            )}
-
-                            {isLocationDiff && (
-                              <div className="flex flex-wrap items-center gap-2 text-xs">
-                                <span className="font-semibold text-slate-500 min-w-[70px]">Titik Peta:</span>
-                                <span className="text-slate-400 text-[11px]">
-                                  {parsedChanges.previous?.locationCoordinates
-                                    ? `[${parsedChanges.previous.locationCoordinates[0].toFixed(5)}, ${parsedChanges.previous.locationCoordinates[1].toFixed(5)}]`
-                                    : 'Titik Posisi Awal'}
-                                </span>
-                                <ArrowRight className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                                <span className="font-mono text-[11px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                                  [{parsedChanges.updated.locationCoordinates[0].toFixed(5)}, {parsedChanges.updated.locationCoordinates[1].toFixed(5)}]
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        {/* Riwayat aktivitas / audit trail */}
+        <AuditTimeline logs={auditLogs} />
       </main>
 
       {/* APPROVE MODAL */}
@@ -790,6 +658,7 @@ export default function AdminReviewDetailPage() {
         activeClasses={classes}
         canEdit={false}
         onSaved={fetchDetail}
+        sam3Result={getSam3Result(submission?.session?.mediaAssets?.find((m: any) => m.id === inspectingMediaId))}
       />
     </div>
   );

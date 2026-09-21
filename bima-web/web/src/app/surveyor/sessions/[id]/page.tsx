@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import MediaBoxOverlay, { OverlayDetection } from '@/components/MediaBoxOverlay';
 import MediaInspectionModal from '@/components/MediaInspectionModal';
+import { Sam3Chips, getSam3Result } from '@/components/Sam3Result';
 import { useToast } from '@/components/ToastProvider';
 import { DetailWorkspaceSkeleton } from '@/components/SkeletonLoaders';
 import {
@@ -168,27 +169,16 @@ export default function SurveyorSessionWorkspace() {
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        setUploadProgress(`Mengupload file (${i + 1}/${files.length}): ${file.name}...`);
+        setUploadProgress(`Mengompres & mengupload file (${i + 1}/${files.length}): ${file.name}...`);
 
-        // Convert file to Base64 data URL
-        const dataUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
-        });
+        // 1. Send the raw file; the server compresses it and stores it in the Supabase bucket
+        const formData = new FormData();
+        formData.append('sessionId', sessionId);
+        formData.append('file', file);
 
-        const isVideo = file.type.includes('video') || file.name.endsWith('.mp4');
-
-        // 1. Register MediaAsset in Supabase Database
         const regRes = await fetch('/api/media/upload', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId,
-            fileName: file.name,
-            fileType: isVideo ? 'video' : 'image',
-            fileUrl: dataUrl,
-          }),
+          body: formData,
         });
 
         const regData = await regRes.json();
@@ -652,6 +642,18 @@ export default function SurveyorSessionWorkspace() {
       ? detections
       : detections.filter((d) => d.classId === selectedClassFilter);
 
+  // SAM3 media get ONE card per photo/video (class pills + counts); VLM findings keep one card per object.
+  const sam3Media = mediaAssets.filter((m) => getSam3Result(m));
+  const sam3MediaIds = new Set(sam3Media.map((m) => m.id));
+  const vlmDetections = filteredDetections.filter((d) => !sam3MediaIds.has(d.mediaAssetId));
+  const sam3Groups = sam3Media
+    .map((media) => ({
+      media,
+      result: getSam3Result(media)!,
+      dets: filteredDetections.filter((d) => d.mediaAssetId === media.id),
+    }))
+    .filter((g) => g.dets.length > 0);
+
   const unresolvedConflicts = detections.filter((d) => d.hasConflict && !d.conflictResolved);
   const processingMedia = mediaAssets.filter((m) =>
     ['queued', 'uploading', 'processing'].includes(m.status)
@@ -1001,7 +1003,56 @@ export default function SurveyorSessionWorkspace() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredDetections.map((det) => {
+                {sam3Groups.map(({ media, result, dets }) => {
+                  const worst = dets.some((d) => d.feasibility === 'tidak_layak')
+                    ? 'tidak_layak'
+                    : dets.some((d) => d.feasibility === 'cukup_layak')
+                    ? 'cukup_layak'
+                    : 'layak';
+                  return (
+                    <div
+                      key={media.id}
+                      onClick={() => setInspectingMediaId(media.id)}
+                      className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-lg hover:border-blue-300 transition-all flex flex-col justify-between cursor-pointer group"
+                    >
+                      <div className="relative h-48 bg-slate-950 overflow-hidden">
+                        {media.fileType === 'video' ? (
+                          <video src={result.url} muted className="w-full h-48 object-contain" />
+                        ) : (
+                          <img src={result.url} alt={media.fileName} className="w-full h-48 object-contain" />
+                        )}
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                          <span className="px-3 py-1.5 bg-blue-600/90 backdrop-blur-xs text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-lg">
+                            <Eye className="w-3.5 h-3.5" />
+                            Lihat Hasil
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-4 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                            {media.fileName}
+                          </h4>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                              worst === 'tidak_layak'
+                                ? 'bg-rose-100 text-rose-800'
+                                : worst === 'cukup_layak'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-emerald-100 text-emerald-800'
+                            }`}
+                          >
+                            {worst.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <Sam3Chips result={result} />
+                        <p className="text-[11px] text-slate-400">{dets.length} temuan · klik untuk detail</p>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {vlmDetections.map((det) => {
                   let parsedBbox = { x: 0, y: 0, width: 0, height: 0 };
                   try {
                     parsedBbox = JSON.parse(det.bbox);
@@ -1125,6 +1176,7 @@ export default function SurveyorSessionWorkspace() {
                   const mediaDetectionsCount = (session?.detections || []).filter(
                     (d: any) => d.mediaAssetId === media.id && !d.isDeleted
                   ).length;
+                  const sam3Result = getSam3Result(media);
 
                   return (
                     <div
@@ -1154,9 +1206,9 @@ export default function SurveyorSessionWorkspace() {
 
                         <div className="relative h-36 bg-slate-900 rounded-xl overflow-hidden mb-3">
                           {media.fileType === 'video' ? (
-                            <video src={media.fileUrl} className="w-full h-full object-cover" />
+                            <video src={sam3Result?.url || media.fileUrl} className="w-full h-full object-cover" />
                           ) : (
-                            <img src={media.fileUrl} alt={media.fileName} className="w-full h-full object-cover" />
+                            <img src={sam3Result?.url || media.fileUrl} alt={media.fileName} className="w-full h-full object-cover" />
                           )}
                           <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <span className="px-3 py-1 bg-blue-600/90 backdrop-blur-xs text-white text-xs font-bold rounded-lg flex items-center gap-1 shadow">
@@ -1168,7 +1220,9 @@ export default function SurveyorSessionWorkspace() {
 
                         <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2">
                           <span className="font-medium text-slate-700">
-                            {media.status === 'completed' ? (
+                            {media.status === 'completed' && sam3Result ? (
+                              <Sam3Chips result={sam3Result} />
+                            ) : media.status === 'completed' ? (
                               <strong className="text-blue-600">{mediaDetectionsCount} Objek Terdeteksi</strong>
                             ) : media.status === 'processing' ? (
                               <span className="text-blue-500 animate-pulse">Sedang memproses AI...</span>
@@ -1509,6 +1563,7 @@ export default function SurveyorSessionWorkspace() {
         activeClasses={availableClasses}
         canEdit={canEditMetadata}
         onSaved={fetchSessionDetails}
+        sam3Result={getSam3Result(session?.mediaAssets?.find((m: any) => m.id === inspectingMediaId))}
       />
     </div>
   );

@@ -4,7 +4,10 @@ import time
 import base64
 import secrets
 import logging
-from typing import List
+import threading
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, List
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Header, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,9 +33,14 @@ from providers.mock import MockVisionProvider
 from services.deduplication import deduplicate_temporal_detections
 from services.conflict_detector import detect_class_conflicts
 from services.video_splitter import plan_video_segments
+from services.sam3_service import run_sam3_job
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ai_service")
+
+# Base URL of the Next.js web app, used as a fallback to fetch /uploads/* files
+# that are not on this machine's filesystem.
+WEB_BASE_URL = os.getenv("WEB_BASE_URL", "http://127.0.0.1:3000").rstrip("/")
 
 app = FastAPI(
     title="AI Kawasan Vision & Processing Service",
@@ -93,6 +101,51 @@ def get_provider(config_payload) -> BaseVisionProvider:
             detail=f"Provider AI '{config_payload.provider}' tidak valid atau belum dikonfigurasi."
         )
 
+# --- Local SAM3 jobs -------------------------------------------------------------
+# Videos take minutes, so the web starts a job and polls it instead of holding one
+# long HTTP request. A single worker thread keeps the GPU single-owner.
+_sam3_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sam3-job")
+_sam3_jobs: Dict[str, dict] = {}
+_sam3_jobs_lock = threading.Lock()
+_MAX_KEPT_JOBS = 200
+
+
+def _run_sam3_job_bg(job_id: str, req: ProcessMediaRequest):
+    def set_state(**kw):
+        with _sam3_jobs_lock:
+            _sam3_jobs[job_id].update(kw)
+
+    set_state(status="running")
+    try:
+        result = run_sam3_job(req, on_progress=lambda p: set_state(progress=round(p, 3)))
+        set_state(status="completed", progress=1.0, result=result.model_dump())
+    except Exception as e:
+        logger.error(f"SAM3 job {job_id} failed: {e}", exc_info=True)
+        set_state(status="failed", error=str(e))
+
+
+@app.post("/api/v1/sam3/jobs", status_code=status.HTTP_202_ACCEPTED)
+def create_sam3_job(req: ProcessMediaRequest, _: bool = Depends(verify_internal_secret)):
+    if (req.ai_model_config.provider or "").lower() != "sam3":
+        raise HTTPException(status_code=400, detail="Endpoint ini hanya untuk provider 'sam3'.")
+    job_id = str(uuid.uuid4())
+    with _sam3_jobs_lock:
+        _sam3_jobs[job_id] = {"status": "queued", "progress": 0.0, "result": None, "error": None}
+        while len(_sam3_jobs) > _MAX_KEPT_JOBS:
+            _sam3_jobs.pop(next(iter(_sam3_jobs)))
+    _sam3_executor.submit(_run_sam3_job_bg, job_id, req)
+    return {"job_id": job_id}
+
+
+@app.get("/api/v1/sam3/jobs/{job_id}")
+def get_sam3_job(job_id: str, _: bool = Depends(verify_internal_secret)):
+    with _sam3_jobs_lock:
+        job = _sam3_jobs.get(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job tidak ditemukan (service mungkin di-restart).")
+        return dict(job)
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": "ai-service", "timestamp": time.time()}
@@ -103,6 +156,20 @@ async def test_connection(
     _: bool = Depends(verify_internal_secret)
 ):
     start_time = time.time()
+    if (req.ai_model_config.provider or "").lower() == "sam3":
+        from services.sam3_engine import engine as sam3_engine
+        ok = os.path.exists(sam3_engine.checkpoint)
+        try:
+            import torch  # noqa: F401
+            import ultralytics  # noqa: F401
+        except ImportError:
+            return TestConnectionResponse(success=False, message="torch / ultralytics belum terpasang di ai-service.",
+                                          latency_ms=round((time.time() - start_time) * 1000, 2))
+        return TestConnectionResponse(
+            success=ok,
+            message="SAM3 lokal siap dipakai." if ok else f"Bobot SAM3 tidak ditemukan: {sam3_engine.checkpoint}",
+            latency_ms=round((time.time() - start_time) * 1000, 2),
+        )
     try:
         provider = get_provider(req.ai_model_config)
         success = await provider.test_connection()
@@ -189,11 +256,11 @@ async def process_media(
                     image_base64 = base64.b64encode(f.read()).decode("utf-8")
             else:
                 async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.get(f"http://127.0.0.1:3000{req.file_url}")
+                    resp = await client.get(f"{WEB_BASE_URL}{req.file_url}")
                     if resp.status_code == 200:
                         image_base64 = base64.b64encode(resp.content).decode("utf-8")
                     else:
-                        raise ValueError(f"Gagal membaca file {req.file_url} dari filesystem atau HTTP 3000.")
+                        raise ValueError(f"Gagal membaca file {req.file_url} dari filesystem atau {WEB_BASE_URL}.")
         elif os.path.exists(req.file_url):
             with open(req.file_url, "rb") as f:
                 image_base64 = base64.b64encode(f.read()).decode("utf-8")

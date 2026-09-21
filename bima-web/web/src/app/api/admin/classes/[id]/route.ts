@@ -40,6 +40,13 @@ export async function PATCH(
       updateData.feasibilityCriteria = body.feasibilityCriteria.trim();
       shouldCreateVersion = true;
     }
+    if (body.samPrompt !== undefined) {
+      updateData.samPrompt = body.samPrompt?.trim() || null;
+      shouldCreateVersion = true;
+    }
+    if (body.samColor !== undefined) {
+      updateData.samColor = body.samColor?.trim() || null;
+    }
     if (body.mutuallyExclusiveWith !== undefined) {
       updateData.mutuallyExclusiveWith =
         typeof body.mutuallyExclusiveWith === 'string'
@@ -71,6 +78,8 @@ export async function PATCH(
             visualDescription: updated.visualDescription,
             conditionCriteria: updated.conditionCriteria,
             feasibilityCriteria: updated.feasibilityCriteria,
+            samPrompt: updated.samPrompt,
+            samColor: updated.samColor,
           }),
         },
       });

@@ -23,6 +23,7 @@ interface ModelItem {
   provider: string;
   modelName: string;
   endpointUrl?: string;
+  samMode?: string | null;
   isDefault: boolean;
   isActive: boolean;
   apiKeyMasked: string;
@@ -42,6 +43,7 @@ export default function AdminModelsPage() {
   const [endpointUrl, setEndpointUrl] = useState('https://openrouter.ai/api/v1/chat/completions');
   const [apiKey, setApiKey] = useState('');
   const [isDefault, setIsDefault] = useState(false);
+  const [samMode, setSamMode] = useState<'optimized' | 'fast'>('optimized');
 
   const [testingId, setTestingId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<{ id: string; success: boolean; message: string } | null>(null);
@@ -75,6 +77,7 @@ export default function AdminModelsPage() {
     setModelName('qwen/qwen3-vl-8b-instruct');
     setEndpointUrl('https://openrouter.ai/api/v1/chat/completions');
     setProvider('OpenRouter');
+    setSamMode('optimized');
     setIsDefault(false);
     setModalOpen(true);
   };
@@ -86,6 +89,7 @@ export default function AdminModelsPage() {
     setModelName(m.modelName);
     setEndpointUrl(m.endpointUrl || 'https://openrouter.ai/api/v1/chat/completions');
     setProvider(m.provider);
+    setSamMode(m.samMode === 'fast' ? 'fast' : 'optimized');
     setIsDefault(m.isDefault);
     setModalOpen(true);
   };
@@ -105,6 +109,7 @@ export default function AdminModelsPage() {
         endpointUrl,
         isDefault,
       };
+      if (provider === 'sam3') payload.samMode = samMode;
       if (apiKey && apiKey.trim() !== '') {
         payload.apiKey = apiKey.trim();
       }
@@ -268,6 +273,12 @@ export default function AdminModelsPage() {
                       <span className="text-slate-400">API Key:</span>
                       <span className="font-mono text-slate-600">{m.apiKeyMasked}</span>
                     </div>
+                    {m.provider.toLowerCase() === 'sam3' && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Algoritma video:</span>
+                        <strong className="text-slate-800">{m.samMode === 'fast' ? 'Fast' : 'Optimized'}</strong>
+                      </div>
+                    )}
                     {m.endpointUrl && (
                       <div className="flex justify-between">
                         <span className="text-slate-400">Endpoint:</span>
@@ -386,7 +397,10 @@ export default function AdminModelsPage() {
                   value={provider}
                   onChange={(e) => {
                     setProvider(e.target.value);
-                    if (e.target.value === 'onpremise') {
+                    if (e.target.value === 'sam3') {
+                      setEndpointUrl('');
+                      setModelName('sam3_1');
+                    } else if (e.target.value === 'onpremise') {
                       setEndpointUrl('http://localhost:8000/v1/vision');
                     } else {
                       setEndpointUrl('https://openrouter.ai/api/v1/chat/completions');
@@ -394,6 +408,7 @@ export default function AdminModelsPage() {
                   }}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium"
                 >
+                  <option value="sam3">SAM3 Lokal (Segmentasi mask, tanpa API Key)</option>
                   <option value="OpenRouter">OpenRouter (Cloud API)</option>
                   <option value="onpremise">On-Premise (Local Vision Endpoint)</option>
                 </select>
@@ -413,6 +428,30 @@ export default function AdminModelsPage() {
                 />
               </div>
 
+              {provider === 'sam3' ? (
+                <div className="space-y-3">
+                <p className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-[11px] text-slate-600">
+                  SAM3 berjalan lokal di ai-service (bobot diatur lewat <code>SAM3_CHECKPOINT</code>). Prompt
+                  tiap kelas diatur di menu Kelas Deteksi pada kolom &quot;SAM Prompt&quot;. Endpoint dan API Key
+                  tidak dipakai.
+                </p>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Algoritma Video</label>
+                  <select
+                    value={samMode}
+                    onChange={(e) => setSamMode(e.target.value as 'optimized' | 'fast')}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium"
+                  >
+                    <option value="optimized">Optimized (default) — keyframe SAM + optical flow, mask halus</option>
+                    <option value="fast">Fast — keyframe SAM + phase shift, lebih cepat, kurang halus</option>
+                  </select>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Hanya berlaku untuk video. Foto selalu diproses penuh oleh SAM3.
+                  </p>
+                </div>
+                </div>
+              ) : (
+              <>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Endpoint URL</label>
                 <input
@@ -435,6 +474,8 @@ export default function AdminModelsPage() {
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-xs sm:text-sm"
                 />
               </div>
+              </>
+              )}
 
               <div className="flex items-center gap-2 pt-2">
                 <input

@@ -25,6 +25,7 @@ export async function PATCH(
     if (body.apiKey !== undefined && body.apiKey.trim() !== '') {
       updateData.encryptedApiKey = encryptSecret(body.apiKey.trim());
     }
+    if (body.samMode !== undefined) updateData.samMode = body.samMode === 'fast' ? 'fast' : 'optimized';
     if (body.isActive !== undefined) updateData.isActive = Boolean(body.isActive);
 
     const updated = await prisma.modelConfig.update({

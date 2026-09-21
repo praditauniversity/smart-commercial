@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import MediaBoxOverlay, { OverlayDetection, BoundingBox } from './MediaBoxOverlay';
 import FindingLocationMap from './FindingLocationMap';
+import { Sam3Stage, Sam3Controls, Sam3Result, useSam3View } from './Sam3Result';
 import { useToast } from './ToastProvider';
 
 interface ClassItem {
@@ -82,6 +83,8 @@ interface MediaInspectionModalProps {
   activeClasses: ClassItem[];
   canEdit: boolean;
   onSaved: () => void;
+  /** Local SAM3 result for this media: shows the clean-photo viewer (class pills) instead of the box overlay. */
+  sam3Result?: Sam3Result | null;
 }
 
 export default function MediaInspectionModal({
@@ -93,8 +96,10 @@ export default function MediaInspectionModal({
   activeClasses,
   canEdit,
   onSaved,
+  sam3Result = null,
 }: MediaInspectionModalProps) {
   const toast = useToast();
+  const sam3View = useSam3View(sam3Result);
   const [selectedDetId, setSelectedDetId] = useState<string | null>(null);
   const [editStates, setEditStates] = useState<
     Record<
@@ -312,10 +317,14 @@ export default function MediaInspectionModal({
       const res = await fetch(`/api/media/${mediaAsset.id}/process`, { method: 'POST' });
       const data = await res.json();
       if (res.ok && data.success) {
-        toast.success('Media berhasil di-rescan.', 'Rescan Selesai');
+        const background = data.status === 'processing';
+        toast.success(
+          background ? 'Media sedang diproses ulang di latar belakang.' : 'Media berhasil di-rescan.',
+          background ? 'Rescan Dimulai' : 'Rescan Selesai'
+        );
         setFeedback({
           type: 'success',
-          message: 'Media berhasil di-rescan.',
+          message: background ? 'Media sedang diproses ulang. Hasil akan muncul otomatis.' : 'Media berhasil di-rescan.',
         });
         onSaved();
       } else {
@@ -334,16 +343,14 @@ export default function MediaInspectionModal({
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[95vh] sm:max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
         {/* Modal Header */}
-        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50 shrink-0">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+        <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3 bg-slate-50 shrink-0">
+          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 sm:flex-1">
             <div className="p-2 bg-blue-100 text-blue-700 rounded-xl shrink-0">
               <FileImage className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-sm sm:text-base font-bold text-slate-900 truncate max-w-[180px] sm:max-w-md">
-                  {mediaAsset.fileName}
-                </h2>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 truncate sm:max-w-md">{mediaAsset.fileName}</h2>
+              <div className="mt-0.5 flex items-center gap-2 flex-wrap">
                 <span
                   className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${
                     mediaAsset.status === 'completed'
@@ -357,22 +364,39 @@ export default function MediaInspectionModal({
                 >
                   {mediaAsset.status}
                 </span>
+                <p className="text-[11px] sm:text-xs text-slate-500 leading-snug sm:truncate">
+                  {canEdit
+                    ? `Mode Edit (${detections.length} objek)`
+                    : `Mode Pratinjau (${detections.length} objek)`}
+                  {sam3Result && (
+                    <>
+                      {' · '}
+                      <span className="font-semibold text-blue-600">SAM3 lokal</span>
+                      {sam3Result.algorithm ? ` (${sam3Result.algorithm})` : ''}
+                      {sam3Result.processingSeconds ? ` · ${sam3Result.processingSeconds}s` : ''}
+                    </>
+                  )}
+                </p>
               </div>
-              <p className="text-[11px] sm:text-xs text-slate-500 truncate mt-0.5">
-                {canEdit
-                  ? `Mode Edit (${detections.length} objek teridentifikasi)`
-                  : `Mode Pratinjau (${detections.length} objek)`}
-              </p>
             </div>
+            {/* Phones: close sits in the title row so the action buttons get their own full-width row */}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Tutup"
+              className="sm:hidden -mr-1 p-2 bg-slate-200 hover:bg-slate-300 active:scale-95 text-slate-700 rounded-xl transition-all cursor-pointer shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 sm:shrink-0">
             {canEdit && (
               <button
                 type="button"
                 onClick={handleRetryProcessing}
                 disabled={retrying || mediaAsset.status === 'processing'}
-                className="px-2.5 sm:px-3 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                className="flex-1 sm:flex-none justify-center px-3 py-2 sm:py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
                 title="Scan ulang media"
               >
                 {retrying || mediaAsset.status === 'processing' ? (
@@ -389,16 +413,16 @@ export default function MediaInspectionModal({
                 type="button"
                 onClick={handleSaveAll}
                 disabled={saveAllLoading}
-                className="px-2.5 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                className="flex-1 sm:flex-none justify-center px-3 py-2 sm:py-1.5 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
               >
                 {saveAllLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                <span className="hidden xs:inline">Simpan Semua</span> ({detections.length})
+                <span>Simpan Semua ({detections.length})</span>
               </button>
             )}
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 active:scale-95 text-slate-700 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1"
+              className="hidden sm:flex px-3 py-1.5 bg-slate-200 hover:bg-slate-300 active:scale-95 text-slate-700 rounded-xl text-xs font-semibold transition-all cursor-pointer items-center gap-1"
               title="Tutup"
             >
               <X className="w-4 h-4" />
@@ -431,8 +455,36 @@ export default function MediaInspectionModal({
         )}
 
         {/* Modal Body: Split Two Columns on desktop, stacked on mobile */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-y-auto">
-          {/* LEFT SIDE: Media Visual & Bounding Box Overlays */}
+        <div
+          className={
+            sam3Result
+              ? 'flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 gap-0 overflow-hidden'
+              : 'flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-y-auto'
+          }
+        >
+          {sam3Result ? (
+            /* LEFT SIDE (SAM3): image + stat cards stay on screen on phones; pills/slider join the scrolling part */
+            <div className="lg:col-span-5 shrink-0 max-h-[52dvh] lg:max-h-none overflow-y-auto overscroll-contain p-3 sm:p-5 bg-slate-50 border-b lg:border-b-0 lg:border-r border-slate-200">
+              {mediaAsset.status === 'processing' ? (
+                <div className="flex flex-col items-center justify-center p-6 text-center text-slate-500 min-h-[200px]">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-3" />
+                  <p className="font-semibold text-sm text-slate-700">AI Sedang Menganalisis Media...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <Sam3Stage result={sam3Result} fileName={mediaAsset.fileName} view={sam3View} />
+                  <div className="hidden lg:block">
+                    <Sam3Controls result={sam3Result} view={sam3View} />
+                  </div>
+                </div>
+              )}
+              <div className="hidden lg:flex pt-3 mt-3 border-t border-slate-200 text-[11px] text-slate-500 flex-wrap justify-between gap-2">
+                <span>Tipe: <strong className="text-slate-700 uppercase">{mediaAsset.fileType}</strong></span>
+                <span>Upload: <strong className="text-slate-700">{new Date(mediaAsset.createdAt).toLocaleDateString('id-ID')}</strong></span>
+              </div>
+            </div>
+          ) : (
+          /* LEFT SIDE: Media Visual & Bounding Box Overlays */
           <div className="lg:col-span-5 p-4 sm:p-5 bg-slate-950 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800 space-y-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs text-slate-400 pb-2 border-b border-slate-800">
@@ -496,8 +548,21 @@ export default function MediaInspectionModal({
             </div>
           </div>
 
-          {/* RIGHT SIDE: AI Analysis Results, Metadata & Editing Form */}
-          <div className="lg:col-span-7 p-4 sm:p-6 space-y-5 sm:space-y-6 bg-white overflow-y-auto">
+          )}
+
+          {/* RIGHT SIDE: AI Analysis Results, Metadata & Editing Form (the scrolling part) */}
+          <div
+            className={`lg:col-span-7 p-4 sm:p-6 space-y-5 sm:space-y-6 bg-white overflow-y-auto ${
+              sam3Result ? 'flex-1 min-h-0 overscroll-contain' : ''
+            }`}
+          >
+            {/* Phones: pills + slider start the scrolling part (on desktop they sit under the image) */}
+            {sam3Result && mediaAsset.status !== 'processing' && (
+              <div className="lg:hidden p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                <Sam3Controls result={sam3Result} view={sam3View} />
+              </div>
+            )}
+
             {/* Session Context Metadata Box */}
             {session && (
               <div className="p-3.5 sm:p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">

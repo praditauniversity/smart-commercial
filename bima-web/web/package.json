@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "seed:sam3": "tsx prisma/seed-sam3.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

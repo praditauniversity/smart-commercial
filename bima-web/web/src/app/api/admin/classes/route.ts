@@ -30,6 +30,8 @@ export async function POST(request: Request) {
       feasibilityCriteria,
       mutuallyExclusiveWith,
       conflictIouThreshold,
+      samPrompt,
+      samColor,
     } = body;
 
     if (!name || !visualDescription || !conditionCriteria || !feasibilityCriteria) {
@@ -61,6 +63,8 @@ export async function POST(request: Request) {
         feasibilityCriteria: feasibilityCriteria.trim(),
         mutuallyExclusiveWith: JSON.stringify(mutuallyExclusiveWith || []),
         conflictIouThreshold: conflictIouThreshold ? parseFloat(conflictIouThreshold) : 0.5,
+        samPrompt: samPrompt?.trim() || null,
+        samColor: samColor?.trim() || null,
         isActive: true,
         versions: {
           create: {
@@ -71,6 +75,8 @@ export async function POST(request: Request) {
               visualDescription: visualDescription.trim(),
               conditionCriteria: conditionCriteria.trim(),
               feasibilityCriteria: feasibilityCriteria.trim(),
+              samPrompt: samPrompt?.trim() || null,
+              samColor: samColor?.trim() || null,
             }),
           },
         },

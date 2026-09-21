@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import crypto from 'crypto';
+import { compressAndUpload } from '@/lib/media-storage';
 
 export async function POST(request: Request) {
   try {
@@ -39,14 +40,22 @@ export async function POST(request: Request) {
     const fileName = isVideo ? `live_capture_${timestamp}.mp4` : `live_capture_${timestamp}.jpg`;
     const idempotencyKey = crypto.randomUUID();
 
+    // Decode the captured frame, compress it and store it in the Supabase bucket
+    const base64Data = captureDataUrl.includes(',') ? captureDataUrl.split(',')[1] : captureDataUrl;
+    const stored = await compressAndUpload({
+      input: Buffer.from(base64Data, 'base64'),
+      kind: isVideo ? 'video' : 'image',
+      sessionId,
+    });
+
     // Create MediaAsset record
     const mediaAsset = await prisma.mediaAsset.create({
       data: {
         sessionId: session.id,
         fileName,
         fileType: isVideo ? 'video' : 'image',
-        fileUrl: captureDataUrl,
-        storagePath: `sessions/${sessionId}/${fileName}`,
+        fileUrl: stored.fileUrl,
+        storagePath: stored.storagePath,
         durationSeconds: durationSeconds ? parseFloat(durationSeconds) : null,
         status: 'uploaded',
         idempotencyKey,

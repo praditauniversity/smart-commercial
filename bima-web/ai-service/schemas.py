@@ -35,13 +35,16 @@ class ClassDef(BaseModel):
     feasibility_criteria: str
     mutually_exclusive_with: List[str] = Field(default_factory=list)
     conflict_iou_threshold: Optional[float] = 0.5
+    sam_prompt: Optional[str] = None  # text prompt for the local SAM3 provider
+    sam_color: Optional[str] = None   # "#RRGGBB" overlay color for SAM3 results
 
 class ModelConfigPayload(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
-    provider: str = "OpenRouter" # OpenRouter | onpremise | mock
+    provider: str = "OpenRouter" # OpenRouter | onpremise | sam3 | mock
     model_name: str = "qwen/qwen3-vl-8b-instruct"
     endpoint_url: Optional[str] = None
     api_key: Optional[str] = None
+    sam_mode: Optional[str] = None  # sam3 video algorithm: "optimized" (default) | "fast"
 
 class ProcessMediaRequest(BaseModel):
     model_config = ConfigDict(protected_namespaces=())

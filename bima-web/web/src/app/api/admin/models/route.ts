@@ -17,6 +17,7 @@ export async function GET() {
       provider: m.provider,
       modelName: m.modelName,
       endpointUrl: m.endpointUrl,
+      samMode: m.samMode,
       isDefault: m.isDefault,
       isActive: m.isActive,
       apiKeyMasked: m.encryptedApiKey ? maskSecret(m.encryptedApiKey) : 'Tidak Dikonfigurasi',
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
     const user = await requireAuth(['admin']);
     const body = await request.json();
 
-    const { name, provider, modelName, endpointUrl, apiKey, isDefault } = body;
+    const { name, provider, modelName, endpointUrl, apiKey, isDefault, samMode } = body;
 
     if (!name || !modelName) {
       return NextResponse.json(
@@ -66,6 +67,7 @@ export async function POST(request: Request) {
         modelName: modelName.trim(),
         endpointUrl: endpointUrl?.trim() || null,
         encryptedApiKey,
+        samMode: (provider || '').toLowerCase() === 'sam3' ? (samMode === 'fast' ? 'fast' : 'optimized') : null,
         isDefault: Boolean(isDefault),
         isActive: true,
       },

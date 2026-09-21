@@ -215,7 +215,9 @@ class OpenRouterProvider(BaseVisionProvider):
         system_prompt = self._build_system_prompt(active_classes)
 
         # Send clean image directly to Vision LLM for natural, accurate visual grounding
-        image_url = f"data:image/jpeg;base64,{image_base64}" if not image_base64.startswith("data:") else image_base64
+        # Sniff the mime type from the base64 magic bytes (uploads are stored as WebP/JPEG).
+        mime = "image/webp" if image_base64.startswith("UklGR") else "image/png" if image_base64.startswith("iVBOR") else "image/jpeg"
+        image_url = f"data:{mime};base64,{image_base64}" if not image_base64.startswith("data:") else image_base64
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",

@@ -32,6 +32,8 @@ model ClassDefinition {
   isActive              Boolean                  @default(true)
   mutuallyExclusiveWith String                   @default("[]") // JSON Array of class IDs
   conflictIouThreshold  Float                    @default(0.5)
+  samPrompt             String? // Short English noun phrase used by the local SAM3 provider (text prompt)
+  samColor              String? // Overlay color for SAM3 results, "#RRGGBB"
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
   versions              ClassDefinitionVersion[]
@@ -55,6 +57,7 @@ model ModelConfig {
   modelName       String      @default("qwen/qwen3-vl-8b-instruct")
   endpointUrl     String?
   encryptedApiKey String?
+  samMode         String? // SAM3 video algorithm: "optimized" (default) | "fast"
   isDefault       Boolean     @default(false)
   isActive        Boolean     @default(true)
   createdAt       DateTime    @default(now())

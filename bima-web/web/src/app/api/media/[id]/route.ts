@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { removeStoredFile } from '@/lib/media-storage';
 
 export async function DELETE(
   _request: Request,
@@ -12,7 +13,7 @@ export async function DELETE(
 
     const mediaAsset = await prisma.mediaAsset.findUnique({
       where: { id },
-      include: { session: true },
+      include: { session: true, segments: { select: { mediaUrl: true } } },
     });
 
     if (!mediaAsset) {
@@ -51,6 +52,10 @@ export async function DELETE(
       prisma.mediaSegment.deleteMany({ where: { mediaAssetId: id } }),
       prisma.mediaAsset.delete({ where: { id } }),
     ]);
+
+    // Original file plus any annotated SAM3 result stored in the buckets
+    const urls = new Set([mediaAsset.fileUrl, ...mediaAsset.segments.map((s) => s.mediaUrl || '')]);
+    await Promise.all([...urls].filter(Boolean).map((u) => removeStoredFile(u)));
 
     return NextResponse.json({
       success: true,

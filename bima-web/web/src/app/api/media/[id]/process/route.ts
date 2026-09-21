@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { decryptSecret, encryptSecret } from '@/lib/security';
+import { runSam3Job } from '@/lib/sam3-runner';
 
 const FASTAPI_SERVICE_URL = process.env.FASTAPI_SERVICE_URL || 'http://127.0.0.1:8000';
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET || 'bima-research-internal-secret-2026';
@@ -68,6 +69,33 @@ export async function POST(
           status: 'failed',
         },
         { status: 400 }
+      );
+    }
+
+    // Local SAM3 provider: text prompts come from ClassDefinition.samPrompt, no API key needed.
+    // Runs in the background (videos take minutes); the UI polls the "processing" status.
+    if (modelConfig.provider.toLowerCase() === 'sam3') {
+      const samClasses = activeClasses.filter((c) => c.samPrompt && c.samPrompt.trim() !== '');
+      if (samClasses.length === 0) {
+        const message = 'Tidak ada kelas aktif dengan SAM Prompt. Isi "SAM Prompt" pada menu Kelas Deteksi.';
+        await prisma.mediaAsset.update({ where: { id }, data: { status: 'failed', errorMessage: message } });
+        return NextResponse.json(
+          { success: false, error: message, mediaAssetId: id, status: 'failed' },
+          { status: 400 }
+        );
+      }
+
+      void runSam3Job({
+        mediaAsset,
+        classes: samClasses,
+        modelName: modelConfig.modelName,
+        modelConfigId: modelConfig.id,
+        samMode: modelConfig.samMode,
+      });
+
+      return NextResponse.json(
+        { success: true, mediaAssetId: id, status: 'processing' },
+        { status: 202 }
       );
     }
 
