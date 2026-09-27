@@ -1,0 +1,13 @@
+.env
+.env.*
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+playground/
+openrouter_debug.log
+*.log
+*.pt
+Dockerfile
+.dockerignore

@@ -1,0 +1,18 @@
+# Local SAM3 inference on the GPU. Install with the CUDA wheel index matching the host driver:
+#   pip install -r requirements-gpu.txt --extra-index-url https://download.pytorch.org/whl/cu130
+#
+# Pinned rather than floating: these are coupled to the CUDA runtime and to the SAM 3.1
+# checkpoint format. The versions below are the ones verified on the RTX 3080 Ti host.
+-r requirements.txt
+
+torch==2.13.0
+torchvision==0.28.0
+ultralytics==8.4.126
+
+# SAM3 text prompting builds its tokenizer from CLIP. ultralytics would otherwise pip-install this
+# from git on first use, which fails in a container (no git, non-root, and runtime installs are
+# not reproducible). Installing it here keeps inference offline-capable.
+clip @ git+https://github.com/ultralytics/CLIP.git
+
+# SAM3's ViTDet backbone lazily imports timm and would otherwise try to pip-install it mid-inference.
+timm==1.0.29

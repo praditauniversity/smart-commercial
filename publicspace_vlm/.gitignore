@@ -1,2 +1,4 @@
 sam*
+!sam_segmentation_inference_optimized_fast.ipynb
+!sam_segmentation_parallel_fast.ipynb
 yolo*

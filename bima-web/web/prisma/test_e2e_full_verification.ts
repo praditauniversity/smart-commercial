@@ -11,7 +11,7 @@ async function runEndToEndVerification() {
   console.log('====================================================');
 
   // Load API Key
-  const apiKey = process.env.OPEN_ROUTER_API_KEY; // optional: without it the real API calls are skipped
+  const apiKey = process.env.OPEN_ROUTER_API_KEY ?? ''; // optional: empty means the real API calls are skipped
   if (!apiKey) {
     console.warn('OPEN_ROUTER_API_KEY is not set in environment. Skipping real API calls.');
   }

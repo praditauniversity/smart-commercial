@@ -7,7 +7,9 @@ Layanan Python (FastAPI) untuk inferensi. Kode di [`ai-service/`](../ai-service/
 ```bash
 cd ai-service
 python -m venv venv && source venv/bin/activate      # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements.txt                       # inti (tanpa GPU)
+# untuk provider sam3 (GPU), pakai ini sebagai gantinya:
+# pip install -r requirements-gpu.txt --extra-index-url https://download.pytorch.org/whl/cu130
 cp .env.example .env                                  # lalu isi
 python main.py                                        # host/port dari AI_SERVICE_HOST / AI_SERVICE_PORT
 ```
@@ -15,7 +17,10 @@ python main.py                                        # host/port dari AI_SERVIC
 - Mendengarkan `AI_SERVICE_HOST`:`AI_SERVICE_PORT` (isi loopback, mis. `127.0.0.1:8000`). Swagger di `/docs`.
 - **Semua konfigurasi dari environment, tanpa nilai bawaan di kode.** Variabel yang wajib tetapi kosong menghentikan proses dengan pesan yang menyebut nama variabelnya (`config.py`). `INTERNAL_API_SECRET` harus sama dengan `web/.env`.
 - Tes: `pytest` (IoU, perencanaan segmen, dedup temporal, deteksi konflik, grid visual).
-- Dependensi SAM3 (torch, torchvision, ultralytics, opencv-python, numpy) bersifat opsional dan di-import lazy. Service tetap hidup tanpa mereka, tetapi provider `sam3` akan gagal.
+- `numpy` dan `opencv` **wajib**: `services/sam3_engine.py` meng-import keduanya pada level modul, sehingga `main.py` tidak bisa start tanpa mereka meski provider `sam3` tidak dipakai. Keduanya ada di `requirements.txt`.
+- `torch`, `torchvision`, dan `ultralytics` di-import lazy dan hanya dibutuhkan provider `sam3`. Semuanya ada di `requirements-gpu.txt` dengan versi dipatok, karena terikat pada runtime CUDA dan format bobot SAM 3.1. Service tetap hidup tanpa mereka, tetapi provider `sam3` akan gagal.
+- **CLIP wajib untuk SAM3.** Tokenizer teks SAM3 dibangun dari paket `clip`. Bila paket itu tidak ada, ultralytics mencoba `pip install git+...CLIP.git` **saat inferensi pertama**; di container hal itu gagal (`No module named 'clip'`). Karena itu `requirements-gpu.txt` memasangnya lebih awal.
+- Menjalankan lewat Docker: lihat [`operations.md`](operations.md#5-deploy-dengan-docker).
 
 ## 2. Jalur pemrosesan
 
@@ -48,7 +53,7 @@ Kontrak provider (`providers/base.py`): `detect(image_base64, active_classes, ti
 
 ### 2.3 Jalur SAM3 ➕
 
-Alur satu job (`services/sam3_service.py`). Video dibatasi 2 menit di sisi web (upload):
+Alur satu job (`services/sam3_service.py`). Video dibatasi 20 menit di sisi web (upload):
 
 1. `build_class_prompts`: hanya kelas dengan `sam_prompt` yang dipakai. Warna dari `sam_color` (atau palet bawaan).
 2. Materialisasi input ke file lokal (unduh dengan streaming, timeout 300 dtk).
@@ -74,7 +79,7 @@ Mode video (`ModelConfig.samMode`):
 Batasan SAM3 saat ini:
 
 - Tidak ada dedup temporal: hanya frame puncak per kelas.
-- Satu segmen per video (tidak dipecah ≤10 detik). Durasi video dibatasi 2 menit oleh web sebelum sampai ke sini.
+- Satu segmen per video (tidak dipecah ≤10 detik). Durasi video dibatasi 20 menit oleh web sebelum sampai ke sini.
 
 ### 2.4 Deteksi konflik ➕
 

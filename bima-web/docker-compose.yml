@@ -1,0 +1,78 @@
+name: bima-web
+
+# Both services read their configuration from the same .env files the native setup uses
+# (web/.env, ai-service/.env). Only the values that differ *inside* a container are overridden
+# here; everything else, including every secret, stays in those files.
+
+services:
+  web:
+    build:
+      context: ./web
+      secrets:
+        - web_env
+    env_file: ./web/.env
+    environment:
+      # On the compose network the AI service is reached by name, not on loopback.
+      FASTAPI_SERVICE_URL: http://ai-service:8000
+      FFMPEG_PATH: /usr/bin/ffmpeg
+      FFPROBE_PATH: /usr/bin/ffprobe
+    ports:
+      # Loopback only: Tailscale Serve terminates HTTPS in front of this.
+      # The session cookie is Secure in production, so plain http://<lan-ip>:<port> cannot log in.
+      # Host port is configurable so this can run alongside a native dev server on 3000; Tailscale
+      # Serve forwards to a fixed port, so point it at whatever WEB_HOST_PORT is set to.
+      - "127.0.0.1:${WEB_HOST_PORT:?set WEB_HOST_PORT in bima-web/.env (see .env.example)}:3000"
+    depends_on:
+      # Only ordering, not health: login, review and dashboard work without the AI service, so a
+      # GPU or SAM3 problem must not keep the whole UI down. Media processing fails loudly instead.
+      ai-service:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  ai-service:
+    build:
+      context: ./ai-service
+    env_file: ./ai-service/.env
+    environment:
+      # Listens on all interfaces *within* the container. It is still unreachable from the
+      # network because no port is published: the compose network replaces loopback as the
+      # trust boundary, and X-Internal-Secret still guards every endpoint.
+      AI_SERVICE_HOST: 0.0.0.0
+      AI_SERVICE_PORT: 8000
+      SAM3_CHECKPOINT: /weights/sam3_1.pt
+      FFMPEG_PATH: /usr/bin/ffmpeg
+      WEB_BASE_URL: http://web:3000
+    volumes:
+      # The 3.3 GB checkpoint is mounted read-only, never baked into the image.
+      - ${SAM3_WEIGHTS_HOST_PATH:?set SAM3_WEIGHTS_HOST_PATH in bima-web/.env (see .env.example)}:/weights/sam3_1.pt:ro
+    gpus: all
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # One-off: docker compose --profile tools run --rm migrate
+  migrate:
+    profiles: ["tools"]
+    build:
+      context: ./web
+      target: builder
+      # Same builder stage as `web`, so it needs the same build secret.
+      secrets:
+        - web_env
+    env_file: ./web/.env
+    command: ["npx", "prisma", "migrate", "deploy"]
+    restart: "no"
+
+secrets:
+  web_env:
+    file: ./web/.env

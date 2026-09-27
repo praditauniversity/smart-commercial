@@ -94,7 +94,7 @@ Model yang sudah dirujuk `Detection` tidak di-hard-delete, hanya `isActive=false
 | `fileType` | string | `image` \| `video` |
 | `fileUrl` | string | URL publik bucket |
 | `storagePath` | string | Path objek di bucket |
-| `durationSeconds` | float? | Durasi video hasil ukur ffprobe (maks 2 menit) |
+| `durationSeconds` | float? | Durasi video hasil ukur ffprobe (maks 20 menit) |
 | `status` | string | `queued`, `uploading`, `uploaded`, `processing`, `completed`, `failed`, `deleted` (default `queued`; alur upload menulis `uploaded`) |
 | `errorMessage` | string? | Pesan gagal proses |
 | `idempotencyKey` | string?, unik | UUID acak per upload |

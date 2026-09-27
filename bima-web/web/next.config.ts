@@ -8,6 +8,8 @@ const allowedDevOrigins = (process.env.ALLOWED_DEV_ORIGINS ?? "")
 
 const nextConfig: NextConfig = {
   allowedDevOrigins,
+  // Self-contained server bundle; the Docker runtime image ships only this instead of node_modules.
+  output: "standalone",
 };
 
 export default nextConfig;

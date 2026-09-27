@@ -36,7 +36,7 @@ Semua galat berbentuk `{ "error": "pesan" }`. Kode umum: `401` (belum login), `4
 
 | Method & path | Peran | Fungsi dan aturan |
 |---|---|---|
-| `POST /api/media/upload` | S/A | `multipart/form-data`: `sessionId`, `file`, `durationSeconds?`. Hanya sesi `berlangsung`/`perlu_perbaikan`. Menerima `image/*` dan video (`mp4|mov|webm|mkv`). Video maksimal 2 menit (`NEXT_PUBLIC_MAX_VIDEO_SECONDS`): durasi diukur ffprobe, `400` bila melebihi atau tidak terbaca. Kompres → bucket → `MediaAsset(status=uploaded, durationSeconds=hasil ffprobe)`. Belum ada batas ukuran byte |
+| `POST /api/media/upload` | S/A | `multipart/form-data`: `sessionId`, `file`, `durationSeconds?`. Hanya sesi `berlangsung`/`perlu_perbaikan`. Menerima `image/*` dan video (`mp4|mov|webm|mkv`). Video maksimal 20 menit (`NEXT_PUBLIC_MAX_VIDEO_SECONDS`): durasi diukur ffprobe, `400` bila melebihi atau tidak terbaca. Kompres → bucket → `MediaAsset(status=uploaded, durationSeconds=hasil ffprobe)`. Belum ada batas ukuran byte |
 | `POST /api/media/{id}/process` | S/A | Memicu pemrosesan AI. SAM3 → `202` (background); VLM → menunggu worker lalu mengembalikan `detectionsCount`/`detections`. `400` jika tidak ada model aktif atau API key OpenRouter kosong |
 | `POST /api/media/{id}/retry` | S/A | Proses ulang media (status sesi harus editable). Meneruskan ke `process` |
 | `DELETE /api/media/{id}` | S/A | Hapus permanen media, segmen, detection, dan objek bucket. Status sesi harus editable |

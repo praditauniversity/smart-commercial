@@ -34,7 +34,7 @@ Panduan ini mencakup dua mode: **development** (laptop) dan **server tetap** (sa
 | `FFPROBE_TIMEOUT_MS`, `FFMPEG_IMAGE_TIMEOUT_MS`, `FFMPEG_VIDEO_TIMEOUT_MS` | Batas waktu proses media, ms |
 | `MEDIA_IMAGE_MAX_SIDE`, `MEDIA_IMAGE_QUALITY` | Sisi terpanjang dan kualitas WebP gambar |
 | `MEDIA_VIDEO_MAX_HEIGHT`, `MEDIA_VIDEO_CRF` | Tinggi maksimum dan CRF H.264 video |
-| `NEXT_PUBLIC_MAX_VIDEO_SECONDS` | Batas durasi video dalam detik (mis. `120` = 2 menit) |
+| `NEXT_PUBLIC_MAX_VIDEO_SECONDS` | Batas durasi video dalam detik (mis. `1200` = 20 menit) |
 | `SAM3_POLL_INTERVAL_MS`, `SAM3_MAX_WAIT_MS` | Interval polling dan batas tunggu job SAM3, ms |
 | `DEFAULT_CONFLICT_IOU_THRESHOLD` | Ambang IoU konflik kelas bila kelas tidak menentukan sendiri |
 | `ALLOWED_DEV_ORIGINS` | Host/IP yang boleh membuka server dev (dipisah koma; kosong = tidak ada) |
@@ -217,7 +217,93 @@ systemctl --user restart bima-ai      # bila ai-service atau .env-nya berubah
 
 Perubahan `.env` hanya terbaca setelah service di-restart. Variabel `NEXT_PUBLIC_*` tertanam saat build, jadi perlu `npm run build` ulang.
 
-## 5. Log dan pemantauan
+## 5. Deploy dengan Docker
+
+Alternatif dari service systemd (bagian 4.2): web dan ai-service dijalankan sebagai container. Database dan Storage tetap di Supabase, jadi tidak ada container database.
+
+### 5.1 Prasyarat tambahan
+
+| Kebutuhan | Keterangan |
+|---|---|
+| Docker Engine + Compose v2 | `docker --version`, `docker compose version` |
+| NVIDIA Container Toolkit | Wajib agar container ai-service melihat GPU. Driver tetap milik host; tidak perlu memasang CUDA di dalam image |
+
+Pasang toolkit (sekali saja, di host):
+
+```bash
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
+```
+
+> `systemctl restart docker` menghentikan sementara semua container yang sedang berjalan di mesin ini.
+
+Verifikasi:
+
+```bash
+docker run --rm --gpus all nvidia/cuda:13.0.1-base-ubuntu24.04 nvidia-smi
+```
+
+### 5.2 Konfigurasi
+
+Container memakai **`web/.env` dan `ai-service/.env` yang sama** dengan cara menjalankan secara native. Hanya nilai yang berbeda di dalam container yang ditimpa oleh `docker-compose.yml` (lihat komentar di file tersebut):
+
+| Service | Ditimpa menjadi | Alasan |
+|---|---|---|
+| web | `FASTAPI_SERVICE_URL=http://ai-service:8000` | Di jaringan compose, ai-service dipanggil lewat nama service, bukan loopback |
+| ai-service | `AI_SERVICE_HOST=0.0.0.0` | Harus mendengarkan semua interface **di dalam** container |
+| ai-service | `SAM3_CHECKPOINT=/weights/sam3_1.pt` | Bobot di-mount, bukan ikut di dalam image |
+| ai-service | `WEB_BASE_URL=http://web:3000` | Fallback pengambilan file `/uploads/...` lama |
+
+Selain itu ada dua variabel khusus Docker di **`bima-web/.env`** (contoh: `bima-web/.env.example`):
+
+```bash
+cp .env.example .env
+```
+
+| Variabel | Isi |
+|---|---|
+| `SAM3_WEIGHTS_HOST_PATH` | Path absolut bobot SAM 3.1 di host ini. Di-mount **read-only** ke `/weights/sam3_1.pt`; file itu tidak pernah disalin ke dalam image |
+| `WEB_HOST_PORT` | Port host untuk container web (port di dalam container tetap 3000) |
+
+Compose menolak start bila salah satu variabel itu kosong.
+
+**Tentang `WEB_HOST_PORT`:** pakai port bebas (mis. `3100`) bila server dev native masih jalan di 3000, atau `3000` bila container yang mengambil alih. Tailscale Serve meneruskan ke port tetap, jadi samakan keduanya:
+
+```bash
+tailscale serve --bg --https=8443 <WEB_HOST_PORT>
+```
+
+### 5.3 Build dan jalankan
+
+```bash
+cd bima-web
+docker compose build
+docker compose up -d
+```
+
+Migrasi database dijalankan terpisah (tidak otomatis saat start):
+
+```bash
+docker compose --profile tools run --rm migrate
+```
+
+Periksa status dan log:
+
+```bash
+docker compose ps
+docker compose logs -f ai-service
+```
+
+### 5.4 Hal yang perlu diketahui
+
+- **ai-service tidak mem-publish port.** Ia hanya dapat dihubungi dari jaringan compose, sehingga sifat "loopback saja" tetap terjaga; `X-Internal-Secret` tetap menjaga setiap endpoint. Jangan menambahkan `ports:` pada service ini.
+- **web hanya di-publish ke `127.0.0.1:${WEB_HOST_PORT}`.** HTTPS tetap diterminasi Tailscale Serve di host (bagian 4.3). Karena cookie bertanda `Secure` di production, login lewat `http://<ip-lan>:<port>` akan gagal. Container dan proses native dapat berjalan berdampingan selama portnya berbeda.
+- **Nilai `NEXT_PUBLIC_*` ditanam saat build.** Mengubahnya di `web/.env` butuh `docker compose build web`, bukan sekadar restart. Saat build, `web/.env` dipasang sebagai BuildKit secret sehingga tidak ikut tersimpan di layer image.
+- **GPU dipakai bergantian.** ai-service memakai satu worker dan membongkar model setelah idle (`SAM3_IDLE_UNLOAD_SECONDS`). Jangan menaikkan jumlah replika: satu GPU hanya untuk satu proses. Beban GPU lain di mesin yang sama (mis. Ollama) ikut memakai VRAM yang sama.
+- **Image ai-service besar (beberapa GB)** karena roda torch CUDA. Itu wajar dan tidak perlu dioptimasi dengan base image CUDA terpisah: runtime CUDA sudah dibawa oleh wheel torch, driver berasal dari host.
+
+## 6. Log dan pemantauan
 
 ```bash
 journalctl --user -u bima-web -f
@@ -230,7 +316,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/login
 - `ai-service/openrouter_debug.log` berisi jejak debug OpenRouter (di-gitignore; berpotensi memuat data survei, jangan dibagikan).
 - Riwayat aksi pengguna ada di tabel `AuditLog` (ditampilkan lewat `AuditTimeline`).
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 | Gejala | Penyebab umum | Tindakan |
 |---|---|---|
@@ -239,7 +325,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/login
 | Login berhasil tetapi tetap dianggap belum login | Situs diakses lewat `http://` sementara cookie `Secure` | Akses lewat `https://` (4.3) atau `http://localhost` |
 | Membuka `/admin/*` langsung kembali ke `/login` | Belum login atau sesi kedaluwarsa (proxy halaman bekerja) | Login. Surveyor yang membuka `/admin/*` dialihkan ke `/surveyor/sessions` |
 | Semua halaman/login galat 500, atau fitur berhenti dengan pesan "Environment variable X belum diisi" | Variabel wajib kosong di `web/.env` atau `ai-service/.env` | Isi variabel yang disebut (lihat `.env.example`), restart service (dan `npm run build` bila `NEXT_PUBLIC_*`). Pesan lengkap ada di `journalctl --user -u bima-web` / `bima-ai` |
-| Upload video ditolak: "melebihi batas 2 menit" | Durasi video > `NEXT_PUBLIC_MAX_VIDEO_SECONDS` | Potong video, atau naikkan batas lalu build ulang |
+| Upload video ditolak: "melebihi batas 20 menit" | Durasi video > `NEXT_PUBLIC_MAX_VIDEO_SECONDS` | Potong video, atau naikkan batas lalu build ulang |
 | Upload video ditolak: durasi tidak terbaca / `ffprobe tidak bisa dijalankan` | File rusak atau `FFPROBE_PATH` salah | Periksa file; set `FFPROBE_PATH` (`which ffprobe`) |
 | `Client sent an HTTP request to an HTTPS server` | Membuka `http://...:8443` | Gunakan `https://...:8443` |
 | Port 3000 tidak bisa dijangkau | Service web tidak jalan atau firewall | `systemctl --user status bima-web`; `ss -tlnp \| grep 3000` |
@@ -250,7 +336,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/login
 | `test-connection` SAM3: torch/ultralytics belum terpasang | Dependensi opsional belum diinstal | Instal torch, torchvision, ultralytics, opencv-python, numpy |
 | Kompresi gagal: `ffmpeg tidak bisa dijalankan` | Path ffmpeg salah atau tanpa libx264 | Set `FFMPEG_PATH` ke `/usr/bin/ffmpeg` |
 
-## 7. Keamanan operasional (ringkas)
+## 8. Keamanan operasional (ringkas)
 
 - Jangan commit `.env`, bobot SAM, atau service role key (sudah di-gitignore; hanya `*.env.example` yang dilacak).
 - Ganti password akun seed sebelum dipakai bersama.

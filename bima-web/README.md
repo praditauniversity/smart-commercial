@@ -9,10 +9,11 @@ Aplikasi Web Pemantauan Kawasan Terintegrasi AI Vision (BIMA Vision) untuk surve
 ## 🏗️ Struktur Project
 
 ```
-├── web/           # Next.js 16 (App Router) + React 19 + Tailwind + Prisma + Supabase
-├── ai-service/    # Python 3.10+ FastAPI (VLM, SAM3 lokal, Deduplication, Deteksi Konflik)
-├── docs/          # Arsitektur, model data, API, operasional, gap analysis, code review
-└── PRD_ ....md    # PRD v2.0 (status implementasi per kebutuhan)
+├── web/                 # Next.js 16 (App Router) + React 19 + Tailwind + Prisma + Supabase
+├── ai-service/          # Python 3.10+ FastAPI (VLM, SAM3 lokal, Deduplication, Deteksi Konflik)
+├── docs/                # Arsitektur, model data, API, operasional, gap analysis, code review
+├── docker-compose.yml   # Menjalankan web + ai-service sebagai container (opsional)
+└── PRD_ ....md          # PRD v2.0 (status implementasi per kebutuhan)
 ```
 
 ---
@@ -94,7 +95,32 @@ npm run dev
 
 ---
 
-### 4. Menjalankan Test
+### 4. Alternatif: Jalankan dengan Docker
+
+Menjalankan kedua service sebagai container (database dan Storage tetap di Supabase). Membutuhkan Docker, dan **NVIDIA Container Toolkit** agar provider `sam3` dapat memakai GPU.
+
+```bash
+cd bima-web
+
+# 1. Isi web/.env dan ai-service/.env seperti langkah 2 dan 3 di atas
+# 2. Isi setelan Docker: lokasi bobot SAM 3.1 dan port host untuk web
+cp .env.example .env        # SAM3_WEIGHTS_HOST_PATH dan WEB_HOST_PORT
+
+# 3. Build dan jalankan
+docker compose build
+docker compose up -d
+
+# 4. Migrasi database (sekali, tidak otomatis saat start)
+docker compose --profile tools run --rm migrate
+```
+
+> Web di-publish ke `127.0.0.1:${WEB_HOST_PORT}` saja (pakai port bebas bila server dev native masih jalan di 3000); ai-service **tidak** mem-publish port dan hanya dapat dihubungi dari jaringan internal Docker. Bobot SAM3 (3,3 GB) di-mount read-only, tidak ikut ke dalam image. Nilai `NEXT_PUBLIC_*` ditanam saat build, jadi mengubahnya butuh `docker compose build web`.
+>
+> Langkah lengkap, termasuk cara memasang NVIDIA Container Toolkit: [`docs/operations.md`](docs/operations.md#5-deploy-dengan-docker).
+
+---
+
+### 5. Menjalankan Test
 
 - **AI Service Test**:
   ```bash
@@ -120,7 +146,7 @@ npm run dev
 | `FASTAPI_SERVICE_URL` | URL internal AI Service. Gunakan loopback `http://127.0.0.1:8000` (server-ke-server, bukan IP jaringan). |
 | `JWT_SECRET` | Penandatangan sesi login. **Wajib diisi** (tanpa nilai bawaan; aplikasi menolak login bila kosong) dengan nilai acak yang panjang, mis. `openssl rand -base64 48`. |
 | `ENCRYPTION_SECRET_KEY` | Kunci enkripsi API key model. **Wajib diisi.** |
-| `NEXT_PUBLIC_MAX_VIDEO_SECONDS` | Batas durasi video dalam detik (mis. `120` = 2 menit). Ubah lalu `npm run build` dan restart. |
+| `NEXT_PUBLIC_MAX_VIDEO_SECONDS` | Batas durasi video dalam detik (mis. `1200` = 20 menit). Ubah lalu `npm run build` dan restart. |
 | `FFMPEG_PATH`, `FFPROBE_PATH` | Path ffmpeg dan ffprobe (butuh libx264 dan libwebp). |
 | `SUPABASE_SERVICE_ROLE_KEY` | Hanya server: upload/hapus media di Supabase Storage (bucket `img`, `vids`). **Rahasia.** |
 | `SAM3_CHECKPOINT`, `FFMPEG_PATH` | (ai-service) Bobot SAM 3.1 dan ffmpeg dengan libx264, untuk provider `sam3`. |
