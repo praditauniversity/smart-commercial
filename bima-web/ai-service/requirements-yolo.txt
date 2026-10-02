@@ -1,0 +1,5 @@
+# Deteksi YOLO (6 model kategori) di CPU. Tidak membutuhkan GPU maupun CLIP/SAM3.
+# Pasang torch CPU lebih dulu agar tidak menarik build CUDA yang besar:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r requirements-yolo.txt
+ultralytics>=8.4.126
