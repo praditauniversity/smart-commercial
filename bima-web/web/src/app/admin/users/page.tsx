@@ -19,7 +19,7 @@ interface UserItem {
   id: string;
   email: string;
   name: string;
-  role: 'surveyor' | 'admin';
+  role: 'surveyor' | 'supervisor' | 'admin';
   isActive: boolean;
   createdAt: string;
   _count: { surveySessions: number; reviewedSubmissions: number };
@@ -35,7 +35,7 @@ export default function AdminUsersPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'surveyor' | 'admin'>('surveyor');
+  const [role, setRole] = useState<'surveyor' | 'supervisor' | 'admin'>('surveyor');
 
   const [saving, setSaving] = useState(false);
   const [alertMsg, setAlertMsg] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -201,7 +201,9 @@ export default function AdminUsersPage() {
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                             u.role === 'admin'
                               ? 'bg-indigo-100 text-indigo-800'
-                              : 'bg-blue-100 text-blue-800'
+                              : u.role === 'supervisor'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-blue-100 text-blue-800'
                           }`}
                         >
                           {u.role === 'admin' ? <Shield className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
@@ -211,7 +213,9 @@ export default function AdminUsersPage() {
                       <td className="py-4 px-4 text-slate-500">
                         {u.role === 'surveyor'
                           ? `${u._count?.surveySessions || 0} Sesi Survei`
-                          : `${u._count?.reviewedSubmissions || 0} Review Dilakukan`}
+                          : u.role === 'supervisor'
+                            ? 'Koreksi temuan'
+                            : `${u._count?.reviewedSubmissions || 0} Review Dilakukan`}
                       </td>
                       <td className="py-4 px-4">
                         <button
@@ -313,6 +317,7 @@ export default function AdminUsersPage() {
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium"
                 >
                   <option value="surveyor">Surveyor (Lapangan)</option>
+                  <option value="supervisor">Supervisor / Manajer (Koreksi)</option>
                   <option value="admin">Admin (Review & Pengaturan)</option>
                 </select>
               </div>

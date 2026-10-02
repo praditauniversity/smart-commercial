@@ -10,7 +10,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
+    const user = await requireAuth(['surveyor', 'admin']);
     const { id } = await params;
     const FASTAPI_SERVICE_URL = requireEnv('FASTAPI_SERVICE_URL');
     const INTERNAL_API_SECRET = requireEnv('INTERNAL_API_SECRET');
@@ -298,6 +298,9 @@ export async function POST(
       detections: refreshedDetections,
     });
   } catch (error: any) {
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+    }
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

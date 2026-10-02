@@ -1,5 +1,6 @@
 'use client';
 
+import { ROLE_LABEL, normalizeRole } from '@/lib/access';
 import React, { useMemo, useState } from 'react';
 import {
   ArrowRight,
@@ -249,7 +250,7 @@ export default function AuditTimeline({ logs }: { logs: AuditLog[] }) {
                         )}
                         <span className="text-xs text-slate-500">
                           oleh <span className="font-semibold text-slate-700">{actor?.name || 'Sistem'}</span>
-                          {actor?.role && <span className="text-slate-400"> · {actor.role === 'admin' ? 'Admin' : 'Surveyor'}</span>}
+                          {actor?.role && <span className="text-slate-400"> · {ROLE_LABEL[normalizeRole(actor.role)]}</span>}
                         </span>
                       </div>
                       <time className="text-[11px] text-slate-400 tabular-nums" dateTime={head.createdAt}>

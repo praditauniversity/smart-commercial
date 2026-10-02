@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyJwtToken } from '@/lib/security';
+import { canEnterSection, homePathForRole, normalizeRole } from '@/lib/access';
 
 /**
  * Page guard (Next.js 16 "proxy", formerly middleware). It only checks that the session cookie holds a
@@ -26,13 +27,14 @@ export function proxy(request: NextRequest) {
     return redirectTo(request, '/login', Boolean(token));
   }
 
-  if (request.nextUrl.pathname.startsWith('/admin') && user.role !== 'admin') {
-    return redirectTo(request, '/surveyor/sessions');
+  const role = normalizeRole(user.role);
+  if (!canEnterSection(role, request.nextUrl.pathname)) {
+    return redirectTo(request, homePathForRole(role));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/surveyor/:path*'],
+  matcher: ['/admin/:path*', '/surveyor/:path*', '/supervisor/:path*'],
 };

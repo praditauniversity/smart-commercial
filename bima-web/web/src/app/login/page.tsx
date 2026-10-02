@@ -1,5 +1,6 @@
 'use client';
 
+import { homePathForRole, normalizeRole } from '@/lib/access';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MapPin, Lock, Mail, ArrowRight, Shield, User, Loader2, AlertCircle } from 'lucide-react';
@@ -36,11 +37,7 @@ export default function LoginPage() {
         throw new Error(data.error || 'Gagal login.');
       }
 
-      if (data.user.role === 'admin') {
-        router.push('/admin/dashboard');
-      } else {
-        router.push('/surveyor/sessions');
-      }
+      router.push(homePathForRole(normalizeRole(data.user.role)));
     } catch (err: any) {
       console.error(err);
       setError(err.message);

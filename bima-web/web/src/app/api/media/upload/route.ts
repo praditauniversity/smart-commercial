@@ -6,7 +6,7 @@ import { compressAndUpload, MediaLimitError } from '@/lib/media-storage';
 
 export async function POST(request: Request) {
   try {
-    const user = await requireAuth();
+    const user = await requireAuth(['surveyor', 'admin']);
     const form = await request.formData();
 
     const sessionId = form.get('sessionId');
@@ -96,6 +96,9 @@ export async function POST(request: Request) {
       message: 'Media asset berhasil didaftarkan dan disimpan.',
     });
   } catch (error: any) {
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+    }
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

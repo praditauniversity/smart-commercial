@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { verifyJwtToken, UserJwtPayload } from './security';
 import prisma from './prisma';
 import { requireEnvNumber } from './env';
+import { normalizeRole, type Role } from './access';
 
 // In-memory short TTL cache to avoid redundant roundtrips to Tokyo on every API request
 interface CachedUser {
@@ -40,7 +41,7 @@ export async function getCurrentUser(): Promise<UserJwtPayload | null> {
     const userPayload: UserJwtPayload = {
       userId: user.id,
       email: user.email,
-      role: user.role as 'surveyor' | 'admin',
+      role: normalizeRole(user.role),
       name: user.name,
     };
 
@@ -56,13 +57,13 @@ export async function getCurrentUser(): Promise<UserJwtPayload | null> {
     return {
       userId: payload.userId,
       email: payload.email,
-      role: payload.role as 'surveyor' | 'admin',
+      role: normalizeRole(payload.role),
       name: payload.name,
     };
   }
 }
 
-export async function requireAuth(allowedRoles?: ('surveyor' | 'admin')[]) {
+export async function requireAuth(allowedRoles?: Role[]) {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('UNAUTHORIZED');
