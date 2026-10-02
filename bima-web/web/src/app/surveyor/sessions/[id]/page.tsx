@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar';
 import MediaBoxOverlay, { OverlayDetection } from '@/components/MediaBoxOverlay';
 import MediaInspectionModal from '@/components/MediaInspectionModal';
 import YoloMediaModal, { isYoloProcessed } from '@/components/YoloMediaModal';
+import YoloMediaCard from '@/components/YoloMediaCard';
 import { Sam3Chips, getSam3Result } from '@/components/Sam3Result';
 import Pagination from '@/components/Pagination';
 import { FINDINGS_PAGE_SIZE, paginateTwo } from '@/lib/pagination';
@@ -51,10 +52,20 @@ interface DetectionItem {
   mediaAssetId: string;
   classId: string;
   className: string;
-  classDefinition?: { displayName: string; visualDescription: string };
+  classDefinition?: { id?: string; displayName: string; visualDescription: string; category?: string | null; categoryGroup?: string | null };
   bbox: string;
   condition: string;
   feasibility: 'layak' | 'cukup_layak' | 'tidak_layak';
+  // Jalur YOLO (RQ4): confidence, frame, dan skor risiko; null untuk hasil VLM/SAM3 lama
+  frameIndex?: number | null;
+  timestampSeconds?: number | null;
+  confidence?: number | null;
+  severity?: number | null;
+  severitySource?: string;
+  exposure?: number | null;
+  riskScore?: number | null;
+  priorityBand?: 'rendah' | 'sedang' | 'tinggi' | 'kritikal' | null;
+  reviewStatus?: string;
   hasConflict: boolean;
   conflictResolved: boolean;
   conflictDetails: string;
@@ -541,7 +552,10 @@ export default function SurveyorSessionWorkspace() {
   // SAM3 media get ONE card per photo/video (class pills + counts); VLM findings keep one card per object.
   const sam3Media = mediaAssets.filter((m) => getSam3Result(m));
   const sam3MediaIds = new Set(sam3Media.map((m) => m.id));
-  const vlmDetections = filteredDetections.filter((d) => !sam3MediaIds.has(d.mediaAssetId));
+  // Media hasil YOLO: satu kartu per media (frame yang benar + ringkasan risiko), bukan kartu per kotak.
+  const yoloMedia = mediaAssets.filter((m: any) => isYoloProcessed(m));
+  const yoloMediaIds = new Set(yoloMedia.map((m: any) => m.id));
+  const vlmDetections = filteredDetections.filter((d) => !sam3MediaIds.has(d.mediaAssetId) && !yoloMediaIds.has(d.mediaAssetId));
   const sam3Groups = sam3Media
     .map((media) => ({
       media,
@@ -891,6 +905,18 @@ export default function SurveyorSessionWorkspace() {
               </div>
             ) : (
               <>
+              {yoloMedia.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                  {yoloMedia.map((m: any) => (
+                    <YoloMediaCard
+                      key={m.id}
+                      media={m}
+                      detections={filteredDetections.filter((d: any) => d.mediaAssetId === m.id && !d.isDeleted) as any}
+                      onOpen={() => setInspectingMediaId(m.id)}
+                    />
+                  ))}
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {findingsPaged.first.map(({ media, result, dets }) => {
                   const worst = dets.some((d) => d.feasibility === 'tidak_layak')

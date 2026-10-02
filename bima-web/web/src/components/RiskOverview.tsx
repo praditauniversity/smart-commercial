@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AlertTriangle, ClipboardCheck, Layers, Loader2, MapPin, ShieldAlert, Flag } from 'lucide-react';
 import type { Overview, SessionSummary } from '@/lib/overview';
 import { BAND_LABEL, GROUP_LABEL, type PriorityBand } from '@/lib/risk';
-import { BAND_STYLE, ComplianceBadge, RiskBadge, SimulatedTag } from './RiskBadge';
+import { BAND_STYLE, RiskBadge, SimulatedTag } from './RiskBadge';
 
 interface Props {
   /** Tautan ke halaman detail sesi untuk peran ini. */
@@ -107,9 +107,9 @@ export default function RiskOverview({ detailHref, title = 'Ringkasan risiko lok
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Kpi label="Lokasi/sesi" value={data.totals.sessions} hint={`${data.totals.media} media`} icon={<MapPin className="h-4 w-4" />} tone="bg-blue-50 text-blue-600" />
-        <Kpi label="Temuan valid" value={data.totals.validFindings} hint="tanpa yang ditandai keliru" icon={<Layers className="h-4 w-4" />} tone="bg-indigo-50 text-indigo-600" />
+        <Kpi label="Deteksi valid" value={data.totals.validFindings} hint="kotak pada frame sampel, bukan objek unik" icon={<Layers className="h-4 w-4" />} tone="bg-indigo-50 text-indigo-600" />
         <Kpi label="Tinggi + Kritikal" value={urgent} hint={`${data.bands.kritikal} kritikal`} icon={<ShieldAlert className="h-4 w-4" />} tone="bg-rose-50 text-rose-600" />
-        <Kpi label="Sudah ditinjau" value={`${data.totals.reviewedFindings}/${data.totals.validFindings}`} hint="temuan oleh supervisor" icon={<ClipboardCheck className="h-4 w-4" />} tone="bg-emerald-50 text-emerald-600" />
+        <Kpi label="Sudah ditinjau" value={`${data.totals.reviewedFindings}/${data.totals.validFindings}`} hint="deteksi oleh supervisor" icon={<ClipboardCheck className="h-4 w-4" />} tone="bg-emerald-50 text-emerald-600" />
         <Kpi label="Keliru / terlewat" value={`${data.totals.falsePositives} / ${data.totals.missed}`} hint="false positive / false negative" icon={<Flag className="h-4 w-4" />} tone="bg-amber-50 text-amber-600" />
       </div>
 
@@ -138,6 +138,7 @@ export default function RiskOverview({ detailHref, title = 'Ringkasan risiko lok
           <h3 className="mb-1 text-sm font-bold text-slate-800">Skema penilaian</h3>
           <p className="text-xs text-slate-600">Skor = Severity (1–3) × Exposure (1–3). Nilai mungkin: 1, 2, 3, 4, 6, 9.</p>
           <p className="mt-2 text-xs text-slate-600">Rendah 1–2 · Sedang 3–4 · Tinggi 6 · Kritikal 9 (hanya Berat × Tinggi).</p>
+          <p className="mt-2 text-xs text-slate-600">Angka adalah jumlah kotak deteksi pada frame sampel. Objek yang sama pada beberapa frame dihitung berulang; skor lokasi memakai deteksi terburuk, bukan jumlah.</p>
           <p className="mt-2 text-xs text-violet-700"><SimulatedTag /> Tingkat Paparan (Exposure) berasal dari zona contoh, bukan data lokasi riil.</p>
         </div>
       </div>
@@ -167,7 +168,7 @@ export default function RiskOverview({ detailHref, title = 'Ringkasan risiko lok
             <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-3 py-2">Sesi</th><th className="px-3 py-2">Surveyor</th><th className="px-3 py-2">Zona</th>
-                <th className="px-3 py-2">Risiko tertinggi</th><th className="px-3 py-2">Infrastruktur</th><th className="px-3 py-2">Kepatuhan</th>
+                <th className="px-3 py-2">Risiko tertinggi</th><th className="px-3 py-2" title="Deteksi pada frame sampel">Infrastruktur</th><th className="px-3 py-2" title="Monitoring Kepatuhan: tanpa skor risiko">Kepatuhan (tanpa skor)</th>
                 <th className="px-3 py-2">Ditinjau</th><th className="px-3 py-2">Status</th>
               </tr>
             </thead>
@@ -179,7 +180,7 @@ export default function RiskOverview({ detailHref, title = 'Ringkasan risiko lok
                   <td className="px-3 py-2">{s.zone ? <span className="inline-flex items-center gap-1">{s.zone.name} <span className="font-mono text-slate-500">(E{s.zone.exposure})</span></span> : <span className="text-slate-400">tanpa zona</span>}</td>
                   <td className="px-3 py-2"><RiskBadge score={s.worstScore} band={s.worstBand} /></td>
                   <td className="px-3 py-2 font-mono">{s.infraCount}</td>
-                  <td className="px-3 py-2">{s.complianceCount > 0 ? <span className="inline-flex items-center gap-1"><ComplianceBadge /><b className="font-mono">{s.complianceCount}</b></span> : <span className="text-slate-400">0</span>}</td>
+                  <td className="px-3 py-2"><span className={s.complianceCount > 0 ? 'font-mono' : 'font-mono text-slate-400'}>{s.complianceCount}</span></td>
                   <td className="px-3 py-2 font-mono">{s.reviewed}/{s.valid}{s.missedCount > 0 && <span className="ml-1 inline-flex items-center gap-0.5 text-amber-700" title="Temuan terlewat ditandai petugas"><AlertTriangle className="h-3 w-3" />{s.missedCount}</span>}</td>
                   <td className="px-3 py-2">{STATUS_LABEL[s.status] ?? s.status}</td>
                 </tr>

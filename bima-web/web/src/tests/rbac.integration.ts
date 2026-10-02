@@ -73,7 +73,10 @@ async function main() {
   const created = await call(surveyor, 'POST', '/api/sessions', { name: `RBAC test ${stamp}` });
   assert.equal(created.status, 201, `surveyor gagal membuat sesi: ${JSON.stringify(created.json)}`);
   const sessionId: string = created.json.session.id;
+  const zone = await prisma.zone.findFirstOrThrow({ where: { exposure: 3 } });
+  await prisma.surveySession.update({ where: { id: sessionId }, data: { zoneId: zone.id } });
   const cls = await prisma.classDefinition.findFirstOrThrow({ where: { modelClass: 'pavedroad_pothole' } });
+  const bannerCls = await prisma.classDefinition.findFirstOrThrow({ where: { modelClass: 'banner' } });
   const media = await prisma.mediaAsset.create({
     data: { sessionId, fileName: 'rbac.jpg', fileType: 'image', fileUrl: 'x', storagePath: 'x', status: 'completed' },
   });
@@ -85,7 +88,12 @@ async function main() {
       className: cls.name,
       bbox: JSON.stringify({ x: 0.1, y: 0.1, width: 0.2, height: 0.2 }),
       condition: 'uji',
-      feasibility: 'cukup_layak',
+      feasibility: 'tidak_dinilai',
+      confidence: 0.9,
+      severity: 3,
+      exposure: 3,
+      riskScore: 9,
+      priorityBand: 'kritikal',
     },
   });
 
@@ -176,6 +184,110 @@ async function main() {
   });
   await check('surveyor lain: PATCH temuan ditolak', async () => {
     assert.equal((await call(surveyor2, 'PATCH', `/api/detections/${det.id}`, { condition: 'x' })).status, 403);
+  });
+
+  console.log('\nJalur koreksi: hanya supervisor dan admin');
+  await check('surveyor TIDAK dapat mengoreksi temuan, menandai terlewat, atau membaca riwayat koreksi', async () => {
+    assert.equal((await call(surveyor, 'POST', `/api/detections/${det.id}/correct`, { kind: 'dikonfirmasi' })).status, 403);
+    assert.equal((await call(surveyor, 'POST', `/api/sessions/${sessionId}/missed`, { classId: cls.id })).status, 403);
+    assert.equal((await call(surveyor, 'GET', '/api/corrections')).status, 403);
+    assert.equal((await call(surveyor, 'GET', '/api/dashboard/latency')).status, 403);
+  });
+  await check('permintaan koreksi tidak valid ditolak (jenis tak dikenal, keliru tanpa alasan)', async () => {
+    assert.equal((await call(supervisor, 'POST', `/api/detections/${det.id}/correct`, { kind: 'hapus' })).status, 400);
+    assert.equal((await call(supervisor, 'POST', `/api/detections/${det.id}/correct`, { kind: 'keliru' })).status, 400);
+    assert.equal((await call(supervisor, 'POST', `/api/detections/${det.id}/correct`, { kind: 'severity_diubah', severity: 7 })).status, 400);
+  });
+  await check('supervisor mengonfirmasi temuan: skor tidak berubah', async () => {
+    const r = await call(supervisor, 'POST', `/api/detections/${det.id}/correct`, { kind: 'dikonfirmasi' });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.detection.reviewStatus, 'dikonfirmasi');
+    assert.equal(r.json.detection.riskScore, 9);
+  });
+  await check('supervisor mengubah severity 3 -> 1: skor dihitung ulang (1 x 3 = 3, sedang), sumber "petugas"', async () => {
+    const r = await call(supervisor, 'POST', `/api/detections/${det.id}/correct`, { kind: 'severity_diubah', severity: 1, reason: 'lubang kecil' });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.detection.severity, 1);
+    assert.equal(r.json.detection.severitySource, 'petugas');
+    assert.equal(r.json.detection.riskScore, 3);
+    assert.equal(r.json.detection.priorityBand, 'sedang');
+    assert.equal(r.json.detection.reviewStatus, 'dikoreksi');
+  });
+  await check('supervisor mengubah kelas ke Spanduk (Monitoring Kepatuhan): skor dan severity dikosongkan', async () => {
+    const r = await call(supervisor, 'POST', `/api/detections/${det.id}/correct`, { kind: 'kelas_diubah', classId: bannerCls.id });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.detection.className, 'banner');
+    assert.equal(r.json.detection.riskScore, null);
+    assert.equal(r.json.detection.priorityBand, null);
+    assert.equal(r.json.detection.severity, null);
+  });
+  await check('severity tidak dapat diubah pada kelompok Monitoring Kepatuhan', async () => {
+    assert.equal((await call(supervisor, 'POST', `/api/detections/${det.id}/correct`, { kind: 'severity_diubah', severity: 2 })).status, 400);
+  });
+  await check('admin mengembalikan kelas ke pothole: Severity kembali bawaan (3), skor 9 kritikal', async () => {
+    const r = await call(admin, 'POST', `/api/detections/${det.id}/correct`, { kind: 'kelas_diubah', classId: cls.id });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.detection.severity, 3);
+    assert.equal(r.json.detection.severitySource, 'bawaan');
+    assert.equal(r.json.detection.riskScore, 9);
+    assert.equal(r.json.detection.priorityBand, 'kritikal');
+  });
+  await check('supervisor menandai temuan keliru (dengan alasan): tetap tersimpan, ditandai', async () => {
+    const r = await call(supervisor, 'POST', `/api/detections/${det.id}/correct`, { kind: 'keliru', reason: 'bayangan, bukan lubang' });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.detection.reviewStatus, 'keliru');
+    assert.equal((await prisma.detection.findUniqueOrThrow({ where: { id: det.id } })).isDeleted, false);
+  });
+  await check('temuan terlewat: valid -> 201; bbox di luar 0-1 atau kelas tak valid -> 400', async () => {
+    const ok = await call(supervisor, 'POST', `/api/sessions/${sessionId}/missed`, { classId: cls.id, mediaAssetId: media.id, timestampSeconds: 4.5, bbox: { x: 0.1, y: 0.1, width: 0.2, height: 0.2 }, reason: 'lubang tak terdeteksi' });
+    assert.equal(ok.status, 201);
+    assert.equal(ok.json.correction.kind, 'terlewat');
+    assert.equal((await call(supervisor, 'POST', `/api/sessions/${sessionId}/missed`, { classId: cls.id, bbox: { x: 2, y: 0, width: 1, height: 1 } })).status, 400);
+    assert.equal((await call(supervisor, 'POST', `/api/sessions/${sessionId}/missed`, { classId: 'tidak-ada' })).status, 400);
+    // "terlewat" tidak membuat temuan baru: pernyataan petugas, bukan keluaran model
+    assert.equal(await prisma.detection.count({ where: { sessionId } }), 1);
+  });
+  await check('riwayat koreksi lengkap dan tidak menimpa (>= 6 baris), admin dapat membaca hasil koreksi supervisor', async () => {
+    const r = await call(admin, 'GET', `/api/corrections?sessionId=${sessionId}`);
+    assert.equal(r.status, 200);
+    assert.ok(r.json.corrections.length >= 6, `hanya ${r.json.corrections.length}`);
+    assert.ok(r.json.countsByKind.terlewat >= 1 && r.json.countsByKind.keliru >= 1);
+    assert.ok(r.json.corrections.some((c: any) => c.actor.role === 'supervisor'));
+    assert.ok((await prisma.auditLog.count({ where: { entityId: det.id, action: { startsWith: 'OFFICER_' } } })) >= 5);
+  });
+  await check('data masukan surveyor (kondisi) tidak diubah oleh koreksi', async () => {
+    assert.equal((await prisma.detection.findUniqueOrThrow({ where: { id: det.id } })).condition, 'uji');
+  });
+
+  console.log('\nCakupan dashboard per peran (dibatasi di server)');
+  await check('overview surveyor = hanya sesinya sendiri; surveyor lain tidak melihatnya', async () => {
+    const mine = await call(surveyor, 'GET', '/api/dashboard/overview');
+    assert.equal(mine.json.scope, 'own');
+    assert.ok(mine.json.sessions.some((x: any) => x.id === sessionId));
+    assert.ok(mine.json.sessions.every((x: any) => x.surveyor.name !== 'Surveyor Dua'));
+    const other = await call(surveyor2, 'GET', '/api/dashboard/overview');
+    assert.equal(other.json.scope, 'own');
+    assert.ok(!other.json.sessions.some((x: any) => x.id === sessionId));
+  });
+  await check('surveyor tidak dapat memperluas cakupan lewat parameter surveyorId', async () => {
+    const other = await prisma.user.findFirstOrThrow({ where: { email: requireEnv('SEED_SURVEYOR_EMAIL') } });
+    const r = await call(surveyor2, 'GET', `/api/dashboard/overview?surveyorId=${other.id}`);
+    assert.ok(!r.json.sessions.some((x: any) => x.id === sessionId));
+  });
+  await check('overview supervisor dan admin = semua surveyor; temuan keliru tidak dihitung valid', async () => {
+    for (const c of [supervisor, admin]) {
+      const r = await call(c, 'GET', '/api/dashboard/overview');
+      assert.equal(r.json.scope, 'all');
+      const ses = r.json.sessions.find((x: any) => x.id === sessionId);
+      assert.ok(ses);
+      assert.equal(ses.valid, 0);
+      assert.equal(ses.falsePositiveCount, 1);
+      assert.equal(ses.missedCount, 1);
+    }
+  });
+  await check('latensi dapat dibaca supervisor dan admin', async () => {
+    assert.equal((await call(supervisor, 'GET', '/api/dashboard/latency')).status, 200);
+    assert.equal((await call(admin, 'GET', '/api/dashboard/latency')).status, 200);
   });
 
   console.log('\nData master & dashboard admin');
