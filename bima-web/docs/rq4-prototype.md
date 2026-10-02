@@ -28,7 +28,26 @@ Prinsip: angka "hasil nyata" hanya berasal dari data riil (evaluasi RQ3 yang sud
 
 Pembatasan data dasbor dilakukan di server (`/api/dashboard/overview`), bukan di klien. Uji: `npm run test:rbac` (60 pengecekan).
 
-## 3. Cara menjalankan (pengembangan)
+## 3a. Cara tercepat: satu perintah (demo lokal)
+
+Prasyarat: Node.js 20+, Python 3.10+, ffmpeg (dengan libx264 dan libwebp), 6 berkas weight di `ai-service/models/yolo11n_seed0/`,
+serta PostgreSQL kosong (atau Docker).
+
+```bash
+# dari folder bima-web/
+node scripts/local-demo.mjs --database-url "postgresql://user:sandi@localhost:5432/bima_demo"
+# atau, bila Docker berjalan, biarkan skrip membuat PostgreSQL sendiri:
+node scripts/local-demo.mjs --docker-db
+# sekaligus membuat sesi demo dari sebuah video (nama berkas asli klip uji dikenali sebagai "dievaluasi"):
+node scripts/local-demo.mjs --docker-db --video "C:\\klip\\20260920_080304-002-00.01.17.012-00.02.17.012-seg2.mp4"
+```
+
+Skrip memeriksa prasyarat (dan menjelaskan yang kurang), membuat venv Python + memasang dependensi (sekali, unduhan besar), memigrasi dan
+men-seed database, lalu menjalankan ai-service dan web, dan mencetak alamat serta kata sandi tiga akun (admin, supervisor, surveyor).
+Kata sandi dibuat acak dan disimpan di `.demo/kredensial.txt`. File `.env` Anda **tidak disentuh**; konfigurasi demo ada di `.demo/`
+(di-gitignore). Gunakan database kosong khusus demo. Perintah lain: `setup`, `start`, `demo`, `help`; `--reset` membuat ulang konfigurasi.
+
+## 3. Cara menjalankan manual (pengembangan)
 
 1. Database: `DATABASE_URL`/`DIRECT_URL` → `npx prisma migrate deploy` → `npm run seed` (membuat admin, surveyor, supervisor dari env `SEED_*`) → `npm run seed:risk` (8 kelas YOLO, 3 zona contoh, 35 klip RQ3, model YOLO).
 2. Weight (di luar git): letakkan `<kategori>-best.pt` di `ai-service/models/yolo11n_seed0/` (pavedroad, vegetation, weeds, sign, banner, house_notice).
