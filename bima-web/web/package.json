@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/lib/*.test.ts",
     "seed": "tsx prisma/seed.ts",
-    "seed:sam3": "tsx prisma/seed-sam3.ts"
+    "seed:sam3": "tsx prisma/seed-sam3.ts",
+    "seed:risk": "tsx prisma/seed-risk.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

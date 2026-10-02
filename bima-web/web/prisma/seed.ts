@@ -11,6 +11,7 @@ async function main() {
   // 1. Users
   const adminPasswordHash = await bcrypt.hash(requireEnv('SEED_ADMIN_PASSWORD'), 10);
   const surveyorPasswordHash = await bcrypt.hash(requireEnv('SEED_SURVEYOR_PASSWORD'), 10);
+  const supervisorPasswordHash = await bcrypt.hash(requireEnv('SEED_SUPERVISOR_PASSWORD'), 10);
 
   const admin = await prisma.user.upsert({
     where: { email: requireEnv('SEED_ADMIN_EMAIL') },
@@ -46,7 +47,24 @@ async function main() {
     },
   });
 
-  console.log(`Created users: Admin (${admin.email}), Surveyor (${surveyor.email})`);
+  const supervisor = await prisma.user.upsert({
+    where: { email: requireEnv('SEED_SUPERVISOR_EMAIL') },
+    update: {
+      name: 'Supervisor Kawasan',
+      passwordHash: supervisorPasswordHash,
+      role: 'supervisor',
+      isActive: true,
+    },
+    create: {
+      email: requireEnv('SEED_SUPERVISOR_EMAIL'),
+      name: 'Supervisor Kawasan',
+      passwordHash: supervisorPasswordHash,
+      role: 'supervisor',
+      isActive: true,
+    },
+  });
+
+  console.log(`Created users: Admin (${admin.email}), Surveyor (${surveyor.email}), Supervisor (${supervisor.email})`);
 
   // 2. Class Definitions
   const initialClasses = [
