@@ -46,11 +46,15 @@ services:
       AI_SERVICE_HOST: 0.0.0.0
       AI_SERVICE_PORT: 8000
       SAM3_CHECKPOINT: /weights/sam3_1.pt
+      # Provider YOLO (6 model kategori, RQ4): folder bobot di-mount read-only, tidak di-bake ke image.
+      YOLO_WEIGHTS_DIR: /weights/yolo
       FFMPEG_PATH: /usr/bin/ffmpeg
       WEB_BASE_URL: http://web:3000
     volumes:
       # The 3.3 GB checkpoint is mounted read-only, never baked into the image.
       - ${SAM3_WEIGHTS_HOST_PATH:?set SAM3_WEIGHTS_HOST_PATH in bima-web/.env (see .env.example)}:/weights/sam3_1.pt:ro
+      # Folder berisi <kategori>-best.pt (pavedroad, vegetation, weeds, sign, banner, house_notice). Belum diuji di Docker.
+      - ${YOLO_WEIGHTS_HOST_PATH:-./ai-service/models/yolo11n_seed0}:/weights/yolo:ro
     gpus: all
     restart: unless-stopped
     healthcheck:

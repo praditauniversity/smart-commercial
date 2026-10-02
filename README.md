@@ -21,6 +21,8 @@ smart-commercial/
 
 ## Fitur utama
 
+> Purwarupa tesis (penilaian risiko Severity × Exposure, deteksi YOLO, galeri frame video, koreksi supervisor, tiga peran): lihat [`bima-web/docs/rq4-prototype.md`](bima-web/docs/rq4-prototype.md).
+
 - Upload dan pemrosesan gambar atau video survei.
 - Deteksi objek melalui provider Vision AI (OpenRouter atau on-premise).
 - Pembagian video menjadi segmen, deduplikasi temporal, dan deteksi konflik kelas.

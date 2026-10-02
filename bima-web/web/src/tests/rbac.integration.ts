@@ -311,6 +311,42 @@ async function main() {
     assert.equal((await call(admin, 'GET', '/api/admin/users')).status, 200);
   });
 
+  console.log('\nData master risiko: hanya admin');
+  for (const [who, c] of [['surveyor', surveyor], ['supervisor', supervisor]] as [string, Client][]) {
+    await check(`${who} tidak dapat membaca/membuat/mengubah zona master atau Severity kelas`, async () => {
+      assert.equal((await call(c, 'GET', '/api/admin/zones')).status, 403);
+      assert.equal((await call(c, 'POST', '/api/admin/zones', { code: 'ZN-X', name: 'x', zoneType: 'hunian', exposure: 1 })).status, 403);
+      assert.equal((await call(c, 'PATCH', `/api/admin/classes/${cls.id}`, { defaultSeverity: 1 })).status, 403);
+    });
+  }
+  await check('admin: siklus zona (buat, ubah exposure, nonaktifkan bila dipakai, hapus bila tidak)', async () => {
+    const code = `ZN-T${stamp % 100000}`;
+    const created = await call(admin, 'POST', '/api/admin/zones', { code, name: 'Zona uji', zoneType: 'hunian', exposure: 2 });
+    assert.equal(created.status, 201);
+    assert.equal(created.json.zone.isSimulated, false, 'zona buatan admin bukan data contoh kecuali ditandai');
+    const zid = created.json.zone.id;
+    assert.equal((await call(admin, 'POST', '/api/admin/zones', { code, name: 'dup', zoneType: 'hunian', exposure: 2 })).status, 409);
+    assert.equal((await call(admin, 'POST', '/api/admin/zones', { code: 'ZN-Y', name: 'y', zoneType: 'hunian', exposure: 4 })).status, 400);
+    const up = await call(admin, 'PATCH', `/api/admin/zones/${zid}`, { exposure: 3 });
+    assert.equal(up.json.zone.exposure, 3);
+    // dipakai sesi -> hanya dinonaktifkan
+    const sid = (await call(surveyor, 'POST', '/api/sessions', { name: `zona uji ${stamp}`, zoneId: zid })).json.session.id;
+    const del = await call(admin, 'DELETE', `/api/admin/zones/${zid}`);
+    assert.equal(del.json.deactivated, true);
+    assert.equal((await prisma.zone.findUniqueOrThrow({ where: { id: zid } })).isActive, false);
+    assert.equal((await call(surveyor, 'POST', '/api/sessions', { name: 'x', zoneId: zid })).status, 400, 'zona nonaktif tidak dapat dipilih');
+    await prisma.surveySession.delete({ where: { id: sid } });
+    assert.equal((await call(admin, 'DELETE', `/api/admin/zones/${zid}`)).json.deactivated, false);
+    assert.equal(await prisma.zone.count({ where: { id: zid } }), 0);
+  });
+  await check('admin: validasi Severity kelas (infrastruktur wajib 1-3; kepatuhan tanpa severity)', async () => {
+    const weeds = await prisma.classDefinition.findFirstOrThrow({ where: { modelClass: 'weeds' } });
+    assert.equal((await call(admin, 'PATCH', `/api/admin/classes/${weeds.id}`, { defaultSeverity: 5 })).status, 400);
+    assert.equal((await call(admin, 'PATCH', `/api/admin/classes/${bannerCls.id}`, { defaultSeverity: 2 })).status, 400);
+    assert.equal((await call(admin, 'PATCH', `/api/admin/classes/${weeds.id}`, { defaultSeverity: 1 })).status, 200);
+    assert.equal((await prisma.classDefinition.findUniqueOrThrow({ where: { id: weeds.id } })).defaultSeverity, 1);
+  });
+
   console.log('\nGuard halaman (proxy)');
   const redirects: [string, Client, string, string][] = [
     ['surveyor', surveyor, '/admin/dashboard', '/surveyor/sessions'],
@@ -325,6 +361,16 @@ async function main() {
       assert.ok((r.location || '').endsWith(expected), `location ${r.location}`);
     });
   }
+  await check('supervisor dan admin membuka dasbor/halaman baru tanpa dialihkan; surveyor ke validasi ahli dialihkan', async () => {
+    assert.equal((await call(supervisor, 'GET', '/supervisor/dashboard')).status, 200);
+    assert.equal((await call(admin, 'GET', '/supervisor/dashboard')).status, 200);
+    assert.equal((await call(admin, 'GET', '/admin/risk-master')).status, 200);
+    assert.equal((await call(admin, 'GET', '/admin/validasi-ahli')).status, 200);
+    for (const p of ['/admin/risk-master', '/admin/validasi-ahli']) {
+      const r = await call(supervisor, 'GET', p);
+      assert.ok([301, 302, 303, 307, 308].includes(r.status), `${p} status ${r.status}`);
+    }
+  });
   await check('tanpa login -> /login', async () => {
     const r = await call({ name: 'anon', cookie: '' }, 'GET', '/supervisor/dashboard');
     assert.ok((r.location || '').endsWith('/login'), `location ${r.location}`);

@@ -157,6 +157,28 @@ export default function Navbar() {
                         Kelas Custom
                       </Link>
                       <Link
+                        href="/admin/risk-master"
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          pathname.startsWith('/admin/risk-master')
+                            ? 'bg-blue-50 text-blue-700 font-bold'
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }`}
+                      >
+                        <BarChart3 className="w-4 h-4" />
+                        Risiko &amp; Zona
+                      </Link>
+                      <Link
+                        href="/admin/validasi-ahli"
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          pathname.startsWith('/admin/validasi-ahli')
+                            ? 'bg-blue-50 text-blue-700 font-bold'
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }`}
+                      >
+                        <ClipboardList className="w-4 h-4" />
+                        Validasi Ahli
+                      </Link>
+                      <Link
                         href="/admin/models"
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
                           pathname.startsWith('/admin/models')
@@ -310,6 +332,28 @@ export default function Navbar() {
                   >
                     <Layers className="w-3.5 h-3.5 shrink-0" />
                     Kelas Custom
+                  </Link>
+                  <Link
+                    href="/admin/risk-master"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
+                      pathname.startsWith('/admin/risk-master')
+                        ? 'bg-blue-600 text-white shadow-xs font-bold'
+                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <BarChart3 className="w-3.5 h-3.5 shrink-0" />
+                    Risiko &amp; Zona
+                  </Link>
+                  <Link
+                    href="/admin/validasi-ahli"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
+                      pathname.startsWith('/admin/validasi-ahli')
+                        ? 'bg-blue-600 text-white shadow-xs font-bold'
+                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <ClipboardList className="w-3.5 h-3.5 shrink-0" />
+                    Validasi Ahli
                   </Link>
                   <Link
                     href="/admin/models"

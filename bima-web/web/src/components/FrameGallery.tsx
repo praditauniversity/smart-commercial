@@ -108,7 +108,6 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
       </div>
 
       <div className="relative overflow-hidden rounded-xl bg-slate-900">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={frame.imageUrl} alt={`Frame ${frame.frameIndex + 1} pada ${formatTimestamp(frame.timestampSeconds)}`} className="block h-auto w-full" />
         {showBoxes &&
           current.map((d) => {
@@ -145,7 +144,6 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
             <li key={f.id} className="shrink-0">
               <button type="button" onClick={() => setIndex(i)} aria-label={`Frame ${f.frameIndex + 1}, ${n} kotak`}
                 className={`relative block overflow-hidden rounded-md border-2 ${i === index ? 'border-blue-600' : 'border-transparent'}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={f.imageUrl} alt="" loading="lazy" className="h-14 w-24 object-cover" />
                 {n > 0 && (
                   <span className={`absolute right-0.5 top-0.5 rounded px-1 text-[9px] font-bold text-white ${band ? BAND_STYLE[band].dot : 'bg-slate-600'}`}>{n}</span>

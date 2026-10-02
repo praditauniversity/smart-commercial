@@ -34,7 +34,7 @@ export default function YoloMediaCard({ media, detections, onOpen }: {
     <button type="button" onClick={onOpen} aria-label={`Buka hasil deteksi ${media.fileName}`}
       className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-xs transition-all hover:border-blue-300 hover:shadow-lg">
       <div className="relative h-48 overflow-hidden bg-slate-950">
-        {thumb && /* eslint-disable-next-line @next/next/no-img-element */ <img src={thumb.imageUrl} alt={`Frame ${thumb.frameIndex + 1} dari ${media.fileName}`} className="h-48 w-full object-cover" />}
+        {thumb && <img src={thumb.imageUrl} alt={`Frame ${thumb.frameIndex + 1} dari ${media.fileName}`} className="h-48 w-full object-cover" />}
         <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
           <span className="flex items-center gap-1.5 rounded-xl bg-blue-600/90 px-3 py-1.5 text-xs font-bold text-white shadow-lg"><Eye className="h-3.5 w-3.5" />Lihat galeri frame</span>
         </span>
