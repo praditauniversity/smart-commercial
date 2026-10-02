@@ -96,22 +96,39 @@ export type DetectionAssessment =
   | ({ scored: true } & RiskResult)
   | { scored: false; reason: 'monitoring_kepatuhan' | 'subtipe_tidak_dikenal' | 'tanpa_exposure' };
 
+/** Bagian data master kelas yang dibutuhkan untuk menilai risiko (dibaca dari tabel ClassDefinition). */
+export interface ClassRiskProfile {
+  categoryGroup: string | null;
+  defaultSeverity: number | null;
+}
+
 /**
- * Menilai satu temuan. `severityOverride` adalah koreksi petugas (menggantikan nilai bawaan).
- * Temuan Monitoring Kepatuhan tidak pernah mendapat skor, apa pun override-nya.
+ * Menilai satu temuan dari data master kelas. `severityOverride` adalah koreksi petugas (menggantikan nilai
+ * bawaan). Kelompok Monitoring Kepatuhan tidak pernah mendapat skor, apa pun override-nya.
  */
+export function assessWithProfile(
+  profile: ClassRiskProfile | null | undefined,
+  exposure: Exposure | number | null | undefined,
+  severityOverride?: Severity | number | null
+): DetectionAssessment {
+  if (!profile || !profile.categoryGroup) return { scored: false, reason: 'subtipe_tidak_dikenal' };
+  if (profile.categoryGroup === 'monitoring_kepatuhan') return { scored: false, reason: 'monitoring_kepatuhan' };
+  if (profile.categoryGroup !== 'keselamatan_infrastruktur') return { scored: false, reason: 'subtipe_tidak_dikenal' };
+  if (!isExposure(exposure)) return { scored: false, reason: 'tanpa_exposure' };
+  const severity = isSeverity(severityOverride) ? severityOverride : profile.defaultSeverity;
+  if (!isSeverity(severity)) return { scored: false, reason: 'subtipe_tidak_dikenal' };
+  return { scored: true, ...computeRisk(severity, exposure) };
+}
+
+/** Menilai satu temuan berdasarkan nama kelas model, memakai tabel bawaan di kode (untuk seed dan tes). */
 export function assessDetection(
   subtype: string,
   exposure: Exposure | null | undefined,
   severityOverride?: Severity | null
 ): DetectionAssessment {
-  const profile = getSubtypeProfile(subtype);
-  if (!profile) return { scored: false, reason: 'subtipe_tidak_dikenal' };
-  if (profile.group === 'monitoring_kepatuhan') return { scored: false, reason: 'monitoring_kepatuhan' };
-  if (!isExposure(exposure)) return { scored: false, reason: 'tanpa_exposure' };
-  const severity = isSeverity(severityOverride) ? severityOverride : profile.severity;
-  if (!isSeverity(severity)) return { scored: false, reason: 'subtipe_tidak_dikenal' };
-  return { scored: true, ...computeRisk(severity, exposure) };
+  const p = getSubtypeProfile(subtype);
+  if (!p) return { scored: false, reason: 'subtipe_tidak_dikenal' };
+  return assessWithProfile({ categoryGroup: p.group, defaultSeverity: p.severity }, exposure, severityOverride);
 }
 
 /** Untuk lokasi dengan banyak temuan: skor lokasi = skor tertinggi di antara temuan bernilai. */

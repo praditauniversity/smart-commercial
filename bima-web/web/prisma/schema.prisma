@@ -94,24 +94,27 @@ model SurveySession {
 }
 
 model MediaAsset {
-  id              String              @id @default(uuid())
-  sessionId       String
-  fileName        String
-  fileType        String // "image" | "video"
-  fileUrl         String
-  storagePath     String
-  durationSeconds Float?
-  status          String              @default("queued") // "queued" | "uploading" | "uploaded" | "processing" | "completed" | "failed" | "deleted"
-  errorMessage    String?
-  idempotencyKey  String?             @unique
-  evaluatedClipId String? // Terisi bila nama berkas cocok dengan salah satu dari 35 klip RQ3
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  session         SurveySession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  evaluatedClip   EvaluatedClip?      @relation(fields: [evaluatedClipId], references: [id], onDelete: SetNull)
-  segments        MediaSegment[]
-  detections      Detection[]
-  corrections     OfficerCorrection[]
+  id                String              @id @default(uuid())
+  sessionId         String
+  fileName          String
+  fileType          String // "image" | "video"
+  fileUrl           String
+  storagePath       String
+  durationSeconds   Float?
+  status            String              @default("queued") // "queued" | "uploading" | "uploaded" | "processing" | "completed" | "failed" | "deleted"
+  errorMessage      String?
+  idempotencyKey    String?             @unique
+  evaluatedClipId   String? // Terisi bila nama berkas (dan durasi) cocok dengan salah satu dari 35 klip RQ3
+  clipMatchNote     String? // Alasan bila nama cocok tetapi tidak dianggap klip terevaluasi (mis. durasi berbeda)
+  processingMetrics String? // JSON: latensi per tahap (ekstraksi frame, unduh, inferensi per model, simpan) dalam ms
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  session           SurveySession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  evaluatedClip     EvaluatedClip?      @relation(fields: [evaluatedClipId], references: [id], onDelete: SetNull)
+  segments          MediaSegment[]
+  frames            MediaFrame[]
+  detections        Detection[]
+  corrections       OfficerCorrection[]
 }
 
 model MediaSegment {
@@ -257,4 +260,20 @@ model OfficerCorrection {
 
   @@index([sessionId])
   @@index([detectionId])
+}
+
+// Frame sampel video (Opsi A: galeri frame, 0,5 fps maks 24) atau satu-satunya frame gambar.
+// Frame diekstrak dari berkas ASLI saat unggah; video 720p hanya untuk diputar.
+model MediaFrame {
+  id               String     @id @default(uuid())
+  mediaAssetId     String
+  frameIndex       Int
+  timestampSeconds Float
+  imageUrl         String
+  width            Int?
+  height           Int?
+  createdAt        DateTime   @default(now())
+  mediaAsset       MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaAssetId, frameIndex])
 }

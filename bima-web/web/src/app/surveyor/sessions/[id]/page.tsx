@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import MediaBoxOverlay, { OverlayDetection } from '@/components/MediaBoxOverlay';
 import MediaInspectionModal from '@/components/MediaInspectionModal';
+import YoloMediaModal, { isYoloProcessed } from '@/components/YoloMediaModal';
 import { Sam3Chips, getSam3Result } from '@/components/Sam3Result';
 import Pagination from '@/components/Pagination';
 import { FINDINGS_PAGE_SIZE, paginateTwo } from '@/lib/pagination';
@@ -1344,7 +1345,19 @@ export default function SurveyorSessionWorkspace() {
       )}
 
 
-      {/* MODAL: MEDIA INSPECTION & SURVEYOR CORRECTION */}
+      {/* MODAL: hasil YOLO (galeri frame, risiko, naratif) untuk media jalur YOLO; modal lama untuk VLM/SAM3 */}
+      {(() => {
+        const inspected = session?.mediaAssets?.find((m: any) => m.id === inspectingMediaId) || null;
+        if (inspected && isYoloProcessed(inspected)) {
+          return (
+            <YoloMediaModal
+              media={inspected}
+              detections={(session?.detections || []).filter((d: any) => d.mediaAssetId === inspected.id && !d.isDeleted)}
+              onClose={() => setInspectingMediaId(null)}
+            />
+          );
+        }
+        return (
       <MediaInspectionModal
         isOpen={Boolean(inspectingMediaId)}
         onClose={() => setInspectingMediaId(null)}
@@ -1362,6 +1375,8 @@ export default function SurveyorSessionWorkspace() {
         onSaved={fetchSessionDetails}
         sam3Result={getSam3Result(session?.mediaAssets?.find((m: any) => m.id === inspectingMediaId))}
       />
+        );
+      })()}
     </div>
   );
 }

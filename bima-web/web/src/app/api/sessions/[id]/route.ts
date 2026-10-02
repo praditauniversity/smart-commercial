@@ -15,11 +15,14 @@ export async function GET(
         where: { id },
         include: {
           surveyor: { select: { id: true, name: true, email: true } },
+          zone: true,
           mediaAssets: {
             where: { status: { not: 'deleted' } },
             orderBy: { createdAt: 'desc' },
             include: {
               segments: true,
+              frames: { orderBy: { frameIndex: 'asc' } },
+              evaluatedClip: true,
               _count: { select: { detections: { where: { isDeleted: false } } } },
             },
           },
@@ -99,6 +102,17 @@ export async function PATCH(
           : JSON.stringify(body.locationGeojson);
     }
     if (body.locationAddress !== undefined) updateData.locationAddress = body.locationAddress;
+    if (body.zoneId !== undefined) {
+      if (body.zoneId === null || body.zoneId === '') {
+        updateData.zoneId = null;
+      } else {
+        const zone = await prisma.zone.findUnique({ where: { id: String(body.zoneId) } });
+        if (!zone || !zone.isActive) {
+          return NextResponse.json({ error: 'Zona tidak valid atau nonaktif.' }, { status: 400 });
+        }
+        updateData.zoneId = zone.id;
+      }
+    }
     if (body.surveyDate !== undefined) updateData.surveyDate = new Date(body.surveyDate);
 
     const updated = await prisma.surveySession.update({

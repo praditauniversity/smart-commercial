@@ -104,6 +104,22 @@ async function main() {
   }
   console.log(`Zona contoh: ${ZONES.length} (isSimulated = true)`);
 
+  // Model deteksi lokal YOLO. Dijadikan default hanya bila belum ada model default aktif lain.
+  const existingDefault = await prisma.modelConfig.findFirst({ where: { isDefault: true, isActive: true } });
+  const yolo = await prisma.modelConfig.findFirst({ where: { provider: 'yolo', modelName: 'yolo11n_seed0' } });
+  if (!yolo) {
+    await prisma.modelConfig.create({
+      data: {
+        name: 'YOLO11n seed0 (6 model kategori, CPU)',
+        provider: 'yolo',
+        modelName: 'yolo11n_seed0',
+        isDefault: !existingDefault,
+        isActive: true,
+      },
+    });
+  }
+  console.log(`Model YOLO: ${yolo ? 'sudah ada' : 'dibuat'}${!existingDefault && !yolo ? ' (dijadikan default)' : existingDefault && !yolo ? ' (default saat ini tidak diubah; setel di menu Model AI)' : ''}`);
+
   const clips = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'rq3_clips.json'), 'utf-8')) as any[];
   for (const c of clips) {
     const data = {

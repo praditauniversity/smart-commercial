@@ -49,14 +49,23 @@ export async function POST(request: Request) {
     const user = await requireAuth(['surveyor', 'admin']);
     const body = await request.json();
 
-    const { name, locationType, locationGeojson, locationAddress, surveyDate } = body;
+    const { name, locationType, locationGeojson, locationAddress, surveyDate, zoneId } = body;
 
     if (!name || name.trim() === '') {
       return NextResponse.json({ error: 'Nama survei wajib diisi.' }, { status: 400 });
     }
 
+    // Zona menentukan Tingkat Paparan (Exposure). Opsional; tanpa zona, temuan tidak mendapat skor risiko.
+    if (zoneId) {
+      const zone = await prisma.zone.findUnique({ where: { id: String(zoneId) } });
+      if (!zone || !zone.isActive) {
+        return NextResponse.json({ error: 'Zona tidak valid atau nonaktif.' }, { status: 400 });
+      }
+    }
+
     const session = await prisma.surveySession.create({
       data: {
+        zoneId: zoneId ? String(zoneId) : null,
         name: name.trim(),
         locationType: locationType || 'point',
         locationGeojson: typeof locationGeojson === 'string' ? locationGeojson : JSON.stringify(locationGeojson || {}),

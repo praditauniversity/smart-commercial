@@ -13,7 +13,7 @@ export async function DELETE(
 
     const mediaAsset = await prisma.mediaAsset.findUnique({
       where: { id },
-      include: { session: true, segments: { select: { mediaUrl: true } } },
+      include: { session: true, segments: { select: { mediaUrl: true } }, frames: { select: { imageUrl: true } } },
     });
 
     if (!mediaAsset) {
@@ -54,7 +54,7 @@ export async function DELETE(
     ]);
 
     // Original file plus any annotated SAM3 result stored in the buckets
-    const urls = new Set([mediaAsset.fileUrl, ...mediaAsset.segments.map((s) => s.mediaUrl || '')]);
+    const urls = new Set([mediaAsset.fileUrl, ...mediaAsset.segments.map((s) => s.mediaUrl || ''), ...mediaAsset.frames.map((f) => f.imageUrl)]);
     await Promise.all([...urls].filter(Boolean).map((u) => removeStoredFile(u)));
 
     return NextResponse.json({

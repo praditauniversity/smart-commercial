@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
+import { riskUpdateForClassChange } from '@/lib/risk-persist';
 import prisma from '@/lib/prisma';
 
 export async function GET(
@@ -96,6 +97,8 @@ export async function PATCH(
       updateData.classId = cls.id;
       updateData.className = cls.name;
       updateData.classVersionId = cls.versions[0]?.id || null;
+      // Kelas berubah -> skor risiko ikut dihitung ulang (Severity kembali ke bawaan kelas baru).
+      Object.assign(updateData, await riskUpdateForClassChange(detection.sessionId, cls));
       isClassChanged = true;
     }
 

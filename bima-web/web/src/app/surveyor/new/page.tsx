@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import MapPicker from '@/components/MapPicker';
 import { useToast } from '@/components/ToastProvider';
+import { SimulatedTag } from '@/components/RiskBadge';
+import { EXPOSURE_LABEL, type Exposure } from '@/lib/risk';
 import { MapPin, Calendar, FileText, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 
 export default function NewSurveySessionPage() {
@@ -18,8 +20,17 @@ export default function NewSurveySessionPage() {
     coordinates: [106.8456, -6.2088],
   });
   const [locationAddress, setLocationAddress] = useState('');
+  const [zones, setZones] = useState<{ id: string; name: string; exposure: number; isSimulated: boolean }[]>([]);
+  const [zoneId, setZoneId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/zones')
+      .then((r) => r.json())
+      .then((j) => setZones(j.zones || []))
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +53,7 @@ export default function NewSurveySessionPage() {
           locationGeojson,
           locationAddress,
           surveyDate,
+          zoneId: zoneId || undefined,
         }),
       });
 
@@ -124,6 +136,31 @@ export default function NewSurveySessionPage() {
                     className="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                   />
                 </div>
+              </div>
+
+              {/* Zone -> Exposure */}
+              <div className="space-y-1.5 md:col-span-2">
+                <label htmlFor="zone" className="block text-xs sm:text-sm font-semibold text-slate-700">
+                  Zona Kawasan (menentukan Tingkat Paparan)
+                </label>
+                <select
+                  id="zone"
+                  value={zoneId}
+                  onChange={(e) => setZoneId(e.target.value)}
+                  className="w-full px-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                >
+                  <option value="">Tanpa zona — temuan belum diberi skor risiko</option>
+                  {zones.map((z) => (
+                    <option key={z.id} value={z.id}>
+                      {z.name} — Paparan {EXPOSURE_LABEL[z.exposure as Exposure]} ({z.exposure})
+                    </option>
+                  ))}
+                </select>
+                {zones.some((z) => z.isSimulated) && (
+                  <p className="text-[11px] text-violet-700 flex items-center gap-1.5">
+                    <SimulatedTag /> Daftar zona ini adalah data contoh untuk purwarupa, bukan data lokasi riil.
+                  </p>
+                )}
               </div>
             </div>
 

@@ -6,6 +6,7 @@ import path from 'path';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { getMaxVideoSeconds, videoTooLongMessage } from './media-limits';
 import { requireEnv, requireEnvNumber } from './env';
+import { planFrameTimestamps } from './frame-plan';
 
 // ffmpeg needs libx264 and libwebp (the anaconda build lacks libx264). Paths come from the environment only.
 const ffmpegPath = () => requireEnv('FFMPEG_PATH');
@@ -23,6 +24,28 @@ const BUCKETS = { image: 'img', video: 'vids' } as const;
 export type MediaKind = keyof typeof BUCKETS;
 
 const PUBLIC_PATH_MARKER = '/storage/v1/object/public/';
+
+/**
+ * Backend penyimpanan: "supabase" (bawaan, bila STORAGE_BACKEND kosong) atau "local" (folder LOCAL_STORAGE_DIR,
+ * dilayani lewat /api/files/...). Backend lokal ditujukan untuk purwarupa/demo tanpa Supabase.
+ */
+export function storageBackend(): 'supabase' | 'local' {
+  const v = (process.env.STORAGE_BACKEND ?? '').trim().toLowerCase();
+  if (v === '' || v === 'supabase') return 'supabase';
+  if (v === 'local') return 'local';
+  throw new Error(`STORAGE_BACKEND harus "supabase" atau "local", bukan "${v}".`);
+}
+
+export const LOCAL_URL_PREFIX = '/api/files/';
+const localDir = () => path.resolve(requireEnv('LOCAL_STORAGE_DIR'));
+
+/** Path berkas lokal untuk URL "/api/files/<bucket>/<path>"; null bila bukan URL lokal atau mencoba keluar dari folder. */
+export function localPathForUrl(fileUrl: string): string | null {
+  if (!fileUrl.startsWith(LOCAL_URL_PREFIX)) return null;
+  const rel = decodeURIComponent(fileUrl.slice(LOCAL_URL_PREFIX.length));
+  const full = path.resolve(localDir(), rel);
+  return full.startsWith(localDir() + path.sep) ? full : null;
+}
 
 let adminClient: SupabaseClient | null = null;
 
@@ -98,7 +121,7 @@ const videoScale = () => `scale=-2:'min(${requireEnvNumber('MEDIA_VIDEO_MAX_HEIG
 export async function compressMedia(
   input: Buffer,
   kind: MediaKind
-): Promise<{ buffer: Buffer; contentType: string; ext: string; durationSeconds: number | null }> {
+): Promise<{ buffer: Buffer; contentType: string; ext: string; durationSeconds: number | null; frames: ExtractedFrame[]; frameExtractMs: number }> {
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bima-media-'));
   const inPath = path.join(workDir, 'input');
   const ext = kind === 'image' ? 'webp' : 'mp4';
@@ -136,11 +159,72 @@ export async function compressMedia(
       );
     }
 
+    // Frame sampel diambil dari berkas asli (sebelum/terlepas dari kompresi di atas).
+    let frames: ExtractedFrame[] = [];
+    let frameExtractMs = 0;
+    if (kind === 'video' && durationSeconds !== null) {
+      const t0 = Date.now();
+      frames = await extractFrames(inPath, durationSeconds, workDir);
+      frameExtractMs = Date.now() - t0;
+    }
+
     const buffer = await fs.readFile(outPath);
-    return { buffer, contentType: kind === 'image' ? 'image/webp' : 'video/mp4', ext, durationSeconds };
+    return { buffer, contentType: kind === 'image' ? 'image/webp' : 'video/mp4', ext, durationSeconds, frames, frameExtractMs };
   } finally {
     await fs.rm(workDir, { recursive: true, force: true });
   }
+}
+
+/** Menyimpan satu objek ke backend aktif dan mengembalikan URL yang dapat dibuka klien. */
+async function putObject(bucket: string, storagePath: string, buffer: Buffer, contentType: string): Promise<string> {
+  if (storageBackend() === 'local') {
+    const full = path.join(localDir(), bucket, storagePath);
+    await fs.mkdir(path.dirname(full), { recursive: true });
+    await fs.writeFile(full, buffer);
+    return `${LOCAL_URL_PREFIX}${bucket}/${storagePath}`;
+  }
+  const supabase = getAdminClient();
+  const { error } = await supabase.storage.from(bucket).upload(storagePath, buffer, {
+    contentType,
+    cacheControl: '31536000',
+    upsert: false,
+  });
+  if (error) throw new Error(`Gagal upload ke bucket "${bucket}": ${error.message}`);
+  return supabase.storage.from(bucket).getPublicUrl(storagePath).data.publicUrl;
+}
+
+export interface ExtractedFrame {
+  frameIndex: number;
+  timestampSeconds: number;
+  buffer: Buffer;
+}
+
+/**
+ * Mengekstrak frame sampel dari berkas ASLI (bukan hasil kompresi 720p), memakai seek per timestamp agar
+ * waktu tidak membesar untuk video panjang. Beberapa proses ffmpeg berjalan paralel.
+ */
+export async function extractFrames(inPath: string, durationSeconds: number, workDir: string): Promise<ExtractedFrame[]> {
+  const timestamps = planFrameTimestamps(durationSeconds);
+  const width = requireEnvNumber('FRAME_MAX_WIDTH');
+  const quality = requireEnvNumber('FRAME_JPEG_QUALITY');
+  const concurrency = Math.max(1, requireEnvNumber('FRAME_EXTRACT_CONCURRENCY'));
+  const timeout = requireEnvNumber('FFMPEG_IMAGE_TIMEOUT_MS');
+  const frames: ExtractedFrame[] = new Array(timestamps.length);
+  let next = 0;
+
+  async function worker() {
+    while (next < timestamps.length) {
+      const i = next++;
+      const out = path.join(workDir, `frame_${i}.jpg`);
+      await runFfmpeg(
+        ['-ss', String(timestamps[i]), '-i', inPath, '-frames:v', '1', '-vf', `scale='min(${width},iw)':-2`, '-q:v', String(quality), out],
+        timeout
+      );
+      frames[i] = { frameIndex: i, timestampSeconds: timestamps[i], buffer: await fs.readFile(out) };
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, timestamps.length) }, worker));
+  return frames;
 }
 
 /** Compress the media, upload it to the Supabase bucket (img / vids) and return its public URL. */
@@ -148,39 +232,51 @@ export async function compressAndUpload(params: {
   input: Buffer;
   kind: MediaKind;
   sessionId: string;
+  mediaId: string;
 }): Promise<{
   fileUrl: string;
   storagePath: string;
   originalBytes: number;
   storedBytes: number;
   durationSeconds: number | null;
+  frames: { frameIndex: number; timestampSeconds: number; imageUrl: string }[];
+  timings: { compressAndExtractMs: number; frameExtractMs: number; uploadMs: number };
 }> {
-  const { input, kind, sessionId } = params;
-  const { buffer, contentType, ext, durationSeconds } = await compressMedia(input, kind);
+  const { input, kind, sessionId, mediaId } = params;
+  const t0 = Date.now();
+  const { buffer, contentType, ext, durationSeconds, frames, frameExtractMs } = await compressMedia(input, kind);
+  const compressAndExtractMs = Date.now() - t0;
 
+  const t1 = Date.now();
   const storagePath = `sessions/${sessionId}/${crypto.randomUUID()}.${ext}`;
-  const bucket = BUCKETS[kind];
-  const supabase = getAdminClient();
+  const fileUrl = await putObject(BUCKETS[kind], storagePath, buffer, contentType);
 
-  const { error } = await supabase.storage.from(bucket).upload(storagePath, buffer, {
-    contentType,
-    cacheControl: '31536000',
-    upsert: false,
-  });
-  if (error) throw new Error(`Gagal upload ke bucket "${bucket}": ${error.message}`);
+  // Frame galeri (video) disimpan sebagai JPEG di bucket gambar. Untuk gambar, file itu sendiri adalah satu-satunya frame.
+  const storedFrames: { frameIndex: number; timestampSeconds: number; imageUrl: string }[] = [];
+  for (const f of frames) {
+    const framePath = `sessions/${sessionId}/frames/${mediaId}/f_${String(f.frameIndex).padStart(2, '0')}.jpg`;
+    const imageUrl = await putObject(BUCKETS.image, framePath, f.buffer, 'image/jpeg');
+    storedFrames.push({ frameIndex: f.frameIndex, timestampSeconds: f.timestampSeconds, imageUrl });
+  }
 
-  const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath);
   return {
-    fileUrl: data.publicUrl,
+    fileUrl,
     storagePath,
     originalBytes: input.length,
     storedBytes: buffer.length,
     durationSeconds,
+    frames: storedFrames,
+    timings: { compressAndExtractMs, frameExtractMs, uploadMs: Date.now() - t1 },
   };
 }
 
 /** Best-effort removal of a stored file; ignores files that are not in Supabase Storage (legacy local uploads). */
 export async function removeStoredFile(fileUrl: string): Promise<void> {
+  const local = localPathForUrl(fileUrl);
+  if (local) {
+    await fs.rm(local, { force: true });
+    return;
+  }
   const idx = fileUrl.indexOf(PUBLIC_PATH_MARKER);
   if (idx === -1) return;
   const [bucket, ...rest] = fileUrl.slice(idx + PUBLIC_PATH_MARKER.length).split('/');

@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import crypto from 'crypto';
 import { compressAndUpload, MediaLimitError } from '@/lib/media-storage';
+import { clipMatchNote, matchEvaluatedClip } from '@/lib/clip-match';
 
 export async function POST(request: Request) {
   try {
@@ -54,7 +55,16 @@ export async function POST(request: Request) {
       input: Buffer.from(await file.arrayBuffer()),
       kind: isVideo ? 'video' : 'image',
       sessionId,
+      mediaId,
     });
+
+    // Pencocokan dengan 35 klip uji RQ3 (hanya video). Cocok = nama berkas DAN durasi sesuai.
+    const duration = stored.durationSeconds ?? (durationSeconds ? parseFloat(String(durationSeconds)) : null);
+    let match = matchEvaluatedClip('', null, []);
+    if (isVideo) {
+      const clips = await prisma.evaluatedClip.findMany({ select: { id: true, fileName: true, durationSeconds: true } });
+      match = matchEvaluatedClip(fileName, duration, clips);
+    }
 
     const mediaAsset = await prisma.mediaAsset.create({
       data: {
@@ -65,9 +75,20 @@ export async function POST(request: Request) {
         fileUrl: stored.fileUrl,
         storagePath: stored.storagePath,
         // Prefer the duration measured by ffprobe over the client-supplied one.
-        durationSeconds: stored.durationSeconds ?? (durationSeconds ? parseFloat(String(durationSeconds)) : null),
+        durationSeconds: duration,
         status: 'uploaded',
         idempotencyKey,
+        evaluatedClipId: match.status === 'cocok' ? match.clip.id : null,
+        clipMatchNote: clipMatchNote(match),
+        processingMetrics: JSON.stringify({
+          upload: stored.timings,
+        }),
+        // Video: frame sampel dari berkas asli. Gambar: berkas itu sendiri adalah satu-satunya frame.
+        frames: {
+          create: isVideo
+            ? stored.frames
+            : [{ frameIndex: 0, timestampSeconds: 0, imageUrl: stored.fileUrl }],
+        },
       },
     });
 

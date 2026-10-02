@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   SUBTYPE_PROFILES,
   assessDetection,
+  assessWithProfile,
   bandForScore,
   computeRisk,
   getSubtypeProfile,
@@ -101,4 +102,20 @@ test('skor lokasi = temuan terburuk; hanya Monitoring Kepatuhan -> null', () => 
   const w = worstAssessment([assessDetection('weeds', 2), assessDetection('pavedroad_crack', 3), assessDetection('banner', 3)]);
   assert.equal(w?.score, 6);
   assert.equal(worstAssessment([assessDetection('banner', 2), assessDetection('house_notice', 2)]), null);
+});
+
+test('penilaian dari data master kelas (DB): memakai defaultSeverity dan kelompok yang tersimpan', () => {
+  const r = assessWithProfile({ categoryGroup: 'keselamatan_infrastruktur', defaultSeverity: 3 }, 3);
+  assert.ok(r.scored && r.score === 9 && r.band === 'kritikal');
+  // admin mengubah Severity bawaan di data master -> hasil mengikuti
+  const edited = assessWithProfile({ categoryGroup: 'keselamatan_infrastruktur', defaultSeverity: 1 }, 3);
+  assert.ok(edited.scored && edited.score === 3);
+});
+
+test('data master tidak lengkap -> tidak dinilai, tidak ditebak', () => {
+  assert.deepEqual(assessWithProfile(null, 2), { scored: false, reason: 'subtipe_tidak_dikenal' });
+  assert.deepEqual(assessWithProfile({ categoryGroup: null, defaultSeverity: 2 }, 2), { scored: false, reason: 'subtipe_tidak_dikenal' });
+  assert.deepEqual(assessWithProfile({ categoryGroup: 'keselamatan_infrastruktur', defaultSeverity: null }, 2), { scored: false, reason: 'subtipe_tidak_dikenal' });
+  assert.deepEqual(assessWithProfile({ categoryGroup: 'keselamatan_infrastruktur', defaultSeverity: 9 }, 2), { scored: false, reason: 'subtipe_tidak_dikenal' });
+  assert.deepEqual(assessWithProfile({ categoryGroup: 'monitoring_kepatuhan', defaultSeverity: 3 }, 3), { scored: false, reason: 'monitoring_kepatuhan' });
 });

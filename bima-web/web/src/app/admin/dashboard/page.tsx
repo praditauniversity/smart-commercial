@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
+import RiskOverview from '@/components/RiskOverview';
+import CorrectionsLog from '@/components/CorrectionsLog';
+import LatencyPanel from '@/components/LatencyPanel';
 import { StatsWidgetSkeleton } from '@/components/SkeletonLoaders';
 import {
   BarChart3,
@@ -88,6 +91,16 @@ export default function AdminDashboardPage() {
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+        {/* Risiko (Severity x Exposure), hasil koreksi supervisor, dan latensi: semua sesi semua surveyor */}
+        <RiskOverview
+          title="Risiko lokasi — seluruh sesi semua surveyor"
+          subtitle="Skor = Severity × Exposure untuk Keselamatan Infrastruktur; Monitoring Kepatuhan hanya dilaporkan."
+          detailHref={(id) => `/supervisor/sessions/${id}`}
+          showSurveyorFilter
+        />
+        <CorrectionsLog title="Hasil koreksi supervisor" />
+        <LatencyPanel />
+
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div>

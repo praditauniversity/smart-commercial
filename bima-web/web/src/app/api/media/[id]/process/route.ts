@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { decryptSecret, encryptSecret } from '@/lib/security';
 import { runSam3Job } from '@/lib/sam3-runner';
+import { runYoloJob } from '@/lib/yolo-runner';
 import { requireEnv, requireEnvNumber } from '@/lib/env';
 
 export async function POST(
@@ -70,6 +71,12 @@ export async function POST(
         },
         { status: 400 }
       );
+    }
+
+    // Local YOLO provider (6 model kategori): frame sampel tersimpan -> deteksi -> skor risiko. Berjalan di latar belakang.
+    if (modelConfig.provider.toLowerCase() === 'yolo') {
+      void runYoloJob({ mediaAssetId: id, modelName: modelConfig.modelName, modelConfigId: modelConfig.id });
+      return NextResponse.json({ success: true, mediaAssetId: id, status: 'processing' }, { status: 202 });
     }
 
     // Local SAM3 provider: text prompts come from ClassDefinition.samPrompt, no API key needed.
