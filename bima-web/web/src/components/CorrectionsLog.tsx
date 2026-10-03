@@ -45,28 +45,28 @@ export default function CorrectionsLog({ sessionId, title = 'Riwayat koreksi pet
 
   if (error) return <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">{error}</div>;
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white" aria-label={title}>
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-3">
-        <h3 className="mr-auto text-sm font-bold text-slate-800">{title}</h3>
+    <section className="rounded-xl border border-zinc-200 bg-white shadow-sm" aria-label={title}>
+      <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 p-4">
+        <h3 className="mr-auto text-sm font-semibold text-zinc-900">{title}</h3>
         {Object.entries(counts).map(([k, n]) => (
-          <span key={k} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">{KIND_LABEL[k] ?? k}: {n}</span>
+          <span key={k} className="rounded-md border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-700">{KIND_LABEL[k] ?? k}: {n}</span>
         ))}
       </div>
       {!rows ? (
-        <p className="p-4 text-xs text-slate-500">Memuat…</p>
+        <p className="p-4 text-xs text-zinc-500">Memuat…</p>
       ) : rows.length === 0 ? (
-        <p className="p-4 text-xs text-slate-500">Belum ada koreksi.</p>
+        <p className="p-4 text-xs text-zinc-500">Belum ada koreksi.</p>
       ) : (
-        <ul className="max-h-96 divide-y divide-slate-100 overflow-y-auto text-xs">
+        <ul className="max-h-96 divide-y divide-zinc-100 overflow-y-auto text-xs">
           {rows.map((r) => (
-            <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
-              <span className="font-bold text-slate-900">{KIND_LABEL[r.kind] ?? r.kind}</span>
-              {r.detection && <span className="text-slate-600">{r.detection.className}{r.detection.riskScore !== null ? ` · skor ${r.detection.riskScore}` : ''}</span>}
-              {r.kind === 'severity_diubah' && r.severity && <span className="text-slate-600">→ severity {r.severity}</span>}
-              {!sessionId && <Link href={`/supervisor/sessions/${r.session.id}`} className="text-blue-700 hover:underline">{r.session.name}</Link>}
-              {r.mediaAsset && <span className="truncate text-slate-500">{r.mediaAsset.fileName}</span>}
-              {r.reason && <span className="italic text-slate-600">“{r.reason}”</span>}
-              <span className="ml-auto text-slate-500">{r.actor.name} · {new Date(r.createdAt).toLocaleString('id-ID')}</span>
+            <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
+              <span className="font-semibold text-zinc-900">{KIND_LABEL[r.kind] ?? r.kind}</span>
+              {r.detection && <span className="text-zinc-500">{r.detection.className}{r.detection.riskScore !== null ? ` · skor ${r.detection.riskScore}` : ''}</span>}
+              {r.kind === 'severity_diubah' && r.severity && <span className="text-zinc-500">→ severity {r.severity}</span>}
+              {!sessionId && <Link href={`/supervisor/sessions/${r.session.id}`} className="font-medium text-zinc-900 hover:text-brand-green hover:underline">{r.session.name}</Link>}
+              {r.mediaAsset && <span className="truncate text-zinc-500">{r.mediaAsset.fileName}</span>}
+              {r.reason && <span className="italic text-zinc-500">“{r.reason}”</span>}
+              <span className="ml-auto text-zinc-500">{r.actor.name} · {new Date(r.createdAt).toLocaleString('id-ID')}</span>
             </li>
           ))}
         </ul>

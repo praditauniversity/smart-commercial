@@ -11,7 +11,7 @@ import LatencyPanel from './LatencyPanel';
 
 const LeafletDashboardMap = dynamic(() => import('./LeafletDashboardMap'), {
   ssr: false,
-  loading: () => <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400"><Loader2 className="h-6 w-6 animate-spin" /></div>,
+  loading: () => <div className="flex h-full w-full items-center justify-center bg-zinc-100 text-zinc-400"><Loader2 className="h-6 w-6 animate-spin" /></div>,
 });
 
 const DEFAULT_CENTER: [number, number] = [-6.2088, 106.8456];
@@ -40,20 +40,20 @@ export default function AnalyticsView({ sessionHref, showLatency }: { sessionHre
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs" aria-label="Peta sebaran temuan">
+      <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5" aria-label="Peta sebaran temuan">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900"><MapPin className="h-4 w-4 text-blue-600" />Peta sebaran temuan</h2>
-            <p className="text-[11px] text-slate-500">Satu penanda per lokasi; angka = jumlah deteksi valid, warna = risiko tertinggi di lokasi itu.</p>
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-900"><MapPin className="h-4 w-4 text-zinc-400" />Peta sebaran temuan</h2>
+            <p className="text-xs text-zinc-500">Satu penanda per lokasi; angka = jumlah deteksi valid, warna = risiko tertinggi di lokasi itu.</p>
           </div>
-          <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600" aria-label="Legenda warna penanda">
+          <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-500" aria-label="Legenda warna penanda">
             {LEGEND.map((l) => <li key={l.key} className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: l.color }} />{l.label}</li>)}
           </ul>
         </div>
-        <div className="relative h-96 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+        <div className="relative h-96 w-full overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
           {mapError ? <p role="alert" className="p-4 text-xs text-rose-700">{mapError}</p>
-            : markers === null ? <div className="flex h-full items-center justify-center text-slate-400"><Loader2 className="h-6 w-6 animate-spin" /></div>
-            : markers.length === 0 ? <p className="flex h-full items-center justify-center px-6 text-center text-xs text-slate-400">Belum ada sesi dengan koordinat lokasi. Koordinat diisi surveyor saat membuat sesi (pilih titik atau area di peta).</p>
+            : markers === null ? <div className="flex h-full items-center justify-center text-zinc-400"><Loader2 className="h-6 w-6 animate-spin" /></div>
+            : markers.length === 0 ? <p className="flex h-full items-center justify-center px-6 text-center text-xs text-zinc-400">Belum ada sesi dengan koordinat lokasi. Koordinat diisi surveyor saat membuat sesi (pilih titik atau area di peta).</p>
             : <LeafletDashboardMap markers={markers} defaultCenter={DEFAULT_CENTER} detailHref={sessionHref} />}
         </div>
       </section>
@@ -68,8 +68,8 @@ export default function AnalyticsView({ sessionHref, showLatency }: { sessionHre
 export function AnalyticsHeader({ subtitle }: { subtitle: string }) {
   return (
     <div>
-      <h1 className="flex items-center gap-2.5 text-xl font-bold text-slate-900 sm:text-2xl"><Activity className="h-6 w-6 shrink-0 text-blue-600" />Analitik</h1>
-      <p className="mt-1 text-xs text-slate-500 sm:text-sm">{subtitle}</p>
+      <h1 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight text-zinc-900"><Activity className="h-6 w-6 shrink-0 text-brand-green" />Analitik</h1>
+      <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>
     </div>
   );
 }

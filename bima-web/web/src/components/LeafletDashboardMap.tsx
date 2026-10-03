@@ -45,17 +45,17 @@ export default function LeafletDashboardMap({ markers, defaultCenter, detailHref
         <Marker key={m.key} position={m.position} icon={icons.get(m.key)}>
           <Popup minWidth={220}>
             <div className="space-y-1 text-xs">
-              <Link href={detailHref(m.sessionId)} className="block text-sm font-bold text-blue-700 hover:underline">{m.sessionName}</Link>
-              {m.locationAddress && <div className="text-slate-500">{m.locationAddress}</div>}
-              <div className="font-semibold text-slate-800">
+              <Link href={detailHref(m.sessionId)} className="block text-sm font-semibold text-zinc-900 hover:text-brand-green hover:underline">{m.sessionName}</Link>
+              {m.locationAddress && <div className="text-zinc-500">{m.locationAddress}</div>}
+              <div className="font-semibold text-zinc-900">
                 {m.worstBand ? `Risiko tertinggi: ${BAND_LABEL[m.worstBand]} (${m.worstScore})` : 'Tanpa skor risiko'} · {m.count} temuan
               </div>
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-zinc-100">
                 {m.classes.slice(0, 6).map((c) => (
                   <li key={c.displayName} className="flex justify-between gap-3 py-0.5"><span>{c.displayName}</span><b className="font-mono">{c.count}</b></li>
                 ))}
               </ul>
-              {m.surveyorName && <div className="text-[10px] text-slate-400">Surveyor: {m.surveyorName}</div>}
+              {m.surveyorName && <div className="text-[10px] text-zinc-400">Surveyor: {m.surveyorName}</div>}
             </div>
           </Popup>
         </Marker>
