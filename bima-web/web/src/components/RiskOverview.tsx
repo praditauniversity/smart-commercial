@@ -118,7 +118,7 @@ export default function RiskOverview({ detailHref, title = 'Ringkasan risiko lok
           <h3 className="mb-3 text-sm font-bold text-slate-800">{GROUP_LABEL.keselamatan_infrastruktur}</h3>
           <BandBar bands={data.bands} />
           {data.totals.normalSigns > 0 && <p className="mt-2 text-[11px] text-emerald-700">Rambu normal: <b className="font-mono">{data.totals.normalSigns}</b> (tanpa skor, tidak termasuk pita di atas).</p>}
-          <ul className="mt-3 divide-y divide-slate-100 text-xs">
+          <ul className="mt-3 max-h-64 divide-y divide-slate-100 overflow-y-auto text-xs">
             {byGroup('keselamatan_infrastruktur').map((c) => (
               <li key={c.className} className="flex justify-between py-1.5"><span>{c.displayName}</span><b className="font-mono">{c.count}</b></li>
             ))}
@@ -128,7 +128,7 @@ export default function RiskOverview({ detailHref, title = 'Ringkasan risiko lok
         <div className="rounded-2xl border border-slate-200 bg-white p-4 lg:col-span-1">
           <h3 className="mb-1 text-sm font-bold text-slate-800">{GROUP_LABEL.monitoring_kepatuhan}</h3>
           <p className="mb-3 text-[11px] text-slate-500">Hanya dideteksi dan dilaporkan; tidak ada skor risiko.</p>
-          <ul className="divide-y divide-slate-100 text-xs">
+          <ul className="max-h-64 divide-y divide-slate-100 overflow-y-auto text-xs">
             {byGroup('monitoring_kepatuhan').map((c) => (
               <li key={c.className} className="flex justify-between py-1.5"><span>{c.displayName}</span><b className="font-mono">{c.count}</b></li>
             ))}
@@ -163,9 +163,9 @@ export default function RiskOverview({ detailHref, title = 'Ringkasan risiko lok
           )}
           {loading && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
         </div>
-        <div className="overflow-x-auto">
+        <div className="max-h-[32rem] overflow-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
+            <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-3 py-2">Sesi</th><th className="px-3 py-2">Surveyor</th><th className="px-3 py-2">Zona</th>
                 <th className="px-3 py-2">Risiko tertinggi</th><th className="px-3 py-2" title="Deteksi pada frame sampel">Infrastruktur</th><th className="px-3 py-2" title="Monitoring Kepatuhan: tanpa skor risiko">Kepatuhan (tanpa skor)</th>

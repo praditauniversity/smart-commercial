@@ -237,7 +237,7 @@ export default function AdminModelsPage() {
         {loading ? (
           <CardSkeleton count={2} />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid max-h-[80vh] grid-cols-1 gap-4 overflow-y-auto p-1 sm:gap-6 md:grid-cols-2">
             {models.map((m) => (
               <div
                 key={m.id}

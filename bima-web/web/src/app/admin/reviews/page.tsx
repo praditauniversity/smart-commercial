@@ -134,7 +134,7 @@ export default function AdminReviewQueuePage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="max-h-[80vh] space-y-4 overflow-y-auto p-1">
             {submissions.map((sub) => (
               <div
                 key={sub.id}

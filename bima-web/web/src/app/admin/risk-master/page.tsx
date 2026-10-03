@@ -66,9 +66,9 @@ export default function RiskMasterPage() {
 
         <section className="rounded-2xl border border-slate-200 bg-white" aria-label="Kelas dan Severity">
           <div className="border-b border-slate-100 p-3"><h2 className="text-sm font-bold text-slate-800">Kelas model &amp; Severity bawaan</h2></div>
-          <div className="overflow-x-auto">
+          <div className="max-h-[32rem] overflow-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="px-3 py-2">Kelas model</th><th className="px-3 py-2">Kategori</th><th className="px-3 py-2">Kelompok</th><th className="px-3 py-2">Severity bawaan</th></tr></thead>
+              <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="px-3 py-2">Kelas model</th><th className="px-3 py-2">Kategori</th><th className="px-3 py-2">Kelompok</th><th className="px-3 py-2">Severity bawaan</th></tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {classes.map((c) => (
                   <tr key={c.id}>
@@ -104,9 +104,9 @@ export default function RiskMasterPage() {
               Perubahan berlaku untuk penetapan berikutnya; temuan yang sudah memakai tag menyimpan severity-nya sendiri.
             </p>
           </div>
-          <div className="overflow-x-auto">
+          <div className="max-h-[32rem] overflow-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="px-3 py-2">Kode</th><th className="px-3 py-2">Label</th><th className="px-3 py-2">Severity</th><th className="px-3 py-2">Dipakai</th><th className="px-3 py-2">Aktif</th><th className="px-3 py-2" /></tr></thead>
+              <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="px-3 py-2">Kode</th><th className="px-3 py-2">Label</th><th className="px-3 py-2">Severity</th><th className="px-3 py-2">Dipakai</th><th className="px-3 py-2">Aktif</th><th className="px-3 py-2" /></tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {tags.map((t) => (
                   <tr key={t.id} className={t.isActive ? '' : 'opacity-50'}>
@@ -136,9 +136,9 @@ export default function RiskMasterPage() {
 
         <section className="rounded-2xl border border-slate-200 bg-white" aria-label="Zona dan Exposure">
           <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-3"><h2 className="mr-auto text-sm font-bold text-slate-800">Zona &amp; Tingkat Paparan (Exposure)</h2></div>
-          <div className="overflow-x-auto">
+          <div className="max-h-[32rem] overflow-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="px-3 py-2">Kode</th><th className="px-3 py-2">Nama</th><th className="px-3 py-2">Jenis</th><th className="px-3 py-2">Exposure</th><th className="px-3 py-2">Sesi</th><th className="px-3 py-2">Aktif</th><th className="px-3 py-2" /></tr></thead>
+              <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="px-3 py-2">Kode</th><th className="px-3 py-2">Nama</th><th className="px-3 py-2">Jenis</th><th className="px-3 py-2">Exposure</th><th className="px-3 py-2">Sesi</th><th className="px-3 py-2">Aktif</th><th className="px-3 py-2" /></tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {zones.map((z) => (
                   <tr key={z.id} className={z.isActive ? '' : 'opacity-50'}>

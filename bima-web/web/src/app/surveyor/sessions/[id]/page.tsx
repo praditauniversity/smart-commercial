@@ -907,7 +907,7 @@ export default function SurveyorSessionWorkspace() {
             ) : (
               <>
               {yoloMedia.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                <div className="mb-6 grid max-h-[80vh] grid-cols-1 gap-6 overflow-y-auto p-1 md:grid-cols-2 lg:grid-cols-3">
                   {yoloMedia.map((m: any) => (
                     <YoloMediaCard
                       key={m.id}
@@ -1097,7 +1097,7 @@ export default function SurveyorSessionWorkspace() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid max-h-[80vh] grid-cols-1 gap-4 overflow-y-auto p-1 md:grid-cols-2 lg:grid-cols-3">
                 {mediaAssets.map((media) => {
                   const mediaDetectionsCount = (session?.detections || []).filter(
                     (d: any) => d.mediaAssetId === media.id && !d.isDeleted
@@ -1237,7 +1237,7 @@ export default function SurveyorSessionWorkspace() {
                 Belum ada SubmissionVersion yang dibuat (Sesi belum pernah dikirim ke supervisor).
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="max-h-96 space-y-3 overflow-y-auto pr-1">
                 {session.submissions.map((sub: any) => (
                   <div
                     key={sub.id}

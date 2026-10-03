@@ -167,7 +167,7 @@ export default function Navbar() {
                         }`}
                       >
                         <Layers className="w-4 h-4" />
-                        Kelas Custom
+                        Kelas Deteksi
                       </Link>
                       <Link
                         href="/admin/risk-master"
@@ -357,7 +357,7 @@ export default function Navbar() {
                     }`}
                   >
                     <Layers className="w-3.5 h-3.5 shrink-0" />
-                    Kelas Custom
+                    Kelas Deteksi
                   </Link>
                   <Link
                     href="/admin/risk-master"

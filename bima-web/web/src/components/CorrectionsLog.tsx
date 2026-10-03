@@ -57,7 +57,7 @@ export default function CorrectionsLog({ sessionId, title = 'Riwayat koreksi pet
       ) : rows.length === 0 ? (
         <p className="p-4 text-xs text-slate-500">Belum ada koreksi.</p>
       ) : (
-        <ul className="divide-y divide-slate-100 text-xs">
+        <ul className="max-h-96 divide-y divide-slate-100 overflow-y-auto text-xs">
           {rows.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
               <span className="font-bold text-slate-900">{KIND_LABEL[r.kind] ?? r.kind}</span>

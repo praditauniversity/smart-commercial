@@ -27,6 +27,8 @@ interface ClassItem {
   conflictIouThreshold: number;
   samPrompt?: string | null;
   samColor?: string | null;
+  modelClass?: string | null;
+  category?: string | null;
   versions?: any[];
   _count?: { detections: number };
 }
@@ -36,9 +38,9 @@ export default function AdminClassesPage() {
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Every class has both prompts; which one is shown/edited follows the active model:
-  // SAM3 (local) -> SAM prompt, VLM (OpenRouter/on-premise) -> visual description. Never mixed in one form.
-  const [engine, setEngine] = useState<'sam3' | 'vlm' | null>(null);
+  // Mode halaman mengikuti model aktif: YOLO (detektor terlatih, tanpa prompt), SAM3 (SAM prompt),
+  // atau VLM (deskripsi visual). Ketiganya tidak pernah dicampur dalam satu form.
+  const [engine, setEngine] = useState<'yolo' | 'sam3' | 'vlm' | null>(null);
   const [activeModelName, setActiveModelName] = useState('');
 
   // Create / Edit modal
@@ -79,7 +81,8 @@ export default function AdminClassesPage() {
       const data = await res.json();
       const models: any[] = data.models || [];
       const active = models.find((m) => m.isDefault && m.isActive) || models.find((m) => m.isActive);
-      setEngine(active?.provider?.toLowerCase() === 'sam3' ? 'sam3' : 'vlm');
+      const provider = active?.provider?.toLowerCase();
+      setEngine(provider === 'yolo' ? 'yolo' : provider === 'sam3' ? 'sam3' : 'vlm');
       setActiveModelName(active?.name || '');
     } catch {
       setEngine('vlm');
@@ -92,6 +95,7 @@ export default function AdminClassesPage() {
   }, []);
 
   const isSam = engine === 'sam3';
+  const isYolo = engine === 'yolo';
   const visibleClasses = classes;
 
   const openCreateModal = () => {
@@ -133,7 +137,9 @@ export default function AdminClassesPage() {
     setSaving(true);
     setAlertMsg(null);
 
-    const payload: any = isSam
+    const payload: any = isYolo
+      ? { displayName: formDisplayName }
+      : isSam
       ? {
           name: formName,
           displayName: formDisplayName,
@@ -221,27 +227,29 @@ export default function AdminClassesPage() {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2.5">
               <Layers className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 shrink-0" />
-              Manajemen Kelas Deteksi Objek (Prompt Engineering)
+              {isYolo ? 'Manajemen Kelas Deteksi Objek' : 'Manajemen Kelas Deteksi Objek (Prompt Engineering)'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Atur kelas pemantauan tanpa retraining model AI. Setiap perubahan disimpan dengan version snapshot.
+              {isYolo
+                ? 'Kelas ditentukan oleh model YOLO yang sudah dilatih, tanpa prompt. Di sini admin mengatur nama tampilan dan status aktif kelas; kategori, kelompok, dan Severity ada di Data Master Risiko. Menambah kelas baru memerlukan pelatihan ulang model. Deskripsi naratif video (video-to-text) juga tidak diatur lewat halaman ini.'
+                : 'Atur kelas pemantauan tanpa retraining model AI. Setiap perubahan disimpan dengan version snapshot.'}
             </p>
             {engine && (
               <p className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-                Mode prompt: {isSam ? 'SAM3 Lokal (SAM Prompt)' : 'VLM (Deskripsi Visual)'}
+                {isYolo ? 'Mode: YOLO (detektor terlatih)' : `Mode prompt: ${isSam ? 'SAM3 Lokal (SAM Prompt)' : 'VLM (Deskripsi Visual)'}`}
                 {activeModelName && <span className="text-blue-500 font-normal">· model aktif: {activeModelName}</span>}
               </p>
             )}
           </div>
 
-          <button
+          {!isYolo && <button
             type="button"
             onClick={openCreateModal}
             className="w-full sm:w-auto px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Tambah Kelas Baru
-          </button>
+          </button>}
         </div>
 
         {alertMsg && (
@@ -256,13 +264,22 @@ export default function AdminClassesPage() {
           <TableSkeleton rows={5} cols={5} />
         ) : (
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-            <div className="overflow-x-auto">
+            <div className="max-h-[32rem] overflow-auto">
               <table className="w-full text-left text-xs text-slate-600 min-w-[640px]">
-                <thead className="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
+                <thead className="sticky top-0 z-10 bg-slate-50 text-slate-700 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
                   <tr>
                     <th className="py-3.5 px-4">Nama Kelas</th>
-                    <th className="py-3.5 px-4">{isSam ? 'SAM Prompt' : 'Deskripsi Visual AI'}</th>
-                    {!isSam && <th className="py-3.5 px-4">Kriteria Kelayakan</th>}
+                    {isYolo ? (
+                      <>
+                        <th className="py-3.5 px-4">Kelas keluaran model</th>
+                        <th className="py-3.5 px-4">Kategori</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="py-3.5 px-4">{isSam ? 'SAM Prompt' : 'Deskripsi Visual AI'}</th>
+                        {!isSam && <th className="py-3.5 px-4">Kriteria Kelayakan</th>}
+                      </>
+                    )}
                     <th className="py-3.5 px-4">Versi & Temuan</th>
                     <th className="py-3.5 px-4">Status</th>
                     <th className="py-3.5 px-4 text-right">Aksi</th>
@@ -275,7 +292,12 @@ export default function AdminClassesPage() {
                         <div className="font-bold text-slate-900 text-sm">{cls.displayName}</div>
                         <div className="text-[11px] text-slate-400 font-mono">id: {cls.name}</div>
                       </td>
-                      {isSam ? (
+                      {isYolo ? (
+                        <>
+                          <td className="py-4 px-4 font-mono text-[11px] text-slate-700">{cls.modelClass || <span className="font-sans text-slate-400">tidak dipakai YOLO</span>}</td>
+                          <td className="py-4 px-4 text-slate-700">{cls.category || '-'}</td>
+                        </>
+                      ) : isSam ? (
                         <td className="py-4 px-4 max-w-xs">
                           <p className="flex items-start gap-1.5 text-slate-700">
                             <span
@@ -394,7 +416,13 @@ export default function AdminClassesPage() {
                 </div>
               )}
 
-              {isSam ? (
+              {isYolo ? (
+                editingClass?.modelClass && (
+                  <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600">
+                    Kelas keluaran model: <span className="font-mono font-semibold text-slate-800">{editingClass.modelClass}</span> (tetap; ditentukan oleh weight YOLO).
+                  </p>
+                )
+              ) : isSam ? (
               <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-xl space-y-2">
                 <label className="block font-semibold text-slate-700">
                   SAM Prompt {!editingClass && <span className="text-rose-500">*</span>}

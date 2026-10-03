@@ -179,9 +179,9 @@ export default function AdminUsersPage() {
           <TableSkeleton rows={5} cols={5} />
         ) : (
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-            <div className="overflow-x-auto">
+            <div className="max-h-[32rem] overflow-auto">
               <table className="w-full text-left text-xs text-slate-600 min-w-[560px]">
-                <thead className="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
+                <thead className="sticky top-0 z-10 bg-slate-50 text-slate-700 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
                   <tr>
                     <th className="py-3.5 px-4">Nama Lengkap</th>
                     <th className="py-3.5 px-4">Email</th>

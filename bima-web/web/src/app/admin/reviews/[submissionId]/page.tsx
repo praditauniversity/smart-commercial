@@ -496,7 +496,7 @@ export default function AdminReviewDetailPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid max-h-[80vh] grid-cols-1 gap-6 overflow-y-auto p-1 md:grid-cols-2 lg:grid-cols-3">
               {(snapshot.mediaAssets || []).map((m: any) => {
                 const detCount = detections.filter((d: any) => d.mediaAssetId === m.id).length;
                 return (

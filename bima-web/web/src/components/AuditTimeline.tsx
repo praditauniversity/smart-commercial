@@ -213,7 +213,7 @@ export default function AuditTimeline({ logs }: { logs: AuditLog[] }) {
           <p className="text-xs font-medium text-slate-600">Belum ada riwayat aktivitas yang tercatat pada sesi ini.</p>
         </div>
       ) : (
-        <div className="px-5 sm:px-6 py-5">
+        <div className="max-h-[32rem] overflow-y-auto px-5 py-5 sm:px-6">
           <ol className="relative">
             {shown.map((group, gi) => {
               const head = group[0];
