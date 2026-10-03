@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Layers, MapPin, User as UserIcon } from 'lucide-react';
 import { mapConfig } from '@/lib/public-config';
+import { isFeasibilityRated } from '@/lib/feasibility';
 
 interface DashboardMapPoint {
   id: string;
@@ -118,7 +119,7 @@ export default function LeafletDashboardMap({ points, defaultCenter }: LeafletDa
                     )}
 
                     {/* Top Floating Badge: Tingkat Kelayakan */}
-                    <div className="absolute top-2.5 left-2.5 z-10">
+                    {isFeasibilityRated(pt.feasibility) && <div className="absolute top-2.5 left-2.5 z-10">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide backdrop-blur-md shadow-md border ${
                           pt.feasibility === 'tidak_layak'
@@ -134,7 +135,7 @@ export default function LeafletDashboardMap({ points, defaultCenter }: LeafletDa
                           ? 'Cukup Layak'
                           : 'Layak'}
                       </span>
-                    </div>
+                    </div>}
 
                     {/* Bottom Data Overlay */}
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-3.5 pt-8 text-white space-y-1.5 pointer-events-none">

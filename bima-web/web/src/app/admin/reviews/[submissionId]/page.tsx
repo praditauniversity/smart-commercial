@@ -12,6 +12,7 @@ import Pagination from '@/components/Pagination';
 import { FINDINGS_PAGE_SIZE, paginateTwo } from '@/lib/pagination';
 import { useToast } from '@/components/ToastProvider';
 import { DetailWorkspaceSkeleton } from '@/components/SkeletonLoaders';
+import { feasibilityText, isFeasibilityRated } from '@/lib/feasibility';
 import {
   CheckCircle2,
   XCircle,
@@ -438,17 +439,19 @@ export default function AdminReviewDetailPage() {
                           <h4 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors">
                             {det.displayName || det.className}
                           </h4>
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                              det.feasibility === 'tidak_layak'
-                                ? 'bg-rose-100 text-rose-800'
-                                : det.feasibility === 'cukup_layak'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-emerald-100 text-emerald-800'
-                            }`}
-                          >
-                            {det.feasibility.replace('_', ' ')}
-                          </span>
+                          {isFeasibilityRated(det.feasibility) && (
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                det.feasibility === 'tidak_layak'
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : det.feasibility === 'cukup_layak'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-emerald-100 text-emerald-800'
+                              }`}
+                            >
+                              {feasibilityText(det.feasibility)}
+                            </span>
+                          )}
                         </div>
 
                         <p className="text-xs text-slate-600 line-clamp-2">{det.condition}</p>

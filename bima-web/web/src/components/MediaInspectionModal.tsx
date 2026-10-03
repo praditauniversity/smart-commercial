@@ -24,6 +24,7 @@ import FindingLocationMap from './FindingLocationMap';
 import { Sam3Stage, Sam3Controls, Sam3Result, useSam3View } from './Sam3Result';
 import { useToast } from './ToastProvider';
 import { reviewLabel, visibleBoxes } from '@/lib/media-view';
+import { feasibilityText, isFeasibilityRated } from '@/lib/feasibility';
 
 interface ClassItem {
   id: string;
@@ -707,17 +708,19 @@ export default function MediaInspectionModal({
                                 <span className={`px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${rv.tone === 'benar' ? 'bg-emerald-100 text-emerald-800' : rv.tone === 'keliru' ? 'bg-slate-200 text-slate-700' : 'bg-amber-100 text-amber-800'}`}>{rv.text}</span>
                               );
                             })()}
-                            <span
-                              className={`px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${
-                                edit.feasibility === 'tidak_layak'
-                                  ? 'bg-rose-100 text-rose-800'
-                                  : edit.feasibility === 'cukup_layak'
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : 'bg-emerald-100 text-emerald-800'
-                              }`}
-                            >
-                              {edit.feasibility.replace('_', ' ')}
-                            </span>
+                            {isFeasibilityRated(edit.feasibility) && (
+                              <span
+                                className={`px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${
+                                  edit.feasibility === 'tidak_layak'
+                                    ? 'bg-rose-100 text-rose-800'
+                                    : edit.feasibility === 'cukup_layak'
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-emerald-100 text-emerald-800'
+                                }`}
+                              >
+                                {feasibilityText(edit.feasibility)}
+                              </span>
+                            )}
 
                             {canEdit && (
                               <button
@@ -798,6 +801,7 @@ export default function MediaInspectionModal({
                             )}
                           </div>
 
+                          {isFeasibilityRated(edit.feasibility) && (
                           <div>
                             <label className="block font-semibold text-slate-700 mb-1">
                               Tingkat Kelayakan <span className="text-rose-500">*</span>
@@ -820,10 +824,11 @@ export default function MediaInspectionModal({
                               </select>
                             ) : (
                               <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-medium capitalize">
-                                {det.feasibility.replace('_', ' ')}
+                                {feasibilityText(det.feasibility)}
                               </div>
                             )}
                           </div>
+                          )}
 
                           {canEdit && (
                             <div className="pt-2 flex justify-end">

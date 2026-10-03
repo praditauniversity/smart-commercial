@@ -2,6 +2,7 @@
 
 import { ROLE_LABEL, normalizeRole } from '@/lib/access';
 import React, { useMemo, useState } from 'react';
+import { feasibilityText } from '@/lib/feasibility';
 import {
   ArrowRight,
   CheckCircle2,
@@ -90,8 +91,8 @@ function Diffs({ changes }: { changes: any }) {
   if (upd.feasibility && prev?.feasibility && upd.feasibility !== prev.feasibility) {
     rows.push({
       label: 'Kelayakan',
-      from: prev.feasibility.replace('_', ' '),
-      to: upd.feasibility.replace('_', ' '),
+      from: feasibilityText(prev.feasibility),
+      to: feasibilityText(upd.feasibility),
     });
   }
   if (upd.locationCoordinates && JSON.stringify(upd.locationCoordinates) !== JSON.stringify(prev?.locationCoordinates)) {
