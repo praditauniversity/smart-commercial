@@ -4,6 +4,9 @@ import {
   SUBTYPE_PROFILES,
   assessDetection,
   assessWithProfile,
+  assessWithCondition,
+  DEFAULT_SIGN_TAGS,
+  CONDITION_MODEL_LABEL,
   bandForScore,
   computeRisk,
   getSubtypeProfile,
@@ -118,4 +121,56 @@ test('data master tidak lengkap -> tidak dinilai, tidak ditebak', () => {
   assert.deepEqual(assessWithProfile({ categoryGroup: 'keselamatan_infrastruktur', defaultSeverity: null }, 2), { scored: false, reason: 'subtipe_tidak_dikenal' });
   assert.deepEqual(assessWithProfile({ categoryGroup: 'keselamatan_infrastruktur', defaultSeverity: 9 }, 2), { scored: false, reason: 'subtipe_tidak_dikenal' });
   assert.deepEqual(assessWithProfile({ categoryGroup: 'monitoring_kepatuhan', defaultSeverity: 3 }, 3), { scored: false, reason: 'monitoring_kepatuhan' });
+});
+
+const SIGN = { categoryGroup: 'keselamatan_infrastruktur', defaultSeverity: 2, hasConditionStage: true };
+
+test('tag awal rambu sesuai keputusan final (6 tag, severity 3/3/3/2/2/1)', () => {
+  const m = Object.fromEntries(DEFAULT_SIGN_TAGS.map((t) => [t.code, t.severity]));
+  assert.deepEqual(m, { panel_hilang: 3, panel_penyok: 3, panel_merosot: 3, panel_miring: 2, tiang_miring: 2, pudar: 1 });
+  assert.equal(DEFAULT_SIGN_TAGS.length, 6);
+});
+
+test('rambu normal: TIDAK dinilai sama sekali, apa pun exposure maupun severity manual', () => {
+  for (const exp of [1, 2, 3]) {
+    assert.deepEqual(assessWithCondition(SIGN, exp, { condition: 'normal' }), { scored: false, reason: 'kondisi_normal' });
+  }
+  assert.deepEqual(assessWithCondition(SIGN, 3, { condition: 'normal', severityOverride: 3 }), { scored: false, reason: 'kondisi_normal' });
+});
+
+test('rambu rusak tanpa tag: severity sementara kelas (2), sumber "sementara"', () => {
+  const a = assessWithCondition(SIGN, 3, { condition: 'damaged' });
+  assert.ok(a.scored);
+  assert.equal(a.severity, 2);
+  assert.equal(a.severitySource, 'sementara');
+  assert.equal(a.score, 6);
+  assert.equal(a.band, 'tinggi');
+});
+
+test('rambu rusak dengan tag: severity dari tag, sumber "tag"', () => {
+  const hilang = assessWithCondition(SIGN, 3, { condition: 'damaged', tagSeverity: 3 });
+  assert.ok(hilang.scored && hilang.score === 9 && hilang.band === 'kritikal' && hilang.severitySource === 'tag');
+  const pudar = assessWithCondition(SIGN, 1, { condition: 'damaged', tagSeverity: 1 });
+  assert.ok(pudar.scored && pudar.score === 1 && pudar.band === 'rendah');
+});
+
+test('severity manual petugas menang atas tag; tag tidak berlaku pada rambu normal', () => {
+  const a = assessWithCondition(SIGN, 3, { condition: 'damaged', tagSeverity: 3, severityOverride: 1 });
+  assert.ok(a.scored && a.severity === 1 && a.severitySource === 'petugas');
+});
+
+test('rambu belum diklasifikasi (Tahap 2 tidak aktif): perilaku lama, nilai bawaan kelas', () => {
+  const a = assessWithCondition(SIGN, 2, { condition: null });
+  assert.ok(a.scored && a.severity === 2 && a.severitySource === 'bawaan' && a.score === 4);
+});
+
+test('kelas tanpa Tahap 2 mengabaikan kondisi dan tag', () => {
+  const pothole = { categoryGroup: 'keselamatan_infrastruktur', defaultSeverity: 3 };
+  const a = assessWithCondition(pothole, 3, { condition: 'normal', tagSeverity: 1 });
+  assert.ok(a.scored && a.severity === 3 && a.severitySource === 'bawaan');
+});
+
+test('tanpa exposure: tidak dinilai walau rusak; label model tersedia', () => {
+  assert.deepEqual(assessWithCondition(SIGN, null, { condition: 'damaged', tagSeverity: 3 }), { scored: false, reason: 'tanpa_exposure' });
+  assert.match(CONDITION_MODEL_LABEL, /fold0.*5-fold cross-validation/);
 });

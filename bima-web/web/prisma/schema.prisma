@@ -40,6 +40,8 @@ model ClassDefinition {
   category              String? // Kategori manusiawi: Jalan | Vegetasi | Rambu | Spanduk/Banner | Notis jual/sewa
   categoryGroup         String? // "keselamatan_infrastruktur" | "monitoring_kepatuhan" (null = belum dikelompokkan)
   defaultSeverity       Int? // 1-3; null untuk monitoring_kepatuhan (tidak dapat skor risiko)
+  hasConditionStage     Boolean                  @default(false) // Tahap 2: kondisi (normal/damaged) diklasifikasi per crop; hanya rambu (sign)
+  conditionTags         ConditionTag[]
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
   versions              ClassDefinitionVersion[]
@@ -151,7 +153,10 @@ model Detection {
   confidence       Float?
   // --- Penilaian risiko (RQ4); semua null untuk kelompok monitoring_kepatuhan ---
   severity         Int? // 1-3
-  severitySource   String                  @default("bawaan") // "bawaan" (dari kelas) | "petugas" (dikoreksi)
+  severitySource   String                  @default("bawaan") // "bawaan" (kelas) | "sementara" (rambu rusak, subtipe belum ditentukan) | "tag" (dari tag subtipe) | "petugas" (diubah manual)
+  conditionLabel   String? // Tahap 2 (kelas dengan hasConditionStage): "normal" | "damaged"; null = belum diklasifikasi
+  conditionModel   String? // Model Tahap 2 yang menghasilkan label (mis. "sign_classifier_fold0")
+  conditionTagId   String? // Tag subtipe kerusakan yang ditetapkan supervisor (rambu rusak)
   exposure         Int? // 1-3, disalin dari zona sesi saat temuan dibuat
   riskScore        Int? // severity x exposure: 1,2,3,4,6,9
   priorityBand     String? // "rendah" | "sedang" | "tinggi" | "kritikal"
@@ -167,6 +172,7 @@ model Detection {
   classDefinition  ClassDefinition         @relation(fields: [classId], references: [id])
   classVersion     ClassDefinitionVersion? @relation(fields: [classVersionId], references: [id], onDelete: SetNull)
   modelConfig      ModelConfig?            @relation(fields: [modelConfigId], references: [id], onDelete: SetNull)
+  conditionTag     ConditionTag?           @relation(fields: [conditionTagId], references: [id], onDelete: SetNull)
   corrections      OfficerCorrection[]
 }
 
@@ -242,12 +248,14 @@ model EvaluatedClip {
 // Satu baris = satu aksi; riwayat tidak ditimpa. `kind = "terlewat"` tidak punya detectionId.
 model OfficerCorrection {
   id               String        @id @default(uuid())
-  kind             String // "dikonfirmasi" | "keliru" | "kelas_diubah" | "severity_diubah" | "terlewat"
+  kind             String // "dikonfirmasi" | "keliru" | "kelas_diubah" | "severity_diubah" | "kondisi_diubah" | "terlewat"
   detectionId      String?
   sessionId        String
   mediaAssetId     String?
   classId          String? // kelas yang benar (untuk kelas_diubah / terlewat)
   severity         Int? // severity yang benar (untuk severity_diubah)
+  conditionLabel   String? // kondisi yang benar (untuk kondisi_diubah): normal | damaged
+  conditionTagId   String? // tag subtipe yang ditetapkan (untuk kondisi_diubah)
   bbox             String? // JSON bbox ternormalisasi, untuk "terlewat"
   timestampSeconds Float?
   reason           String?
@@ -276,4 +284,22 @@ model MediaFrame {
   mediaAsset       MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
 
   @@unique([mediaAssetId, frameIndex])
+}
+
+// Master tag subtipe kerusakan untuk kelas dengan Tahap 2 (rambu). Severity per tag dapat diubah admin.
+// Perubahan berlaku untuk penetapan berikutnya; temuan yang sudah memakai tag menyimpan severity-nya sendiri.
+model ConditionTag {
+  id              String          @id @default(uuid())
+  classId         String
+  code            String
+  label           String
+  severity        Int // 1-3
+  sortOrder       Int             @default(0)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  classDefinition ClassDefinition @relation(fields: [classId], references: [id], onDelete: Cascade)
+  detections      Detection[]
+
+  @@unique([classId, code])
 }

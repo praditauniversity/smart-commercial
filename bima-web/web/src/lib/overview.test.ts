@@ -71,3 +71,17 @@ test('jumlah tinjauan: hanya temuan valid yang sudah ditinjau', () => {
   assert.equal(s.reviewed, 2);
   assert.equal(s.valid, 3);
 });
+
+test('rambu normal: dihitung sebagai normal (tanpa skor), BUKAN "belum dinilai", dan tidak ikut skor lokasi', () => {
+  const d = (cond: string | null, band: any, score: number | null): OverviewDetection => ({ className: 'sign', displayName: 'Rambu', group: 'keselamatan_infrastruktur', band, score, reviewStatus: 'belum_ditinjau', condition: cond });
+  const s = summarizeSession(session('a', [d('normal', null, null), d('normal', null, null), d('damaged', 'tinggi', 6)]));
+  assert.equal(s.normalCount, 2);
+  assert.equal(s.infraCount, 1);
+  assert.equal(s.bandCounts.belumDinilai, 0);
+  assert.equal(s.worstBand, 'tinggi');
+  const only = summarizeSession(session('b', [d('normal', null, null)]));
+  assert.equal(only.worstScore, null);
+  assert.equal(only.normalCount, 1);
+  const o = buildOverview([session('a', [d('normal', null, null)]), session('b', [d('normal', null, null)])]);
+  assert.equal(o.totals.normalSigns, 2);
+});

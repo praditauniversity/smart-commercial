@@ -50,3 +50,12 @@ test('ringkasan: target 5 menit, persentil, dan tahap terlambat', () => {
   assert.equal(s.totalMs!.p50, 120_000);
   assert.equal(s.slowestStage, 'kompresi');
 });
+
+test('tahap klasifikasi kondisi hanya muncul bila Tahap 2 berjalan (ada crop)', () => {
+  const base = { upload: { compressAndExtractMs: 1000, frameExtractMs: 200, uploadMs: 10 }, persistMs: 5 };
+  const withStage = mediaLatency({ ...base, yolo: { download_ms: 1, inference_ms: 100, stage2_ms: 40, stage2_crops: 3 } })!;
+  assert.equal(withStage.stages.klasifikasi_kondisi, 40);
+  assert.equal(withStage.totalMs, 800 + 200 + 10 + 1 + 100 + 40 + 5);
+  const noCrops = mediaLatency({ ...base, yolo: { download_ms: 1, inference_ms: 100, stage2_ms: 0, stage2_crops: 0 } })!;
+  assert.equal(noCrops.stages.klasifikasi_kondisi, undefined);
+});

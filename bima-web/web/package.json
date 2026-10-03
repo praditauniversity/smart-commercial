@@ -11,6 +11,7 @@
     "test": "tsx --test src/lib/*.test.ts",
     "test:rbac": "tsx src/tests/rbac.integration.ts",
     "test:video": "tsx src/tests/video-flow.integration.ts",
+    "test:stage2": "tsx src/tests/stage2.integration.ts",
     "seed": "tsx prisma/seed.ts",
     "seed:sam3": "tsx prisma/seed-sam3.ts",
     "seed:risk": "tsx prisma/seed-risk.ts",

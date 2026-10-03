@@ -174,6 +174,8 @@ function checkPrereqs(state) {
   const missing = WEIGHT_CATEGORIES.filter((c) => !fs.existsSync(path.join(weights, `${c}-best.pt`)));
   if (missing.length === 0) ok(`Bobot YOLO lengkap: ${weights}`);
   else errors.push(`Bobot YOLO belum lengkap di ${weights}. Hilang: ${missing.map((c) => `${c}-best.pt`).join(', ')}. Letakkan 6 berkas itu di sana atau beri --weights DIR.`);
+  if (fs.existsSync(path.join(weights, 'sign_stage2_fold0_best.pt'))) ok('Classifier kondisi rambu (Tahap 2) ditemukan: sign_stage2_fold0_best.pt');
+  else warn('Classifier kondisi rambu tidak ada (opsional): salin fold0_best.pt sebagai sign_stage2_fold0_best.pt ke folder bobot untuk mengaktifkan Tahap 2.');
 
   const dbGiven = flag('database-url');
   if (dbGiven && dbGiven !== true) ok('PostgreSQL: memakai --database-url');
@@ -273,6 +275,8 @@ function buildEnvs(s) {
     AI_SERVICE_HOST: '127.0.0.1',
     AI_SERVICE_PORT: String(s.aiPort),
     YOLO_WEIGHTS_DIR: s.weights,
+    // Tahap 2 rambu (classifier fold0, hasil 5-fold cross-validation): aktif hanya bila berkasnya ada.
+    ...(fs.existsSync(path.join(s.weights, 'sign_stage2_fold0_best.pt')) ? { SIGN_CONDITION_WEIGHTS: 'sign_stage2_fold0_best.pt' } : {}),
     YOLO_CONF: '0.25',
     YOLO_DEVICE: 'cpu',
     PYTHONUNBUFFERED: '1',

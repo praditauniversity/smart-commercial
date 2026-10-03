@@ -20,12 +20,14 @@ export default function YoloMediaCard({ media, detections, onOpen }: {
   const compliance = valid.filter((d) => d.classDefinition?.categoryGroup === 'monitoring_kepatuhan');
   const counts: Record<PriorityBand, number> = { rendah: 0, sedang: 0, tinggi: 0, kritikal: 0 };
   let unscored = 0;
+  let normalSigns = 0;
   for (const d of infra) {
-    if (d.priorityBand) counts[d.priorityBand]++;
+    if (d.conditionLabel === 'normal') normalSigns++; // rambu normal: tanpa skor, bukan "belum dinilai"
+    else if (d.priorityBand) counts[d.priorityBand]++;
     else unscored++;
   }
   // Miniatur: frame yang memuat deteksi infrastruktur dengan skor tertinggi; bila tidak ada, frame pertama.
-  const worst = [...infra].filter((d) => d.frameIndex !== null).sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0))[0];
+  const worst = [...infra].filter((d) => d.frameIndex !== null && d.conditionLabel !== 'normal').sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0))[0];
   const frames = media.frames ?? [];
   const thumb = frames.find((f) => f.frameIndex === worst?.frameIndex) ?? frames[0];
   const framesWithDet = new Set(valid.map((d) => d.frameIndex).filter((i) => i !== null)).size;
@@ -47,6 +49,7 @@ export default function YoloMediaCard({ media, detections, onOpen }: {
             <span key={b} className={`rounded-full border px-2 py-0.5 ${BAND_STYLE[b].chip}`}>{BAND_LABEL[b]} {counts[b]}</span>
           ))}
           {unscored > 0 && <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-500">Belum dinilai {unscored}</span>}
+          {normalSigns > 0 && <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-emerald-800">Rambu normal {normalSigns} (tanpa skor)</span>}
           {compliance.length > 0 && <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-slate-700">Kepatuhan {compliance.length} (tanpa skor)</span>}
           {valid.length === 0 && <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-500">Tidak ada deteksi</span>}
         </div>

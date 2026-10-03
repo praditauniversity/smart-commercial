@@ -22,11 +22,16 @@ export interface DetectionView {
   riskScore: number | null;
   priorityBand: PriorityBand | null;
   reviewStatus: string; // belum_ditinjau | dikonfirmasi | dikoreksi | keliru
+  /** Tahap 2 (rambu): hasil classifier atau koreksi supervisor; null = belum diklasifikasi / bukan rambu. */
+  conditionLabel?: 'normal' | 'damaged' | string | null;
+  conditionModel?: string | null;
+  conditionTag?: { id: string; code: string; label: string; severity: number } | null;
   classDefinition?: {
     id: string;
     displayName: string;
     category: string | null;
     categoryGroup: string | null;
+    hasConditionStage?: boolean;
   } | null;
 }
 

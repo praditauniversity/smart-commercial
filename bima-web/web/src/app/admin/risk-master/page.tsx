@@ -4,10 +4,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { SimulatedTag } from '@/components/RiskBadge';
 import { useToast } from '@/components/ToastProvider';
-import { EXPOSURE_LABEL, GROUP_LABEL, SEVERITY_LABEL, type Exposure, type Severity } from '@/lib/risk';
+import { CONDITION_MODEL_LABEL, EXPOSURE_LABEL, GROUP_LABEL, SEVERITY_LABEL, type Exposure, type Severity } from '@/lib/risk';
 import { ZONE_TYPES } from '@/lib/master-validation';
 
 interface ClassRow { id: string; name: string; displayName: string; modelClass: string | null; category: string | null; categoryGroup: string | null; defaultSeverity: number | null; isActive: boolean }
+interface TagRow { id: string; code: string; label: string; severity: number; isActive: boolean; sortOrder: number; classDefinition: { displayName: string }; _count?: { detections: number } }
 interface ZoneRow { id: string; code: string; name: string; zoneType: string; exposure: number; description: string | null; isSimulated: boolean; isActive: boolean; _count?: { sessions: number } }
 
 const ZONE_TYPE_LABEL: Record<string, string> = { jalan_utama: 'Jalan umum ramai / akses utama', hunian: 'Kawasan hunian', area_minim_aktivitas: 'Area minim aktivitas' };
@@ -17,13 +18,17 @@ export default function RiskMasterPage() {
   const toast = useToast();
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [zones, setZones] = useState<ZoneRow[]>([]);
+  const [tags, setTags] = useState<TagRow[]>([]);
+  const [tagDraft, setTagDraft] = useState({ code: '', label: '', severity: 2 });
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState({ code: '', name: '', zoneType: 'hunian', exposure: 2, isSimulated: false });
 
   const load = useCallback(async () => {
     try {
-      const [c, z] = await Promise.all([fetch('/api/admin/classes'), fetch('/api/admin/zones')]);
-      const cj = await c.json(), zj = await z.json();
+      const [c, z, t] = await Promise.all([fetch('/api/admin/classes'), fetch('/api/admin/zones'), fetch('/api/admin/condition-tags')]);
+      const cj = await c.json(), zj = await z.json(), tj = await t.json();
+      if (!t.ok) throw new Error(tj.error);
+      setTags(tj.tags);
       if (!c.ok) throw new Error(cj.error);
       if (!z.ok) throw new Error(zj.error);
       setClasses(cj.classes.filter((x: ClassRow) => x.modelClass));
@@ -90,6 +95,44 @@ export default function RiskMasterPage() {
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white" aria-label="Tag subtipe kerusakan rambu">
+          <div className="border-b border-slate-100 p-3">
+            <h2 className="text-sm font-bold text-slate-800">Tag subtipe kerusakan rambu &amp; Severity</h2>
+            <p className="mt-0.5 text-[11px] text-slate-500">
+              Classifier Tahap 2 ({CONDITION_MODEL_LABEL}) hanya menilai normal/rusak. Supervisor memilih tag di bawah untuk rambu rusak; severity tag menentukan skor.
+              Perubahan berlaku untuk penetapan berikutnya; temuan yang sudah memakai tag menyimpan severity-nya sendiri.
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="px-3 py-2">Kode</th><th className="px-3 py-2">Label</th><th className="px-3 py-2">Severity</th><th className="px-3 py-2">Dipakai</th><th className="px-3 py-2">Aktif</th><th className="px-3 py-2" /></tr></thead>
+              <tbody className="divide-y divide-slate-100">
+                {tags.map((t) => (
+                  <tr key={t.id} className={t.isActive ? '' : 'opacity-50'}>
+                    <td className="px-3 py-2 font-mono">{t.code}</td>
+                    <td className="px-3 py-2"><input aria-label={`Label ${t.code}`} className={`${field} w-48`} defaultValue={t.label} onBlur={(e) => e.target.value.trim() && e.target.value !== t.label && send(`/api/admin/condition-tags/${t.id}`, 'PATCH', { label: e.target.value }, 'Label diperbarui.')} /></td>
+                    <td className="px-3 py-2">
+                      <select aria-label={`Severity ${t.code}`} className={field} value={t.severity} onChange={(e) => send(`/api/admin/condition-tags/${t.id}`, 'PATCH', { severity: Number(e.target.value) }, 'Severity tag diperbarui. Berlaku untuk penetapan berikutnya.')}>
+                        {([1, 2, 3] as Severity[]).map((s) => <option key={s} value={s}>{SEVERITY_LABEL[s]} ({s})</option>)}
+                      </select>
+                    </td>
+                    <td className="px-3 py-2 font-mono">{t._count?.detections ?? 0}</td>
+                    <td className="px-3 py-2"><input type="checkbox" aria-label={`Aktif ${t.code}`} checked={t.isActive} onChange={(e) => send(`/api/admin/condition-tags/${t.id}`, 'PATCH', { isActive: e.target.checked })} /></td>
+                    <td className="px-3 py-2 text-right"><button type="button" className="font-semibold text-rose-700 hover:underline" onClick={() => confirm(`Hapus tag "${t.label}"? Tag yang sudah dipakai temuan hanya dinonaktifkan.`) && send(`/api/admin/condition-tags/${t.id}`, 'DELETE', undefined, 'Tag dihapus/dinonaktifkan.')}>Hapus</button></td>
+                  </tr>
+                ))}
+                {tags.length === 0 && <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400">Belum ada tag. Jalankan npm run seed:risk atau tambahkan di bawah.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+          <form className="flex flex-wrap items-end gap-2 border-t border-slate-100 p-3 text-xs" onSubmit={async (e) => { e.preventDefault(); if (await send('/api/admin/condition-tags', 'POST', tagDraft, 'Tag dibuat.')) setTagDraft({ ...tagDraft, code: '', label: '' }); }}>
+            <label className="flex flex-col gap-1 font-semibold text-slate-600">Kode<input required className={field} value={tagDraft.code} onChange={(e) => setTagDraft({ ...tagDraft, code: e.target.value })} placeholder="panel_retak" pattern="[a-z0-9_]{2,40}" title="Huruf kecil, angka, atau _" /></label>
+            <label className="flex min-w-48 flex-1 flex-col gap-1 font-semibold text-slate-600">Label<input required className={field} value={tagDraft.label} onChange={(e) => setTagDraft({ ...tagDraft, label: e.target.value })} /></label>
+            <label className="flex flex-col gap-1 font-semibold text-slate-600">Severity<select className={field} value={tagDraft.severity} onChange={(e) => setTagDraft({ ...tagDraft, severity: Number(e.target.value) })}>{([1, 2, 3] as Severity[]).map((s) => <option key={s} value={s}>{SEVERITY_LABEL[s]} ({s})</option>)}</select></label>
+            <button type="submit" className="rounded-lg bg-blue-600 px-3 py-1.5 font-semibold text-white hover:bg-blue-700">Tambah tag</button>
+          </form>
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white" aria-label="Zona dan Exposure">

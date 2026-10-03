@@ -7,12 +7,13 @@ import { ArrowLeft, Loader2, MapPin, Video } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import FrameGallery from '@/components/FrameGallery';
 import { ClipEvaluationBadge, NarrativePanel } from '@/components/ClipEvaluation';
-import { ComplianceBadge, RiskBadge, SimulatedTag } from '@/components/RiskBadge';
+import { ComplianceBadge, ConditionBadge, RiskBadge, SimulatedTag } from '@/components/RiskBadge';
 import CorrectionsLog from '@/components/CorrectionsLog';
 import { useToast } from '@/components/ToastProvider';
-import { EXPOSURE_LABEL, SEVERITY_LABEL, type Exposure, type Severity } from '@/lib/risk';
+import { CONDITION_MODEL_LABEL, EXPOSURE_LABEL, SEVERITY_LABEL, type Exposure, type Severity } from '@/lib/risk';
 import type { DetectionView, EvaluatedClipView, FrameView } from '@/lib/media-view';
 
+interface ConditionTagOption { id: string; classId: string; code: string; label: string; severity: number }
 interface ClassOption { id: string; name: string; displayName: string; category: string | null; categoryGroup: string | null }
 interface MediaView {
   id: string; fileName: string; fileType: string; fileUrl: string; status: string; durationSeconds: number | null;
@@ -31,6 +32,7 @@ export default function SupervisorSessionPage() {
   const toast = useToast();
   const [session, setSession] = useState<SessionView | null>(null);
   const [classes, setClasses] = useState<ClassOption[]>([]);
+  const [tags, setTags] = useState<ConditionTagOption[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -39,12 +41,13 @@ export default function SupervisorSessionPage() {
 
   const load = useCallback(async () => {
     try {
-      const [s, c] = await Promise.all([fetch(`/api/sessions/${id}`), fetch('/api/admin/classes')]);
+      const [s, c, t] = await Promise.all([fetch(`/api/sessions/${id}`), fetch('/api/admin/classes'), fetch('/api/condition-tags')]);
       const sj = await s.json();
       if (!s.ok) throw new Error(sj.error || 'Gagal memuat sesi.');
       setSession(sj.session);
       const cj = await c.json();
       setClasses((cj.classes || []).filter((x: ClassOption) => x.categoryGroup));
+      setTags(((await t.json()).tags || []) as ConditionTagOption[]);
     } catch (e: any) {
       setError(e.message);
     }
@@ -130,7 +133,7 @@ export default function SupervisorSessionPage() {
               {!selected ? (
                 <p className="text-xs text-slate-500">Pilih sebuah kotak atau baris temuan pada galeri untuk meninjau dan mengoreksinya.</p>
               ) : (
-                <CorrectionForm key={selected.id} detection={selected} classes={classes} busy={busy} onSubmit={correct} />
+                <CorrectionForm key={selected.id} detection={selected} classes={classes} tags={tags} busy={busy} onSubmit={correct} />
               )}
             </section>
             <MissedForm sessionId={session.id} media={session.mediaAssets} classes={classes} onSaved={() => { setLogKey((k) => k + 1); toast.success?.('Temuan terlewat dicatat.'); }} />
@@ -143,22 +146,32 @@ export default function SupervisorSessionPage() {
   );
 }
 
-function CorrectionForm({ detection: d, classes, busy, onSubmit }: { detection: DetectionView; classes: ClassOption[]; busy: boolean; onSubmit: (b: Record<string, unknown>) => void }) {
+const SOURCE_TEXT: Record<string, string> = { bawaan: 'bawaan kelas', sementara: 'sementara (subtipe belum ditentukan)', tag: 'dari tag subtipe', petugas: 'dari petugas' };
+
+function CorrectionForm({ detection: d, classes, tags, busy, onSubmit }: { detection: DetectionView; classes: ClassOption[]; tags: ConditionTagOption[]; busy: boolean; onSubmit: (b: Record<string, unknown>) => void }) {
   const [reason, setReason] = useState('');
   const [classId, setClassId] = useState('');
   const [severity, setSeverity] = useState<string>(d.severity ? String(d.severity) : '2');
   const infra = d.classDefinition?.categoryGroup === 'keselamatan_infrastruktur';
+  // Tahap 2: hanya kelas dengan hasConditionStage (rambu) yang memiliki kondisi dan tag subtipe.
+  const hasStage = Boolean(d.classDefinition?.hasConditionStage);
+  const [cond, setCond] = useState<string>(d.conditionLabel === 'normal' || d.conditionLabel === 'damaged' ? d.conditionLabel : '');
+  const [tagId, setTagId] = useState<string>(d.conditionTag?.id ?? '');
+  const classTags = tags.filter((t) => t.classId === d.classDefinition?.id);
+  const isNormalSign = hasStage && d.conditionLabel === 'normal';
   const btn = 'rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50';
   return (
     <div className="space-y-3 text-xs">
       <div className="rounded-lg bg-slate-50 p-2.5">
         <div className="font-bold text-slate-900">{d.classDefinition?.displayName ?? d.className}</div>
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          {infra ? <RiskBadge score={d.riskScore} band={d.priorityBand} severity={d.severity} exposure={d.exposure} /> : <ComplianceBadge />}
+          {infra ? (isNormalSign ? null : <RiskBadge score={d.riskScore} band={d.priorityBand} severity={d.severity} exposure={d.exposure} source={d.severitySource} />) : <ComplianceBadge />}
+          {hasStage && <ConditionBadge label={d.conditionLabel} tag={d.conditionTag} />}
           <span className="font-mono text-slate-500">conf {d.confidence?.toFixed(2) ?? '-'}</span>
           <span className="text-slate-500">status: {d.reviewStatus.replace('_', ' ')}</span>
         </div>
-        {infra && d.severity && <div className="mt-1 text-slate-600">Severity {SEVERITY_LABEL[d.severity as Severity]} ({d.severity}){d.severitySource === 'petugas' ? ' — dari petugas' : ' — bawaan kelas'}</div>}
+        {infra && d.severity && !isNormalSign && <div className="mt-1 text-slate-600">Severity {SEVERITY_LABEL[d.severity as Severity]} ({d.severity}) — {SOURCE_TEXT[d.severitySource] ?? d.severitySource}</div>}
+        {hasStage && !d.conditionLabel && <div className="mt-1 text-amber-700">Kondisi rambu belum diklasifikasi (Tahap 2 tidak aktif saat deteksi).</div>}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -182,7 +195,29 @@ function CorrectionForm({ detection: d, classes, busy, onSubmit }: { detection: 
         </div>
       </div>
 
-      {infra && (
+      {hasStage && (
+        <div className="space-y-2 border-t border-slate-100 pt-3" role="group" aria-label="Kondisi rambu">
+          <span className="block font-semibold text-slate-700">Kondisi rambu</span>
+          <div className="flex gap-4">
+            {[['normal', 'Normal'], ['damaged', 'Rusak']].map(([v, l]) => (
+              <label key={v} className="flex items-center gap-1.5"><input type="radio" name="cond" value={v} checked={cond === v} onChange={() => { setCond(v); if (v === 'normal') setTagId(''); }} />{l}</label>
+            ))}
+          </div>
+          {cond === 'damaged' && (
+            <label className="block">
+              <span className="mb-1 block text-slate-600">Subtipe kerusakan (tag)</span>
+              <select value={tagId} onChange={(e) => setTagId(e.target.value)} aria-label="Subtipe kerusakan" className="w-full rounded-lg border border-slate-300 p-1.5">
+                <option value="">Subtipe belum ditentukan (severity sementara)</option>
+                {classTags.map((t) => <option key={t.id} value={t.id}>{t.label} — severity {SEVERITY_LABEL[t.severity as Severity]} ({t.severity})</option>)}
+              </select>
+            </label>
+          )}
+          <button type="button" disabled={busy || !cond} className={`${btn} bg-teal-600 text-white hover:bg-teal-700`} onClick={() => onSubmit({ kind: 'kondisi_diubah', condition: cond, tagId: cond === 'damaged' ? (tagId || null) : undefined, reason })}>Simpan kondisi</button>
+          <p className="text-[11px] text-slate-500">Normal = tanpa skor risiko. Rusak tanpa subtipe = severity sementara; memilih tag mengganti severity sesuai master tag. Hasil awal: {CONDITION_MODEL_LABEL}.</p>
+        </div>
+      )}
+
+      {infra && !isNormalSign && (
         <div className="border-t border-slate-100 pt-3">
           <span className="mb-1 block font-semibold text-slate-700">Severity</span>
           <div className="flex gap-2">

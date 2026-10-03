@@ -117,6 +117,7 @@ export default function RiskOverview({ detailHref, title = 'Ringkasan risiko lok
         <div className="rounded-2xl border border-slate-200 bg-white p-4 lg:col-span-1">
           <h3 className="mb-3 text-sm font-bold text-slate-800">{GROUP_LABEL.keselamatan_infrastruktur}</h3>
           <BandBar bands={data.bands} />
+          {data.totals.normalSigns > 0 && <p className="mt-2 text-[11px] text-emerald-700">Rambu normal: <b className="font-mono">{data.totals.normalSigns}</b> (tanpa skor, tidak termasuk pita di atas).</p>}
           <ul className="mt-3 divide-y divide-slate-100 text-xs">
             {byGroup('keselamatan_infrastruktur').map((c) => (
               <li key={c.className} className="flex justify-between py-1.5"><span>{c.displayName}</span><b className="font-mono">{c.count}</b></li>

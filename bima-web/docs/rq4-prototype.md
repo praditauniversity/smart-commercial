@@ -70,7 +70,14 @@ Kata sandi dibuat acak dan disimpan di `.demo/kredensial.txt`. File `.env` Anda 
 - **Sampling frame**: ~0,5 fps, maksimal 24 frame, **disebar merata** di seluruh durasi (bukan 24 frame pertama). Klip 60 dtk menghasilkan 24 frame (jarak ±2,5 dtk).
 - **Pencocokan klip**: nama berkas saja tidak cukup. Nama sama tetapi durasi berbeda > 3 dtk **tidak** dianggap terevaluasi, dan alasannya dicatat di `clipMatchNote`, agar narasi/skor klip lain tidak menempel pada video yang berbeda.
 - **Sesi tanpa zona**: temuan Keselamatan Infrastruktur tidak diberi skor (Exposure tidak diketahui); tidak ditebak.
-- **Rambu**: model hanya mendeteksi keberadaan. Severity awal 2 (Sedang), dapat diubah petugas atau di data master.
+- **Rambu, dua tahap** (opsi B): Tahap 1 mendeteksi semua rambu; setiap rambu dipotong dengan `adaptive_crop_box` (disalin apa adanya dari notebook; kotak rambu lain dari Tahap 1 menjadi `other_boxes`) lalu diklasifikasi `normal`/`damaged` pada imgsz 224 oleh **classifier fold0, hasil 5-fold cross-validation** (`fold0_best.pt`, yolo11n-cls). Aturan:
+  - `normal` → **tidak diberi skor risiko** (tampil sebagai temuan normal).
+  - `damaged` → Severity sementara 2, berlabel "subtipe belum ditentukan". Classifier **tidak** menentukan subtipe.
+  - Hanya untuk rambu rusak, **supervisor** dapat memilih satu dari 6 tag subtipe (data master di Admin → Data Master Risiko; kode, label, severity, dan status aktif dapat ditambah/diubah): panel_hilang/penyok/merosot = 3, panel_miring/tiang_miring = 2, pudar = 1. Kelas selain rambu tidak memiliki opsi ini.
+  - Prioritas severity: koreksi manual petugas > severity tag > nilai sementara kelas. Severity tag disalin ke temuan saat dipilih, sehingga perubahan master hanya berlaku untuk pemilihan berikutnya.
+  - Probabilitas classifier sengaja **tidak ditampilkan** (val/loss tinggi → kemungkinan terlalu percaya diri); akurasi top-1 0,8922 adalah validasi lipatan-0, bukan uji independen.
+  - Aktivasi: salin `fold0_best.pt` menjadi `ai-service/models/yolo11n_seed0/sign_stage2_fold0_best.pt`, set `SIGN_CONDITION_WEIGHTS=sign_stage2_fold0_best.pt` di `ai-service/.env` (otomatis oleh `npm run demo` bila berkas ada), jalankan `npx prisma migrate deploy` dan `npm run seed:risk`, lalu restart ai-service dan web. Deteksi rambu yang diproses sebelum Tahap 2 aktif perlu diproses ulang.
+- **Persetujuan survei**: dilakukan oleh **supervisor** (admin tetap dapat). Pengiriman sesi oleh surveyor menampilkan "menunggu disetujui/direview oleh supervisor".
 - **Perubahan Severity kelas / Exposure zona** berlaku untuk deteksi berikutnya; temuan lama tidak dihitung ulang otomatis. Mengganti kelas temuan (oleh petugas) menghitung ulang skornya.
 - **Hitungan di dasbor** adalah jumlah kotak deteksi pada frame sampel, **bukan objek unik** (belum ada penggabungan antar-frame). Skor lokasi memakai deteksi terburuk.
 - **Temuan "keliru"** tidak dihapus; ditandai dan dikeluarkan dari hitungan valid dan skor lokasi. **"Terlewat"** adalah pernyataan petugas dan tidak membuat `Detection`.

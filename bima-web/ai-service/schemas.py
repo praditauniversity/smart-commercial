@@ -20,6 +20,8 @@ class DetectionItem(BaseModel):
     frame_index: Optional[int] = None
     has_conflict: bool = False
     conflict_details: Optional[Dict[str, Any]] = None
+    condition_state: Optional[str] = None  # Tahap 2: "normal" | "damaged"; None = tidak diklasifikasi
+    condition_model: Optional[str] = None  # model Tahap 2 yang menghasilkan condition_state
 
 class DetectionSchema(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
@@ -38,6 +40,7 @@ class ClassDef(BaseModel):
     sam_prompt: Optional[str] = None  # text prompt for the local SAM3 provider
     sam_color: Optional[str] = None   # "#RRGGBB" overlay color for SAM3 results
     model_class: Optional[str] = None  # YOLO output class name (e.g. "pavedroad_pothole"); falls back to `name`
+    has_condition_stage: bool = False  # Tahap 2: kondisi (normal/damaged) diklasifikasi per crop (hanya rambu)
 
 class ModelConfigPayload(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
@@ -109,6 +112,9 @@ class YoloDetectMetrics(BaseModel):
     total_ms: float
     per_model_ms: Dict[str, float] = Field(default_factory=dict)  # total ms per category model
     detections_by_class: Dict[str, int] = Field(default_factory=dict)
+    stage2_ms: float = 0.0  # total waktu klasifikasi kondisi (Tahap 2)
+    stage2_crops: int = 0  # jumlah crop yang diklasifikasi
+    stage2_model: Optional[str] = None  # None bila Tahap 2 tidak aktif
     missing_models: List[str] = Field(default_factory=list)
     device: Optional[str] = None
     conf: float

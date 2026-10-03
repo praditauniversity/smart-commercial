@@ -35,6 +35,7 @@ export async function GET(request: Request) {
             priorityBand: true,
             riskScore: true,
             reviewStatus: true,
+            conditionLabel: true,
             classDefinition: { select: { displayName: true, categoryGroup: true } },
           },
         },
@@ -57,6 +58,7 @@ export async function GET(request: Request) {
         band: d.priorityBand as PriorityBand | null,
         score: d.riskScore,
         reviewStatus: d.reviewStatus,
+        condition: d.conditionLabel,
       })),
     }));
 

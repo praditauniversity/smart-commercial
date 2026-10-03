@@ -11,6 +11,8 @@ export interface OverviewDetection {
   band: PriorityBand | null;
   score: number | null;
   reviewStatus: string;
+  /** Hasil Tahap 2 (rambu): 'normal' = tanpa skor, bukan "belum dinilai". */
+  condition?: string | null;
 }
 
 export interface OverviewSessionInput {
@@ -38,6 +40,8 @@ export interface SessionSummary {
   mediaCount: number;
   missedCount: number;
   infraCount: number;
+  /** Rambu berkondisi normal: ditampilkan sebagai temuan normal, tanpa skor risiko. */
+  normalCount: number;
   complianceCount: number;
   falsePositiveCount: number;
   bandCounts: ReturnType<typeof emptyBands>;
@@ -52,10 +56,15 @@ export function summarizeSession(s: OverviewSessionInput): SessionSummary {
   const bandCounts = emptyBands();
   let worst: OverviewDetection | null = null;
   let infraCount = 0;
+  let normalCount = 0;
   let complianceCount = 0;
   for (const d of valid) {
     if (d.group === 'monitoring_kepatuhan') {
       complianceCount++;
+      continue;
+    }
+    if (d.condition === 'normal') {
+      normalCount++;
       continue;
     }
     infraCount++;
@@ -76,6 +85,7 @@ export function summarizeSession(s: OverviewSessionInput): SessionSummary {
     mediaCount: s.mediaCount,
     missedCount: s.missedCount,
     infraCount,
+    normalCount,
     complianceCount,
     falsePositiveCount: s.detections.length - valid.length,
     bandCounts,
@@ -87,7 +97,7 @@ export function summarizeSession(s: OverviewSessionInput): SessionSummary {
 }
 
 export interface Overview {
-  totals: { sessions: number; media: number; validFindings: number; falsePositives: number; missed: number; reviewedFindings: number };
+  totals: { sessions: number; media: number; validFindings: number; normalSigns: number; falsePositives: number; missed: number; reviewedFindings: number };
   bands: ReturnType<typeof emptyBands>;
   byClass: { className: string; displayName: string; group: string | null; count: number }[];
   sessions: SessionSummary[];
@@ -120,6 +130,7 @@ export function buildOverview(inputs: OverviewSessionInput[]): Overview {
       sessions: sessions.length,
       media: sessions.reduce((n, s) => n + s.mediaCount, 0),
       validFindings: sessions.reduce((n, s) => n + s.valid, 0),
+      normalSigns: sessions.reduce((n, s) => n + s.normalCount, 0),
       falsePositives: sessions.reduce((n, s) => n + s.falsePositiveCount, 0),
       missed: sessions.reduce((n, s) => n + s.missedCount, 0),
       reviewedFindings: sessions.reduce((n, s) => n + s.reviewed, 0),

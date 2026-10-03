@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { BAND_LABEL, GROUP_LABEL, SEVERITY_LABEL, EXPOSURE_LABEL, type PriorityBand, type Severity, type Exposure } from '@/lib/risk';
+import { BAND_LABEL, CONDITION_MODEL_LABEL, GROUP_LABEL, SEVERITY_LABEL, EXPOSURE_LABEL, type PriorityBand, type Severity, type Exposure } from '@/lib/risk';
 
 export const BAND_STYLE: Record<PriorityBand, { chip: string; box: string; dot: string }> = {
   rendah: { chip: 'bg-emerald-100 text-emerald-800 border-emerald-200', box: 'border-emerald-500', dot: 'bg-emerald-500' },
@@ -13,12 +13,20 @@ export const BAND_STYLE: Record<PriorityBand, { chip: string; box: string; dot: 
 /** Warna kotak untuk temuan Monitoring Kepatuhan (tanpa skor risiko): sengaja netral agar tidak terbaca sebagai tingkat risiko. */
 export const COMPLIANCE_STYLE = { chip: 'bg-slate-100 text-slate-700 border-slate-300', box: 'border-slate-500 border-dashed', dot: 'bg-slate-500' };
 
-export function RiskBadge({ score, band, severity, exposure, compact = false }: {
+const SOURCE_NOTE: Record<string, string> = {
+  sementara: 'severity sementara: subtipe belum ditentukan',
+  tag: 'severity dari tag subtipe',
+  petugas: 'severity diubah petugas',
+};
+
+export function RiskBadge({ score, band, severity, exposure, compact = false, source }: {
   score: number | null;
   band: PriorityBand | null;
   severity?: number | null;
   exposure?: number | null;
   compact?: boolean;
+  /** Sumber Severity (bawaan | sementara | tag | petugas); ditampilkan sebagai tooltip bila bukan bawaan. */
+  source?: string | null;
 }) {
   if (!band || score === null) {
     return (
@@ -28,9 +36,10 @@ export function RiskBadge({ score, band, severity, exposure, compact = false }: 
     );
   }
   const st = BAND_STYLE[band];
-  const detail = severity && exposure
+  const note = source && SOURCE_NOTE[source] ? ` — ${SOURCE_NOTE[source]}` : '';
+  const detail = (severity && exposure
     ? `Severity ${SEVERITY_LABEL[severity as Severity]} (${severity}) × Exposure ${EXPOSURE_LABEL[exposure as Exposure]} (${exposure}) = ${score}`
-    : `Skor ${score}`;
+    : `Skor ${score}`) + note;
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${st.chip}`} title={detail}>
       <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} />
@@ -62,4 +71,26 @@ export function SimulatedTag({ label = 'data contoh' }: { label?: string }) {
       {label}
     </span>
   );
+}
+
+/**
+ * Hasil Tahap 2 rambu. normal = tanpa skor risiko; rusak = skor dihitung, subtipe dari tag supervisor
+ * (sebelum dipilih: "subtipe belum ditentukan" dengan severity sementara).
+ */
+export function ConditionBadge({ label, tag }: { label: string | null | undefined; tag?: { label: string } | null }) {
+  if (label === 'normal') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800" title={`Kondisi normal: tidak masuk penilaian risiko (${CONDITION_MODEL_LABEL})`}>
+        Normal · tanpa skor
+      </span>
+    );
+  }
+  if (label === 'damaged') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-800" title={`Kondisi rusak (${CONDITION_MODEL_LABEL})`}>
+        Rusak · {tag ? tag.label : 'subtipe belum ditentukan'}
+      </span>
+    );
+  }
+  return null;
 }

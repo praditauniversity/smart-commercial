@@ -48,8 +48,30 @@ export function validateZone(input: ZoneInput, { partial = false }: { partial?: 
   need(input.zoneType, 'Jenis zona');
   need(input.exposure, 'Exposure');
   if (input.code !== undefined && !/^[A-Za-z0-9_-]{2,32}$/.test(input.code)) errors.push('Kode 2-32 karakter: huruf, angka, "-" atau "_".');
-  if (input.name !== undefined && input.name.trim() === '') errors.push('Nama tidak boleh kosong.');
+  if (partial && input.name !== undefined && input.name.trim() === '') errors.push('Nama tidak boleh kosong.');
   if (input.zoneType !== undefined && !(ZONE_TYPES as readonly string[]).includes(input.zoneType)) errors.push('Jenis zona tidak valid.');
   if (input.exposure !== undefined && !isExposure(input.exposure)) errors.push('Exposure harus 1, 2, atau 3.');
+  return errors;
+}
+
+export interface ConditionTagInput {
+  code?: string;
+  label?: string;
+  severity?: number;
+}
+
+/** Validasi tag subtipe kerusakan (master tag Tahap 2). `partial` untuk pembaruan sebagian. */
+export function validateConditionTag(input: ConditionTagInput, { partial = false }: { partial?: boolean } = {}): string[] {
+  const errors: string[] = [];
+  const need = (v: unknown, label: string) => {
+    if (!partial && (v === undefined || v === null || String(v).trim() === '')) errors.push(`${label} wajib diisi.`);
+  };
+  need(input.code, 'Kode tag');
+  need(input.label, 'Label tag');
+  need(input.severity, 'Severity');
+  if (input.code !== undefined && !/^[a-z0-9_]{2,40}$/.test(input.code)) errors.push('Kode tag 2-40 karakter: huruf kecil, angka, atau "_".');
+  // Saat membuat, label kosong sudah dilaporkan oleh need(); cek ini untuk pembaruan sebagian agar tidak ganda.
+  if (partial && input.label !== undefined && input.label.trim() === '') errors.push('Label tag tidak boleh kosong.');
+  if (input.severity !== undefined && !isSeverity(input.severity)) errors.push('Severity tag harus 1, 2, atau 3.');
   return errors;
 }

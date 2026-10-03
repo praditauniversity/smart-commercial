@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateClassRisk, validateZone } from './master-validation';
+import { validateClassRisk, validateConditionTag, validateZone } from './master-validation';
 
 test('kelas infrastruktur wajib severity 1-3', () => {
   assert.deepEqual(validateClassRisk({ categoryGroup: 'keselamatan_infrastruktur', defaultSeverity: 2 }), []);
@@ -30,4 +30,17 @@ test('zona: semua field wajib saat membuat; exposure 1-3', () => {
 test('pembaruan sebagian hanya memeriksa field yang dikirim', () => {
   assert.deepEqual(validateZone({ exposure: 2 }, { partial: true }), []);
   assert.equal(validateZone({ exposure: 0 }, { partial: true }).length, 1);
+});
+
+test('tag kondisi: kode, label, severity 1-3 wajib; kode hanya huruf kecil/angka/_', () => {
+  assert.deepEqual(validateConditionTag({ code: 'panel_hilang', label: 'Panel hilang', severity: 3 }), []);
+  assert.ok(validateConditionTag({}).length >= 3);
+  assert.equal(validateConditionTag({ code: 'Panel Hilang', label: 'x', severity: 3 }).length, 1);
+  assert.equal(validateConditionTag({ code: 'ok_tag', label: 'x', severity: 0 }).length, 1);
+  assert.equal(validateConditionTag({ code: 'ok_tag', label: '  ', severity: 2 }).length, 1);
+});
+
+test('tag kondisi: pembaruan sebagian hanya memeriksa field yang dikirim', () => {
+  assert.deepEqual(validateConditionTag({ severity: 2 }, { partial: true }), []);
+  assert.equal(validateConditionTag({ severity: 7 }, { partial: true }).length, 1);
 });

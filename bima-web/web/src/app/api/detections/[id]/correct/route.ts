@@ -13,7 +13,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const user = await requireAuth(['supervisor', 'admin']);
     const { id } = await params;
     const body = await request.json();
-    const { kind, classId, severity, reason } = body ?? {};
+    const { kind, classId, severity, reason, condition, tagId } = body ?? {};
 
     if (!isDetectionCorrectionKind(kind)) {
       return NextResponse.json({ error: 'Jenis koreksi tidak valid.' }, { status: 400 });
@@ -24,13 +24,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const detection = await prisma.detection.findUnique({
       where: { id },
-      include: { classDefinition: true },
+      include: { classDefinition: true, conditionTag: true },
     });
     if (!detection || detection.isDeleted) {
       return NextResponse.json({ error: 'Deteksi tidak ditemukan.' }, { status: 404 });
     }
 
-    let newClass: { id: string; name: string; categoryGroup: string | null; defaultSeverity: number | null; versionId: string | null } | null = null;
+    let newClass: { id: string; name: string; categoryGroup: string | null; defaultSeverity: number | null; hasConditionStage: boolean; versionId: string | null } | null = null;
     if (kind === 'kelas_diubah') {
       const cls = await prisma.classDefinition.findUnique({
         where: { id: String(classId ?? '') },
@@ -39,7 +39,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       if (!cls || !cls.isActive) {
         return NextResponse.json({ error: 'Kelas deteksi tidak valid atau nonaktif.' }, { status: 400 });
       }
-      newClass = { id: cls.id, name: cls.name, categoryGroup: cls.categoryGroup, defaultSeverity: cls.defaultSeverity, versionId: cls.versions[0]?.id ?? null };
+      newClass = { id: cls.id, name: cls.name, categoryGroup: cls.categoryGroup, defaultSeverity: cls.defaultSeverity, hasConditionStage: cls.hasConditionStage, versionId: cls.versions[0]?.id ?? null };
+    }
+
+    // Kondisi/tag hanya untuk kelas dengan Tahap 2 (rambu); tolak lebih awal dengan alasan yang jelas.
+    if (kind === 'kondisi_diubah' && !detection.classDefinition.hasConditionStage) {
+      return NextResponse.json({ error: 'Kondisi dan subtipe hanya berlaku untuk rambu (kelas dengan Tahap 2).' }, { status: 400 });
+    }
+
+    // Tag subtipe (kondisi_diubah): hanya untuk rambu rusak, aktif, dan milik kelas temuan ini (dari master tag).
+    // tagId tidak dikirim = pertahankan tag lama; null/'' = lepas tag; string = pasang tag tersebut.
+    let tag: { id: string; severity: number } | null | undefined = undefined;
+    if (kind === 'kondisi_diubah' && tagId !== undefined) {
+      if (tagId === null || tagId === '') {
+        tag = null;
+      } else {
+      const t = await prisma.conditionTag.findUnique({ where: { id: String(tagId) } });
+      if (!t || !t.isActive || t.classId !== detection.classId) {
+        return NextResponse.json({ error: 'Tag tidak valid, nonaktif, atau bukan milik kelas temuan ini.' }, { status: 400 });
+      }
+      tag = { id: t.id, severity: t.severity };
+      }
     }
 
     const exposure = detection.exposure ?? (await exposureForSession(detection.sessionId));
@@ -50,8 +70,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         severity: detection.severity,
         severitySource: detection.severitySource,
         exposure,
+        conditionLabel: detection.conditionLabel,
+        conditionTagId: detection.conditionTagId,
+        tagSeverity: detection.conditionTag?.severity ?? null,
       },
-      { kind, severity: typeof severity === 'number' ? severity : undefined, newClass: newClass ? { id: newClass.id, profile: newClass } : undefined }
+      {
+        kind,
+        severity: typeof severity === 'number' ? severity : undefined,
+        newClass: newClass ? { id: newClass.id, profile: newClass } : undefined,
+        condition: typeof condition === 'string' ? condition : undefined,
+        tag,
+      }
     );
     if (!plan.ok) return NextResponse.json({ error: plan.error }, { status: 400 });
 
@@ -60,6 +89,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       className: detection.className,
       severity: detection.severity,
       severitySource: detection.severitySource,
+      conditionLabel: detection.conditionLabel,
+      conditionTagId: detection.conditionTagId,
       riskScore: detection.riskScore,
       priorityBand: detection.priorityBand,
       reviewStatus: detection.reviewStatus,
@@ -72,7 +103,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const [updated] = await prisma.$transaction([
-      prisma.detection.update({ where: { id }, data, include: { classDefinition: true } }),
+      prisma.detection.update({ where: { id }, data, include: { classDefinition: true, conditionTag: true } }),
       prisma.officerCorrection.create({
         data: {
           kind,
@@ -81,6 +112,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           mediaAssetId: detection.mediaAssetId,
           classId: newClass?.id ?? null,
           severity: kind === 'severity_diubah' ? plan.update.severity : null,
+          conditionLabel: kind === 'kondisi_diubah' ? plan.update.conditionLabel : null,
+          conditionTagId: kind === 'kondisi_diubah' ? plan.update.conditionTagId : null,
           reason: typeof reason === 'string' && reason.trim() ? reason.trim() : null,
           actorId: user.userId,
         },

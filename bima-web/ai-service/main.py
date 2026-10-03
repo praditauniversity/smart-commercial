@@ -33,7 +33,8 @@ from providers.base import BaseVisionProvider
 from providers.openrouter import OpenRouterProvider
 from providers.onpremise import OnPremiseProvider
 from providers.mock import MockVisionProvider
-from providers.yolo import YoloProvider, decode_image, to_detection_items
+from providers.yolo import YoloProvider, decode_image, to_detection_items, wants_condition_stage
+from services.sign_condition import STAGE2_MODEL_ID, classifier as sign_classifier, classify_signs
 from services.deduplication import deduplicate_temporal_detections
 from services.conflict_detector import detect_class_conflicts
 from services.video_splitter import plan_video_segments
@@ -180,9 +181,14 @@ async def yolo_detect(req: YoloDetectRequest, _: bool = Depends(verify_internal_
         by_class: Dict[str, int] = {}
         download_ms = 0.0
         inference_ms = 0.0
+        stage2_ms = 0.0
+        stage2_crops = 0
+        use_stage2 = wants_condition_stage(req.active_classes)
 
         # Muat model lebih dulu agar waktu muat tidak tercampur ke metrik unduh/inferensi.
         await asyncio.to_thread(yolo_engine.load)
+        if use_stage2:
+            await asyncio.to_thread(sign_classifier.load)  # galat konfigurasi muncul di sini, bukan di tengah proses
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             for fr in req.frames:
@@ -197,7 +203,14 @@ async def yolo_detect(req: YoloDetectRequest, _: bool = Depends(verify_internal_
                 for k, v in timings.per_model_ms.items():
                     per_model[k] = per_model.get(k, 0.0) + v
 
-                items = to_detection_items(raw, req.active_classes, fr.timestamp_seconds, fr.frame_index)
+                conditions = None
+                if use_stage2:
+                    t2 = time.perf_counter()
+                    conditions = await asyncio.to_thread(classify_signs, img, raw)
+                    stage2_ms += (time.perf_counter() - t2) * 1000.0
+                    stage2_crops += len(conditions)
+
+                items = to_detection_items(raw, req.active_classes, fr.timestamp_seconds, fr.frame_index, conditions)
                 for it in items:
                     by_class[it.class_name] = by_class.get(it.class_name, 0) + 1
                 detections.extend(items)
@@ -215,6 +228,9 @@ async def yolo_detect(req: YoloDetectRequest, _: bool = Depends(verify_internal_
                 inference_ms=round(inference_ms, 1),
                 total_ms=round(total_ms, 1),
                 per_model_ms={k: round(v, 1) for k, v in per_model.items()},
+                stage2_ms=round(stage2_ms, 1),
+                stage2_crops=stage2_crops,
+                stage2_model=STAGE2_MODEL_ID if use_stage2 else None,
                 detections_by_class=by_class,
                 missing_models=yolo_engine.missing_categories,
                 device=yolo_engine.device,
@@ -256,12 +272,14 @@ async def test_connection(
         except RuntimeError as e:
             return TestConnectionResponse(success=False, message=str(e),
                                           latency_ms=round((time.time() - start_time) * 1000, 2))
+        s2 = sign_classifier.status()
         if not st["present"]:
             msg = f"Tidak ada bobot YOLO di {st['weights_dir']}."
         elif st["missing"]:
             msg = f"Bobot YOLO belum lengkap, hilang: {', '.join(st['missing'])}."
         else:
             msg = f"YOLO siap: {len(st['present'])} model ({', '.join(st['present'])})."
+        msg += (" Tahap 2 rambu: siap." if s2["enabled"] and s2["present"] else " Tahap 2 rambu: bobot tidak ditemukan." if s2["enabled"] else " Tahap 2 rambu: nonaktif.")
         return TestConnectionResponse(success=bool(st["present"]), message=msg,
                                       latency_ms=round((time.time() - start_time) * 1000, 2))
     try:

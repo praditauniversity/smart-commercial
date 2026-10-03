@@ -35,6 +35,8 @@ class RawDetection:
     y: float
     width: float
     height: float
+    # Kotak dalam piksel gambar asli (x1, y1, x2, y2); dipakai Tahap 2 untuk memotong crop.
+    xyxy: Tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
 
 
 @dataclass
@@ -130,7 +132,7 @@ class YoloEngine:
                 r = model.predict(image_bgr, **kwargs)[0]
                 timings.per_model_ms[cat] = (time.perf_counter() - t0) * 1000.0
                 names = r.names
-                for box, c, s in zip(r.boxes.xyxyn.tolist(), r.boxes.cls.tolist(), r.boxes.conf.tolist()):
+                for box, pxbox, c, s in zip(r.boxes.xyxyn.tolist(), r.boxes.xyxy.tolist(), r.boxes.cls.tolist(), r.boxes.conf.tolist()):
                     x1, y1, x2, y2 = (_clamp01(v) for v in box)
                     results.append(
                         RawDetection(
@@ -141,6 +143,7 @@ class YoloEngine:
                             y=y1,
                             width=max(0.0, x2 - x1),
                             height=max(0.0, y2 - y1),
+                            xyxy=(float(pxbox[0]), float(pxbox[1]), float(pxbox[2]), float(pxbox[3])),
                         )
                     )
         return results, timings

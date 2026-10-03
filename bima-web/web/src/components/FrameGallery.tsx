@@ -3,8 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { formatTimestamp, parseBBox, type DetectionView, type FrameView } from '@/lib/media-view';
-import { BAND_LABEL, GROUP_LABEL } from '@/lib/risk';
-import { BAND_STYLE, COMPLIANCE_STYLE, ComplianceBadge, RiskBadge } from './RiskBadge';
+import { BAND_LABEL, CONDITION_MODEL_LABEL, GROUP_LABEL } from '@/lib/risk';
+import { BAND_STYLE, COMPLIANCE_STYLE, ComplianceBadge, ConditionBadge, RiskBadge } from './RiskBadge';
 
 interface FrameGalleryProps {
   frames: FrameView[];
@@ -20,6 +20,7 @@ type GroupFilter = 'semua' | 'keselamatan_infrastruktur' | 'monitoring_kepatuhan
 function boxStyle(d: DetectionView): string {
   if (d.reviewStatus === 'keliru') return 'border-slate-400 border-dashed opacity-60';
   if (d.classDefinition?.categoryGroup === 'monitoring_kepatuhan') return COMPLIANCE_STYLE.box;
+  if (d.conditionLabel === 'normal') return 'border-emerald-600 border-dashed';
   return d.priorityBand ? BAND_STYLE[d.priorityBand].box : 'border-sky-500';
 }
 
@@ -169,9 +170,10 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
                   <span className="font-mono text-slate-500">conf {d.confidence?.toFixed(2) ?? '-'}</span>
                   {d.classDefinition?.categoryGroup === 'monitoring_kepatuhan' ? (
                     <ComplianceBadge />
-                  ) : (
-                    <RiskBadge score={d.riskScore} band={d.priorityBand} severity={d.severity} exposure={d.exposure} />
+                  ) : d.conditionLabel === 'normal' ? null : (
+                    <RiskBadge score={d.riskScore} band={d.priorityBand} severity={d.severity} exposure={d.exposure} source={d.severitySource} />
                   )}
+                  {d.classDefinition?.hasConditionStage && <ConditionBadge label={d.conditionLabel} tag={d.conditionTag} />}
                   {d.severitySource === 'petugas' && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-800">severity dari petugas</span>}
                   {d.reviewStatus !== 'belum_ditinjau' && (
                     <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${d.reviewStatus === 'keliru' ? 'bg-slate-200 text-slate-700' : 'bg-indigo-100 text-indigo-800'}`}>{d.reviewStatus.replace('_', ' ')}</span>
@@ -183,8 +185,11 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
         )}
       </div>
       <p className="text-[11px] text-slate-500">
-        Pita: {Object.values(BAND_LABEL).join(' · ')}. Garis putus-putus abu-abu = Monitoring Kepatuhan (tanpa skor) atau temuan ditandai keliru.
+        Pita: {Object.values(BAND_LABEL).join(' · ')}. Garis putus-putus abu-abu = Monitoring Kepatuhan (tanpa skor) atau temuan ditandai keliru; hijau putus-putus = rambu normal (tanpa skor).
       </p>
+      {detections.some((d) => d.classDefinition?.hasConditionStage && d.conditionLabel) && (
+        <p className="text-[11px] text-slate-500">Kondisi rambu (normal/rusak): {CONDITION_MODEL_LABEL}. Subtipe kerusakan ditetapkan supervisor.</p>
+      )}
     </div>
   );
 }

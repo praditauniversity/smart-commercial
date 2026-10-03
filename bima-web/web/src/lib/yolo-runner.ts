@@ -1,6 +1,6 @@
 import prisma from '@/lib/prisma';
 import { requireEnv, requireEnvNumber } from '@/lib/env';
-import { assessWithProfile } from '@/lib/risk';
+import { riskFields } from '@/lib/corrections';
 import { localPathForUrl, storageBackend } from '@/lib/media-storage';
 
 async function markFailed(mediaId: string, message: string) {
@@ -76,6 +76,7 @@ export async function runYoloJob(params: {
         mutually_exclusive_with: parseIdList(c.mutuallyExclusiveWith),
         conflict_iou_threshold: c.conflictIouThreshold,
         model_class: c.modelClass,
+        has_condition_stage: c.hasConditionStage,
       })),
       conflict_threshold: requireEnvNumber('DEFAULT_CONFLICT_IOU_THRESHOLD'),
     };
@@ -112,7 +113,9 @@ export async function runYoloJob(params: {
       const rows = (result.detections || []).flatMap((det: any) => {
         const cls = classes.find((c) => c.id === det.class_id);
         if (!cls) return [];
-        const risk = assessWithProfile(cls, exposure);
+        // Tahap 2 (rambu): normal = tanpa skor; damaged = severity sementara kelas sampai supervisor memilih tag subtipe.
+        const condition = cls.hasConditionStage ? det.condition_state ?? null : null;
+        const risk = riskFields(cls, exposure, { condition });
         return [
           {
             sessionId: media.sessionId,
@@ -131,10 +134,13 @@ export async function runYoloJob(params: {
             modelConfigId: modelConfigId || null,
             modelName,
             promptVersion: 'yolo',
-            severity: risk.scored ? risk.severity : null,
-            exposure: risk.scored ? risk.exposure : null,
-            riskScore: risk.scored ? risk.score : null,
-            priorityBand: risk.scored ? risk.band : null,
+            severity: risk.severity,
+            severitySource: risk.severitySource,
+            exposure: risk.exposure,
+            riskScore: risk.riskScore,
+            priorityBand: risk.priorityBand,
+            conditionLabel: condition,
+            conditionModel: condition ? det.condition_model ?? null : null,
             hasConflict: Boolean(det.has_conflict),
             conflictResolved: false,
             conflictDetails: JSON.stringify(det.conflict_details || {}),

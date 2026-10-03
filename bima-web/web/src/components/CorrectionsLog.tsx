@@ -8,6 +8,7 @@ const KIND_LABEL: Record<string, string> = {
   keliru: 'Keliru (false positive)',
   kelas_diubah: 'Kelas diubah',
   severity_diubah: 'Severity diubah',
+  kondisi_diubah: 'Kondisi/subtipe rambu diubah',
   terlewat: 'Terlewat (false negative)',
 };
 

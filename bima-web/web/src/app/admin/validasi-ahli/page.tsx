@@ -40,7 +40,7 @@ const ASPECTS: { title: string; items: string[] }[] = [
 
 const DISCLOSURES = [
   'Deteksi objek memakai model YOLO11n/YOLO26n per kategori (mAP@0,50 berkisar 0,2149 pada vegetasi hingga 0,9720 pada rambu). Kategori vegetasi dan rambu memiliki kinerja deteksi yang lebih rendah/terbatas; hasilnya perlu ditinjau petugas.',
-  'Rambu: model hanya mendeteksi keberadaan rambu. Kondisi normal/rusak belum diklasifikasi, sehingga Severity rambu adalah nilai awal 2 (Sedang) yang dapat diubah petugas.',
+  'Rambu: Tahap 1 mendeteksi rambu; Tahap 2 (classifier fold0, hasil 5-fold cross-validation) menilai normal/rusak per potongan rambu. Rambu normal tidak diberi skor. Rambu rusak diberi Severity sementara 2 sampai supervisor memilih tag subtipe (data master; severity per tag dapat diubah admin). Classifier tidak menentukan subtipe, dan akurasinya berasal dari validasi lipatan-0, bukan uji independen.',
   'Tingkat Paparan (Exposure) pada purwarupa berasal dari ZONA CONTOH (data simulasi), bukan data lokasi riil. Skor risiko yang tampil adalah demonstrasi mekanisme, bukan penilaian lokasi sebenarnya.',
   'Deskripsi naratif hanya tersedia untuk 35 klip uji yang telah dievaluasi (skor BLEU rata-rata 0,0179; skor LLM-based rata-rata 74,57/100). Untuk video baru, sistem menampilkan “Belum dievaluasi”; tidak ada teks yang dibuat.',
   'Jumlah pada dasbor adalah jumlah kotak deteksi pada frame sampel (≤24 frame per klip), bukan jumlah objek unik. Skor lokasi memakai deteksi terburuk.',

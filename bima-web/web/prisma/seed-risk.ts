@@ -2,7 +2,7 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
 import { PrismaClient } from '@prisma/client';
-import { SUBTYPE_PROFILES } from '../src/lib/risk';
+import { DEFAULT_SIGN_TAGS, SUBTYPE_PROFILES } from '../src/lib/risk';
 
 /**
  * Seed purwarupa RQ4 (idempotent):
@@ -85,15 +85,32 @@ async function main() {
       categoryGroup: p.group,
       defaultSeverity: p.severity,
       samColor: SAM_COLORS[p.subtype],
+      hasConditionStage: p.subtype === 'sign', // Tahap 2 (klasifikasi kondisi) hanya rambu
       isActive: true,
     };
+    // Saat seed diulang, Severity bawaan dan kelompok yang sudah diubah admin TIDAK ditimpa.
+    const structural: Partial<typeof data> = { ...data };
+    delete structural.categoryGroup;
+    delete structural.defaultSeverity;
     await prisma.classDefinition.upsert({
       where: { name: p.subtype },
-      update: data,
+      update: structural,
       create: { name: p.subtype, ...data },
     });
   }
   console.log(`Kelas YOLO: ${SUBTYPE_PROFILES.length} subtipe`);
+
+  // Master tag subtipe kerusakan rambu. Dibuat hanya bila belum ada; perubahan admin (label/severity) tidak ditimpa.
+  const sign = await prisma.classDefinition.findUniqueOrThrow({ where: { name: 'sign' } });
+  let createdTags = 0;
+  for (const t of DEFAULT_SIGN_TAGS) {
+    const exists = await prisma.conditionTag.findUnique({ where: { classId_code: { classId: sign.id, code: t.code } } });
+    if (!exists) {
+      await prisma.conditionTag.create({ data: { classId: sign.id, code: t.code, label: t.label, severity: t.severity, sortOrder: t.sortOrder } });
+      createdTags++;
+    }
+  }
+  console.log(`Tag subtipe rambu: ${DEFAULT_SIGN_TAGS.length} (baru dibuat: ${createdTags})`);
 
   for (const z of ZONES) {
     await prisma.zone.upsert({

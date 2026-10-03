@@ -70,6 +70,9 @@ export async function PATCH(
       updateData.defaultSeverity = next.defaultSeverity;
       updateData.category = next.category;
     }
+    if (body.hasConditionStage !== undefined) {
+      updateData.hasConditionStage = Boolean(body.hasConditionStage);
+    }
     if (body.isActive !== undefined) {
       updateData.isActive = Boolean(body.isActive);
     }

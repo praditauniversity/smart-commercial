@@ -34,6 +34,7 @@ export async function GET(
             where: { isDeleted: false },
             include: {
               classDefinition: true,
+              conditionTag: { select: { id: true, code: true, label: true, severity: true } },
               mediaAsset: { select: { id: true, fileName: true, fileType: true, fileUrl: true } },
             },
             orderBy: { createdAt: 'desc' },
