@@ -20,14 +20,14 @@ export interface LiveFindings {
 
 /** Empat chip ringkas untuk kartu antrean: benar / keliru / terlewat (+ belum ditinjau bila ada). */
 export function ReviewCountChips({ counts }: { counts: ReviewCounts }) {
-  const chip = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold';
+  const chip = 'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium';
   return (
     <div className="flex flex-wrap items-center gap-1.5" aria-label="Hasil koreksi supervisor">
-      <span className={`${chip} bg-emerald-100 text-emerald-800`} title="Temuan model yang dikonfirmasi benar oleh supervisor"><CheckCircle2 className="h-3 w-3" />{counts.benar} benar</span>
-      <span className={`${chip} bg-slate-200 text-slate-700`} title="Temuan model yang ditandai keliru (false positive)"><XCircle className="h-3 w-3" />{counts.keliru} keliru</span>
-      <span className={`${chip} bg-orange-100 text-orange-800`} title="Objek yang tidak terdeteksi model, dicatat supervisor (false negative)"><SearchX className="h-3 w-3" />{counts.terlewat} terlewat</span>
+      <span className={`${chip} border-brand-green/20 bg-brand-green/10 text-brand-green`} title="Temuan model yang dikonfirmasi benar oleh supervisor"><CheckCircle2 className="h-3 w-3" />{counts.benar} benar</span>
+      <span className={`${chip} border-zinc-200 bg-zinc-100 text-zinc-700`} title="Temuan model yang ditandai keliru (false positive)"><XCircle className="h-3 w-3" />{counts.keliru} keliru</span>
+      <span className={`${chip} border-brand-orange/30 bg-brand-orange/10 text-orange-700`} title="Objek yang tidak terdeteksi model, dicatat supervisor (false negative)"><SearchX className="h-3 w-3" />{counts.terlewat} terlewat</span>
       {counts.belumDitinjau > 0 && (
-        <span className={`${chip} bg-amber-100 text-amber-800`} title="Temuan model yang belum dikoreksi supervisor"><CircleHelp className="h-3 w-3" />{counts.belumDitinjau} belum ditinjau</span>
+        <span className={`${chip} border-amber-200 bg-amber-50 text-amber-700`} title="Temuan model yang belum dikoreksi supervisor"><CircleHelp className="h-3 w-3" />{counts.belumDitinjau} belum ditinjau</span>
       )}
     </div>
   );
@@ -35,23 +35,23 @@ export function ReviewCountChips({ counts }: { counts: ReviewCounts }) {
 
 function Row({ f }: { f: LiveFindingItem }) {
   return (
-    <li className="flex flex-wrap items-center gap-x-2 gap-y-0.5 px-3 py-2 text-xs">
-      <span className="font-semibold text-slate-900">{f.displayName}</span>
-      {f.mediaFileName && <span className="break-all text-slate-500">{f.mediaFileName}</span>}
-      {f.timestampSeconds !== null && f.timestampSeconds !== undefined && <span className="font-mono text-slate-500">{formatTimestamp(f.timestampSeconds)}</span>}
-      {f.confidence !== null && f.confidence !== undefined && <span className="font-mono text-slate-500">conf {f.confidence.toFixed(2)}</span>}
-      {f.band && f.score ? <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700">{BAND_LABEL[f.band]} · {f.score}</span> : null}
-      {f.conditionLabel === 'normal' && <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">normal</span>}
-      {f.reason && <span className="basis-full text-slate-600">Alasan: {f.reason}</span>}
+    <li className="flex flex-wrap items-center gap-x-2 gap-y-0.5 px-4 py-3 text-xs">
+      <span className="font-semibold text-zinc-900">{f.displayName}</span>
+      {f.mediaFileName && <span className="break-all text-zinc-500">{f.mediaFileName}</span>}
+      {f.timestampSeconds !== null && f.timestampSeconds !== undefined && <span className="font-mono text-zinc-500">{formatTimestamp(f.timestampSeconds)}</span>}
+      {f.confidence !== null && f.confidence !== undefined && <span className="font-mono text-zinc-500">conf {f.confidence.toFixed(2)}</span>}
+      {f.band && f.score ? <span className="rounded-md border border-zinc-200 bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-700">{BAND_LABEL[f.band]} · {f.score}</span> : null}
+      {f.conditionLabel === 'normal' && <span className="rounded-md border border-brand-green/20 bg-brand-green/10 px-1.5 py-0.5 text-[10px] font-medium text-brand-green">normal</span>}
+      {f.reason && <span className="basis-full text-zinc-500">Alasan: {f.reason}</span>}
     </li>
   );
 }
 
 const SECTIONS = [
-  { key: 'benar', title: 'Dikonfirmasi benar', tone: 'border-emerald-300 bg-emerald-50 text-emerald-900', hint: 'Temuan model yang dinyatakan benar oleh supervisor.' },
-  { key: 'keliru', title: 'Keliru (false positive)', tone: 'border-slate-300 bg-slate-100 text-slate-800', hint: 'Temuan model yang dinyatakan salah; tidak dihitung dalam skor.' },
-  { key: 'terlewat', title: 'Terlewat (false negative)', tone: 'border-orange-300 bg-orange-50 text-orange-900', hint: 'Objek di lapangan yang tidak terdeteksi model, dicatat supervisor.' },
-  { key: 'belumDitinjau', title: 'Belum ditinjau', tone: 'border-amber-300 bg-amber-50 text-amber-900', hint: 'Temuan model yang belum dikoreksi supervisor.' },
+  { key: 'benar', title: 'Dikonfirmasi benar', tone: 'border-zinc-200 bg-white text-brand-green', hint: 'Temuan model yang dinyatakan benar oleh supervisor.' },
+  { key: 'keliru', title: 'Keliru (false positive)', tone: 'border-zinc-200 bg-white text-zinc-500', hint: 'Temuan model yang dinyatakan salah; tidak dihitung dalam skor.' },
+  { key: 'terlewat', title: 'Terlewat (false negative)', tone: 'border-zinc-200 bg-white text-orange-700', hint: 'Objek di lapangan yang tidak terdeteksi model, dicatat supervisor.' },
+  { key: 'belumDitinjau', title: 'Belum ditinjau', tone: 'border-zinc-200 bg-white text-amber-700', hint: 'Temuan model yang belum dikoreksi supervisor.' },
 ] as const;
 
 /** Rincian hasil koreksi supervisor pada halaman review, dibedakan per kelompok. */
@@ -60,10 +60,10 @@ export default function ReviewFindings({ findings }: { findings: LiveFindings })
   const list = findings[open] as LiveFindingItem[];
   const section = SECTIONS.find((s) => s.key === open)!;
   return (
-    <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4" aria-label="Hasil koreksi supervisor">
+    <section className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5" aria-label="Hasil koreksi supervisor">
       <div>
-        <h2 className="text-sm font-bold text-slate-900">Hasil koreksi supervisor</h2>
-        <p className="text-xs text-slate-500">Dihitung dari kondisi sesi saat ini. Terlewat adalah catatan supervisor, bukan keluaran model.</p>
+        <h2 className="text-sm font-semibold text-zinc-900">Hasil koreksi supervisor</h2>
+        <p className="text-xs text-zinc-500">Dihitung dari kondisi sesi saat ini. Terlewat adalah catatan supervisor, bukan keluaran model.</p>
       </div>
       <div className="grid gap-2 sm:grid-cols-4">
         {SECTIONS.map((s) => {
@@ -71,19 +71,19 @@ export default function ReviewFindings({ findings }: { findings: LiveFindings })
           return (
             <button
               key={s.key} type="button" onClick={() => setOpen(s.key)} aria-pressed={open === s.key}
-              className={`rounded-xl border p-3 text-left transition-all ${s.tone} ${open === s.key ? 'ring-2 ring-blue-500' : 'opacity-80 hover:opacity-100'}`}
+              className={`rounded-lg border p-3 text-left shadow-sm transition-all ${s.tone} ${open === s.key ? 'ring-2 ring-brand-green' : 'opacity-70 hover:opacity-100'}`}
             >
-              <div className="text-2xl font-extrabold">{n}</div>
-              <div className="text-xs font-semibold">{s.title}</div>
+              <div className="text-2xl font-semibold tracking-tight">{n}</div>
+              <div className="text-xs font-medium">{s.title}</div>
             </button>
           );
         })}
       </div>
-      <p className="text-[11px] text-slate-500">{section.hint}</p>
+      <p className="text-[11px] text-zinc-500">{section.hint}</p>
       {list.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500">Tidak ada data pada kelompok ini.</p>
+        <p className="rounded-lg border border-dashed border-zinc-200 p-4 text-center text-xs text-zinc-500">Tidak ada data pada kelompok ini.</p>
       ) : (
-        <ul className="max-h-72 divide-y divide-slate-100 overflow-y-auto rounded-lg border border-slate-200">
+        <ul className="max-h-72 divide-y divide-zinc-100 overflow-y-auto rounded-lg border border-zinc-200">
           {list.map((f) => <Row key={f.id} f={f} />)}
         </ul>
       )}
