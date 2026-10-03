@@ -18,9 +18,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!isDetectionCorrectionKind(kind)) {
       return NextResponse.json({ error: 'Jenis koreksi tidak valid.' }, { status: 400 });
     }
-    if (kind === 'keliru' && (typeof reason !== 'string' || reason.trim() === '')) {
-      return NextResponse.json({ error: 'Alasan wajib diisi untuk temuan yang ditandai keliru.' }, { status: 400 });
-    }
+    // Alasan bersifat opsional (boleh dikosongkan), termasuk untuk temuan yang ditandai keliru.
 
     const detection = await prisma.detection.findUnique({
       where: { id },

@@ -49,7 +49,7 @@ export const SUBTYPE_PROFILES: readonly SubtypeProfile[] = [
   { subtype: 'vegetation_blocking', category: 'Vegetasi', group: 'keselamatan_infrastruktur', label: 'Vegetasi menghalangi objek', severity: 3 },
   { subtype: 'vegetation_dead', category: 'Vegetasi', group: 'keselamatan_infrastruktur', label: 'Vegetasi mati berisiko tumbang', severity: 2 },
   { subtype: 'weeds', category: 'Vegetasi', group: 'keselamatan_infrastruktur', label: 'Rumput liar / gulma', severity: 1 },
-  { subtype: 'sign', category: 'Rambu', group: 'keselamatan_infrastruktur', label: 'Rambu (kondisi belum diklasifikasi)', severity: 2 },
+  { subtype: 'sign', category: 'Rambu', group: 'keselamatan_infrastruktur', label: 'Rambu', severity: 2 },
   { subtype: 'banner', category: 'Spanduk/Banner', group: 'monitoring_kepatuhan', label: 'Spanduk / banner', severity: null },
   { subtype: 'house_notice', category: 'Notis jual/sewa', group: 'monitoring_kepatuhan', label: 'Notis jual / sewa rumah', severity: null },
 ];

@@ -38,7 +38,7 @@ export default function YoloMediaModal({ media, detections, onClose }: { media: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={`Hasil deteksi ${media.fileName}`}>
-      <div className="w-full max-w-4xl space-y-4 rounded-2xl bg-slate-50 p-4 shadow-xl sm:p-5">
+      <div className="w-full max-w-6xl space-y-4 rounded-2xl bg-slate-50 p-4 shadow-xl sm:p-5">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <h2 className="break-all text-base font-bold text-slate-900">{media.fileName}</h2>
@@ -46,7 +46,7 @@ export default function YoloMediaModal({ media, detections, onClose }: { media: 
           </div>
           <button type="button" onClick={onClose} aria-label="Tutup" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-200"><X className="h-5 w-5" /></button>
         </div>
-        <FrameGallery frames={media.frames ?? []} detections={detections} />
+        <FrameGallery frames={media.frames ?? []} detections={detections} mode="pratinjau" />
         {media.fileType === 'video' && <NarrativePanel clip={media.evaluatedClip} note={media.clipMatchNote} />}
       </div>
     </div>

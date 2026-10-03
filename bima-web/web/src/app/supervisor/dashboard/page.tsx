@@ -7,6 +7,19 @@ import CorrectionsLog from '@/components/CorrectionsLog';
 import PendingReviewBanner from '@/components/PendingReviewBanner';
 import { ClipboardCheck } from 'lucide-react';
 
+function Step({ n, title, hint }: { n: number; title: string; hint: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white" aria-hidden>{n}</span>
+      <div>
+        <h2 className="text-base font-bold text-slate-900 sm:text-lg">{title}</h2>
+        <p className="text-xs text-slate-500 sm:text-sm">{hint}</p>
+      </div>
+    </div>
+  );
+}
+
+/** Dashboard supervisor mengikuti alur kerja: surveyor entri temuan, supervisor mengoreksi, lalu review dan setujui/tolak. */
 export default function SupervisorDashboardPage() {
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 pb-24 sm:pb-16">
@@ -18,12 +31,24 @@ export default function SupervisorDashboardPage() {
             Dashboard Supervisor
           </h1>
           <p className="mt-1 text-xs text-slate-500 sm:text-sm">
-            Temuan dari seluruh surveyor untuk ditinjau dan dikoreksi. Buka sebuah sesi untuk menandai temuan keliru atau terlewat dan mengubah severity.
+            Alur kerja: surveyor mengentri temuan → supervisor mengoreksi → pengajuan direview, lalu disetujui atau ditolak.
           </p>
         </div>
-        <PendingReviewBanner />
-        <RiskOverview detailHref={(id) => `/supervisor/sessions/${id}`} showSurveyorFilter />
-        <CorrectionsLog />
+
+        <section className="space-y-4" aria-label="Langkah 1: entri temuan surveyor">
+          <Step n={1} title="Entri temuan oleh surveyor" hint="Sesi dan temuan dari seluruh surveyor. Buka sebuah sesi untuk mengoreksi temuannya." />
+          <RiskOverview title="Ringkasan risiko" detailHref={(id) => `/supervisor/sessions/${id}`} showSurveyorFilter />
+        </section>
+
+        <section className="space-y-4" aria-label="Langkah 2: koreksi supervisor">
+          <Step n={2} title="Koreksi oleh supervisor" hint="Konfirmasi benar, tandai keliru, ubah kelas/kondisi/severity, atau catat temuan terlewat pada halaman sesi." />
+          <CorrectionsLog />
+        </section>
+
+        <section className="space-y-4" aria-label="Langkah 3: review dan persetujuan">
+          <Step n={3} title="Review dan persetujuan" hint="Setelah dikoreksi, setujui atau tolak pengajuan survei dari surveyor." />
+          <PendingReviewBanner />
+        </section>
       </main>
     </div>
   );

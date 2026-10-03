@@ -164,7 +164,7 @@ async function main() {
     assert.ok(m.yolo.inference_ms > 0 && Object.keys(m.yolo.per_model_ms).length === 6);
     assert.ok(m.persistMs >= 0 && m.processTotalMs > 0);
   });
-  await check('supervisor melihat sesi lengkap dengan narasi klip terevaluasi dan zona (data contoh)', async () => {
+  await check('supervisor melihat sesi lengkap dengan narasi klip terevaluasi dan zona', async () => {
     const s = (await (await get(supervisor, `/api/sessions/${sidA}`)).json()).session;
     const m = s.mediaAssets.find((x: any) => x.id === mediaA.id);
     assert.ok(m.evaluatedClip?.modelCaption?.length > 20);

@@ -78,3 +78,33 @@ export function formatTimestamp(seconds: number | null | undefined): string {
   const s = seconds - m * 60;
   return `${String(m).padStart(2, '0')}:${s.toFixed(1).padStart(4, '0')}`;
 }
+
+export type GalleryMode = 'pratinjau' | 'koreksi';
+
+/** Status tinjau yang dianggap "benar": dikonfirmasi supervisor, atau dikoreksi (kelas/severity/kondisi) lalu dipertahankan. */
+export function isAcceptedFinding(status: string): boolean {
+  return status === 'dikonfirmasi' || status === 'dikoreksi';
+}
+
+/**
+ * Kotak yang digambar pada satu frame, agar kotak tidak bertumpuk:
+ * - ada pilihan: hanya kotak yang dipilih (temuan keliru atau lainnya baru tampil saat dipilih di panel);
+ * - pratinjau (hanya baca): hanya temuan yang sudah dikonfirmasi benar. Bila media belum pernah ditinjau sama sekali,
+ *   semua kecuali keliru ditampilkan (kalau tidak, hasil AI tidak akan terlihat);
+ * - koreksi: semua kecuali keliru (yang belum ditinjau tetap terlihat agar bisa dikoreksi).
+ */
+export function visibleBoxes<T extends { id: string; reviewStatus: string }>(
+  frameDetections: T[],
+  opts: { mode: GalleryMode; selectedIds: readonly string[]; mediaHasReview: boolean }
+): T[] {
+  if (opts.selectedIds.length > 0) return frameDetections.filter((d) => opts.selectedIds.includes(d.id));
+  if (opts.mode === 'pratinjau' && opts.mediaHasReview) return frameDetections.filter((d) => isAcceptedFinding(d.reviewStatus));
+  return frameDetections.filter((d) => d.reviewStatus !== 'keliru');
+}
+
+/** Label singkat status tinjau untuk panel temuan. */
+export function reviewLabel(status: string): { text: string; tone: 'benar' | 'keliru' | 'belum' } {
+  if (isAcceptedFinding(status)) return { text: status === 'dikoreksi' ? 'Benar (dikoreksi)' : 'Benar', tone: 'benar' };
+  if (status === 'keliru') return { text: 'Keliru', tone: 'keliru' };
+  return { text: 'Belum ditinjau', tone: 'belum' };
+}

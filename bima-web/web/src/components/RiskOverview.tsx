@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AlertTriangle, ClipboardCheck, Layers, Loader2, MapPin, ShieldAlert, Flag } from 'lucide-react';
 import type { Overview, SessionSummary } from '@/lib/overview';
 import { BAND_LABEL, GROUP_LABEL, type PriorityBand } from '@/lib/risk';
-import { BAND_STYLE, RiskBadge, SimulatedTag } from './RiskBadge';
+import { BAND_STYLE, RiskBadge } from './RiskBadge';
 
 interface Props {
   /** Tautan ke halaman detail sesi untuk peran ini. */
@@ -140,7 +140,6 @@ export default function RiskOverview({ detailHref, title = 'Ringkasan risiko lok
           <p className="text-xs text-slate-600">Skor = Severity (1–3) × Exposure (1–3). Nilai mungkin: 1, 2, 3, 4, 6, 9.</p>
           <p className="mt-2 text-xs text-slate-600">Rendah 1–2 · Sedang 3–4 · Tinggi 6 · Kritikal 9 (hanya Berat × Tinggi).</p>
           <p className="mt-2 text-xs text-slate-600">Angka adalah jumlah kotak deteksi pada frame sampel. Objek yang sama pada beberapa frame dihitung berulang; skor lokasi memakai deteksi terburuk, bukan jumlah.</p>
-          <p className="mt-2 text-xs text-violet-700"><SimulatedTag /> Tingkat Paparan (Exposure) berasal dari zona contoh, bukan data lokasi riil.</p>
         </div>
       </div>
 

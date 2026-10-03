@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { CardSkeleton } from '@/components/SkeletonLoaders';
 import { useToast } from '@/components/ToastProvider';
+import { ReviewCountChips } from '@/components/ReviewFindings';
+import type { ReviewCounts } from '@/lib/review-summary';
 import {
   CheckSquare,
   Clock,
@@ -31,6 +33,7 @@ interface SubmissionQueueItem {
   reviewerName?: string;
   rejectReason?: string;
   locationAddress?: string;
+  review: ReviewCounts;
   stats: {
     totalMedia: number;
     totalDetections: number;
@@ -187,14 +190,11 @@ export default function AdminReviewQueuePage() {
 
                 {/* Stats and Action */}
                 <div className="flex items-center justify-between sm:justify-end gap-4 w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
-                  <div className="text-left md:text-right text-xs">
+                  <div className="text-left md:text-right text-xs space-y-1">
                     <div className="font-bold text-slate-900 text-xs sm:text-sm">
-                      {sub.stats.totalDetections} Temuan AI
+                      {sub.review.totalTemuan} Temuan AI
                     </div>
-                    <div className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
-                      <span className="text-rose-600 font-semibold">{sub.stats.tidakLayakCount} Kritis</span> •{' '}
-                      <span className="text-emerald-600 font-semibold">{sub.stats.layakCount} Layak</span>
-                    </div>
+                    <ReviewCountChips counts={sub.review} />
                   </div>
 
                   <Link

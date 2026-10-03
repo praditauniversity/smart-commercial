@@ -1,8 +1,8 @@
 # Purwarupa RQ4: penilaian risiko, deteksi YOLO, galeri frame, koreksi petugas
 
 Dokumen ini merangkum fitur purwarupa tesis (Fase 4) yang dibangun di atas platform BIMA, cara menjalankannya, dan batasannya.
-Prinsip: angka "hasil nyata" hanya berasal dari data riil (evaluasi RQ3 yang sudah ada); data simulasi selalu diberi label
-**data contoh**; jawaban Validasi Ahli tidak pernah dibuat atau diisi oleh sistem.
+Prinsip: angka "hasil nyata" hanya berasal dari evaluasi RQ3 yang sudah ada; seluruh data pada purwarupa ini adalah data
+demonstrasi/uji (tidak ditandai per baris di antarmuka); jawaban Validasi Ahli tidak pernah dibuat atau diisi oleh sistem.
 
 ## 1. Pemetaan terhadap kebutuhan
 
@@ -77,6 +77,10 @@ Kata sandi dibuat acak dan disimpan di `.demo/kredensial.txt`. File `.env` Anda 
   - Prioritas severity: koreksi manual petugas > severity tag > nilai sementara kelas. Severity tag disalin ke temuan saat dipilih, sehingga perubahan master hanya berlaku untuk pemilihan berikutnya.
   - Probabilitas classifier sengaja **tidak ditampilkan** (val/loss tinggi → kemungkinan terlalu percaya diri); akurasi top-1 0,8922 adalah validasi lipatan-0, bukan uji independen.
   - Aktivasi: salin `fold0_best.pt` menjadi `ai-service/models/yolo11n_seed0/sign_stage2_fold0_best.pt`, set `SIGN_CONDITION_WEIGHTS=sign_stage2_fold0_best.pt` di `ai-service/.env` (otomatis oleh `npm run demo` bila berkas ada), jalankan `npx prisma migrate deploy` dan `npm run seed:risk`, lalu restart ai-service dan web. Deteksi rambu yang diproses sebelum Tahap 2 aktif perlu diproses ulang.
+- **Alur supervisor**: dashboard menampilkan tiga langkah berurutan: (1) entri temuan oleh surveyor, (2) koreksi oleh supervisor, (3) review dan persetujuan/penolakan.
+- **Halaman koreksi sesi**: panel "Temuan pada frame ini" berada di kanan gambar. Centang beberapa temuan lalu "Konfirmasi benar" atau "Tandai keliru" sekaligus (`POST /api/detections/bulk-correct`, maksimal 200 temuan; tiap temuan tetap punya riwayat koreksi sendiri). Alasan **opsional**. Koreksi rinci (kelas, kondisi rambu, severity) tersedia bila tepat satu temuan dipilih. Severity manual disembunyikan untuk rambu yang sudah diklasifikasi Tahap 2 karena severity mengikuti kondisi dan tag subtipe.
+- **Kotak pada gambar**: tidak bertumpuk. Pratinjau (modal) menampilkan hanya temuan yang sudah dikonfirmasi benar (jika media belum pernah ditinjau sama sekali, semua kecuali keliru agar hasil AI terlihat). Halaman koreksi menampilkan semua kecuali keliru. Memilih temuan di panel menampilkan kotaknya saja, termasuk temuan keliru.
+- **Antrean review**: kartu dan halaman detail membedakan temuan **benar**, **keliru**, **terlewat** (dan belum ditinjau), dihitung dari data sesi saat ini, bukan snapshot saat submit.
 - **Persetujuan survei**: dilakukan oleh **supervisor** (admin tetap dapat). Pengiriman sesi oleh surveyor menampilkan "menunggu disetujui/direview oleh supervisor".
 - **Perubahan Severity kelas / Exposure zona** berlaku untuk deteksi berikutnya; temuan lama tidak dihitung ulang otomatis. Mengganti kelas temuan (oleh petugas) menghitung ulang skornya.
 - **Hitungan di dasbor** adalah jumlah kotak deteksi pada frame sampel, **bukan objek unik** (belum ada penggabungan antar-frame). Skor lokasi memakai deteksi terburuk.

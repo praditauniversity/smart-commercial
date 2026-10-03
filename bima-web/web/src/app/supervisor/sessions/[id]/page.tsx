@@ -7,7 +7,7 @@ import { ArrowLeft, Loader2, MapPin, Video } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import FrameGallery from '@/components/FrameGallery';
 import { ClipEvaluationBadge, NarrativePanel } from '@/components/ClipEvaluation';
-import { ComplianceBadge, ConditionBadge, RiskBadge, SimulatedTag } from '@/components/RiskBadge';
+import { ComplianceBadge, ConditionBadge, RiskBadge } from '@/components/RiskBadge';
 import CorrectionsLog from '@/components/CorrectionsLog';
 import { useToast } from '@/components/ToastProvider';
 import { CONDITION_MODEL_LABEL, EXPOSURE_LABEL, SEVERITY_LABEL, type Exposure, type Severity } from '@/lib/risk';
@@ -34,7 +34,7 @@ export default function SupervisorSessionPage() {
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [tags, setTags] = useState<ConditionTagOption[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [logKey, setLogKey] = useState(0);
   const [playing, setPlaying] = useState<string | null>(null);
@@ -55,7 +55,8 @@ export default function SupervisorSessionPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const selected = useMemo(() => session?.detections.find((d) => d.id === selectedId) ?? null, [session, selectedId]);
+  // Koreksi rinci hanya saat tepat satu temuan dipilih; beberapa temuan dikoreksi massal lewat panel temuan.
+  const selected = useMemo(() => (selectedIds.length === 1 ? session?.detections.find((d) => d.id === selectedIds[0]) ?? null : null), [session, selectedIds]);
 
   async function correct(body: Record<string, unknown>) {
     if (!selected) return;
@@ -69,6 +70,24 @@ export default function SupervisorSessionPage() {
       setLogKey((k) => k + 1);
     } catch (e: any) {
       toast.error?.(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function bulkCorrect(ids: string[], kind: 'dikonfirmasi' | 'keliru', reason: string): Promise<boolean> {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/detections/bulk-correct', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids, kind, reason }) });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || 'Gagal menyimpan koreksi massal.');
+      toast.success?.(`${j.updated} temuan ${kind === 'keliru' ? 'ditandai keliru' : 'dikonfirmasi benar'}.`);
+      await load();
+      setLogKey((k) => k + 1);
+      return true;
+    } catch (e: any) {
+      toast.error?.(e.message);
+      return false;
     } finally {
       setBusy(false);
     }
@@ -91,13 +110,12 @@ export default function SupervisorSessionPage() {
             {session.locationAddress && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{session.locationAddress}</span>}
             <span className="inline-flex items-center gap-1.5">
               Zona: {session.zone ? <b>{session.zone.name} · Exposure {EXPOSURE_LABEL[session.zone.exposure as Exposure]} ({session.zone.exposure})</b> : <b className="text-amber-700">belum ada zona — temuan belum dapat diberi skor</b>}
-              {session.zone?.isSimulated && <SimulatedTag />}
             </span>
           </div>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="min-w-0 space-y-6">
             {session.mediaAssets.length === 0 && <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">Sesi ini belum memiliki media.</p>}
             {session.mediaAssets.map((m) => {
               const dets = session.detections.filter((d) => d.mediaAssetId === m.id);
@@ -111,7 +129,12 @@ export default function SupervisorSessionPage() {
                   {m.status !== 'completed' ? (
                     <p className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">Status media: <b>{m.status}</b>. Deteksi belum selesai atau belum dijalankan.</p>
                   ) : (
-                    <FrameGallery frames={m.frames} detections={dets} selectedDetectionId={selectedId} onSelectDetection={(d) => setSelectedId(d.id)} />
+                    <FrameGallery
+                      frames={m.frames} detections={dets} mode="koreksi"
+                      selectedIds={selectedIds.filter((sid) => dets.some((d) => d.id === sid))}
+                      onSelectionChange={(ids) => setSelectedIds([...selectedIds.filter((sid) => !dets.some((d) => d.id === sid)), ...ids])}
+                      onBulk={bulkCorrect} bulkBusy={busy}
+                    />
                   )}
                   {m.fileType === 'video' && (
                     <div>
@@ -127,11 +150,13 @@ export default function SupervisorSessionPage() {
             })}
           </div>
 
-          <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+          <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
             <section className="rounded-2xl border border-slate-200 bg-white p-4" aria-label="Panel koreksi">
               <h2 className="mb-2 text-sm font-bold text-slate-900">Koreksi temuan</h2>
-              {!selected ? (
-                <p className="text-xs text-slate-500">Pilih sebuah kotak atau baris temuan pada galeri untuk meninjau dan mengoreksinya.</p>
+              {selectedIds.length > 1 ? (
+                <p className="text-xs text-slate-600"><b>{selectedIds.length} temuan dipilih.</b> Gunakan tombol “Konfirmasi benar” atau “Tandai keliru” pada panel temuan di samping gambar. Pilih satu temuan saja untuk koreksi rinci.</p>
+              ) : !selected ? (
+                <p className="text-xs text-slate-500">Pilih sebuah kotak atau baris temuan pada galeri untuk mengoreksinya. Centang beberapa temuan di panel untuk koreksi massal.</p>
               ) : (
                 <CorrectionForm key={selected.id} detection={selected} classes={classes} tags={tags} busy={busy} onSubmit={correct} />
               )}
@@ -159,6 +184,8 @@ function CorrectionForm({ detection: d, classes, tags, busy, onSubmit }: { detec
   const [tagId, setTagId] = useState<string>(d.conditionTag?.id ?? '');
   const classTags = tags.filter((t) => t.classId === d.classDefinition?.id);
   const isNormalSign = hasStage && d.conditionLabel === 'normal';
+  // Rambu yang sudah diklasifikasi Tahap 2: severity ditentukan kondisi + tag subtipe, bukan form terpisah.
+  const stageDecides = hasStage && Boolean(d.conditionLabel);
   const btn = 'rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50';
   return (
     <div className="space-y-3 text-xs">
@@ -179,10 +206,10 @@ function CorrectionForm({ detection: d, classes, tags, busy, onSubmit }: { detec
       </div>
 
       <label className="block">
-        <span className="mb-1 block font-semibold text-slate-700">Alasan (wajib untuk “keliru”)</span>
+        <span className="mb-1 block font-semibold text-slate-700">Alasan (opsional)</span>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 p-2" />
       </label>
-      <button type="button" disabled={busy || reason.trim() === ''} className={`${btn} bg-rose-600 text-white hover:bg-rose-700`} onClick={() => onSubmit({ kind: 'keliru', reason })}>Tandai keliru (false positive)</button>
+      <button type="button" disabled={busy} className={`${btn} bg-rose-600 text-white hover:bg-rose-700`} onClick={() => onSubmit({ kind: 'keliru', reason })}>Tandai keliru (false positive)</button>
 
       <div className="border-t border-slate-100 pt-3">
         <span className="mb-1 block font-semibold text-slate-700">Kelas yang benar</span>
@@ -217,7 +244,7 @@ function CorrectionForm({ detection: d, classes, tags, busy, onSubmit }: { detec
         </div>
       )}
 
-      {infra && !isNormalSign && (
+      {infra && !stageDecides && (
         <div className="border-t border-slate-100 pt-3">
           <span className="mb-1 block font-semibold text-slate-700">Severity</span>
           <div className="flex gap-2">

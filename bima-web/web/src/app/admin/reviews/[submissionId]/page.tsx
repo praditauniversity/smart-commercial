@@ -7,6 +7,7 @@ import MediaBoxOverlay, { OverlayDetection } from '@/components/MediaBoxOverlay'
 import MediaInspectionModal from '@/components/MediaInspectionModal';
 import { Sam3Chips, getSam3Result } from '@/components/Sam3Result';
 import AuditTimeline from '@/components/AuditTimeline';
+import ReviewFindings, { type LiveFindings } from '@/components/ReviewFindings';
 import Pagination from '@/components/Pagination';
 import { FINDINGS_PAGE_SIZE, paginateTwo } from '@/lib/pagination';
 import { useToast } from '@/components/ToastProvider';
@@ -35,6 +36,7 @@ export default function AdminReviewDetailPage() {
 
   const [submission, setSubmission] = useState<any>(null);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [liveFindings, setLiveFindings] = useState<LiveFindings | null>(null);
   const [loading, setLoading] = useState(true);
   const [classes, setClasses] = useState<any[]>([]);
   const [inspectingMediaId, setInspectingMediaId] = useState<string | null>(null);
@@ -59,6 +61,7 @@ export default function AdminReviewDetailPage() {
       if (data.success && data.submission) {
         setSubmission(data.submission);
         setAuditLogs(data.auditLogs || []);
+        setLiveFindings(data.liveFindings || null);
       }
     } catch (err) {
       console.error(err);
@@ -285,6 +288,8 @@ export default function AdminReviewDetailPage() {
 
       {/* Main Content Area */}
       <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {liveFindings && <ReviewFindings findings={liveFindings} />}
+
         {/* Navigation Tabs */}
         <div className="flex border-b border-slate-200 gap-6 text-sm font-semibold">
           <button

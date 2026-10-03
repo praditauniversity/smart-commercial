@@ -2,12 +2,11 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
-import { SimulatedTag } from '@/components/RiskBadge';
 import { useToast } from '@/components/ToastProvider';
 import { CONDITION_MODEL_LABEL, EXPOSURE_LABEL, GROUP_LABEL, SEVERITY_LABEL, type Exposure, type Severity } from '@/lib/risk';
 import { ZONE_TYPES } from '@/lib/master-validation';
 
-interface ClassRow { id: string; name: string; displayName: string; modelClass: string | null; category: string | null; categoryGroup: string | null; defaultSeverity: number | null; isActive: boolean }
+interface ClassRow { id: string; name: string; displayName: string; modelClass: string | null; category: string | null; categoryGroup: string | null; defaultSeverity: number | null; isActive: boolean; hasConditionStage?: boolean }
 interface TagRow { id: string; code: string; label: string; severity: number; isActive: boolean; sortOrder: number; classDefinition: { displayName: string }; _count?: { detections: number } }
 interface ZoneRow { id: string; code: string; name: string; zoneType: string; exposure: number; description: string | null; isSimulated: boolean; isActive: boolean; _count?: { sessions: number } }
 
@@ -21,7 +20,7 @@ export default function RiskMasterPage() {
   const [tags, setTags] = useState<TagRow[]>([]);
   const [tagDraft, setTagDraft] = useState({ code: '', label: '', severity: 2 });
   const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState({ code: '', name: '', zoneType: 'hunian', exposure: 2, isSimulated: false });
+  const [draft, setDraft] = useState({ code: '', name: '', zoneType: 'hunian', exposure: 2 });
 
   const load = useCallback(async () => {
     try {
@@ -88,7 +87,7 @@ export default function RiskMasterPage() {
                           {([1, 2, 3] as Severity[]).map((s) => <option key={s} value={s}>{SEVERITY_LABEL[s]} ({s})</option>)}
                         </select>
                       ) : <span className="text-slate-400">tanpa skor risiko</span>}
-                      {c.modelClass === 'sign' && <div className="mt-1 text-[10px] text-amber-700">Nilai awal; kondisi rambu (normal/rusak) belum diklasifikasi model.</div>}
+                      {c.hasConditionStage && <div className="mt-1 text-[10px] text-slate-500">Severity sementara bagi rambu rusak; severity akhir mengikuti tag subtipe.</div>}
                     </td>
                   </tr>
                 ))}
@@ -136,10 +135,10 @@ export default function RiskMasterPage() {
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white" aria-label="Zona dan Exposure">
-          <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-3"><h2 className="mr-auto text-sm font-bold text-slate-800">Zona &amp; Tingkat Paparan (Exposure)</h2><SimulatedTag label="zona contoh ditandai" /></div>
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-3"><h2 className="mr-auto text-sm font-bold text-slate-800">Zona &amp; Tingkat Paparan (Exposure)</h2></div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="px-3 py-2">Kode</th><th className="px-3 py-2">Nama</th><th className="px-3 py-2">Jenis</th><th className="px-3 py-2">Exposure</th><th className="px-3 py-2">Sumber</th><th className="px-3 py-2">Sesi</th><th className="px-3 py-2">Aktif</th><th className="px-3 py-2" /></tr></thead>
+              <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="px-3 py-2">Kode</th><th className="px-3 py-2">Nama</th><th className="px-3 py-2">Jenis</th><th className="px-3 py-2">Exposure</th><th className="px-3 py-2">Sesi</th><th className="px-3 py-2">Aktif</th><th className="px-3 py-2" /></tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {zones.map((z) => (
                   <tr key={z.id} className={z.isActive ? '' : 'opacity-50'}>
@@ -151,7 +150,6 @@ export default function RiskMasterPage() {
                         {([1, 2, 3] as Exposure[]).map((e) => <option key={e} value={e}>{EXPOSURE_LABEL[e]} ({e})</option>)}
                       </select>
                     </td>
-                    <td className="px-3 py-2"><label className="flex items-center gap-1.5"><input type="checkbox" checked={z.isSimulated} onChange={(e) => send(`/api/admin/zones/${z.id}`, 'PATCH', { isSimulated: e.target.checked })} />{z.isSimulated ? <SimulatedTag /> : <span className="font-semibold text-emerald-700">data riil</span>}</label></td>
                     <td className="px-3 py-2 font-mono">{z._count?.sessions ?? 0}</td>
                     <td className="px-3 py-2"><input type="checkbox" aria-label={`Aktif ${z.name}`} checked={z.isActive} onChange={(e) => send(`/api/admin/zones/${z.id}`, 'PATCH', { isActive: e.target.checked })} /></td>
                     <td className="px-3 py-2 text-right"><button type="button" className="font-semibold text-rose-700 hover:underline" onClick={() => confirm(`Hapus zona "${z.name}"? Zona yang sudah dipakai sesi hanya dinonaktifkan.`) && send(`/api/admin/zones/${z.id}`, 'DELETE', undefined, 'Zona dihapus/dinonaktifkan.')}>Hapus</button></td>
@@ -165,7 +163,6 @@ export default function RiskMasterPage() {
             <label className="flex min-w-48 flex-1 flex-col gap-1 font-semibold text-slate-600">Nama<input required className={field} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
             <label className="flex flex-col gap-1 font-semibold text-slate-600">Jenis<select className={field} value={draft.zoneType} onChange={(e) => setDraft({ ...draft, zoneType: e.target.value })}>{ZONE_TYPES.map((t) => <option key={t} value={t}>{ZONE_TYPE_LABEL[t]}</option>)}</select></label>
             <label className="flex flex-col gap-1 font-semibold text-slate-600">Exposure<select className={field} value={draft.exposure} onChange={(e) => setDraft({ ...draft, exposure: Number(e.target.value) })}>{([1, 2, 3] as Exposure[]).map((x) => <option key={x} value={x}>{EXPOSURE_LABEL[x]} ({x})</option>)}</select></label>
-            <label className="flex items-center gap-1.5 pb-1.5 font-semibold text-slate-600"><input type="checkbox" checked={draft.isSimulated} onChange={(e) => setDraft({ ...draft, isSimulated: e.target.checked })} />data contoh</label>
             <button type="submit" className="rounded-lg bg-blue-600 px-3 py-1.5 font-semibold text-white hover:bg-blue-700">Tambah zona</button>
           </form>
         </section>

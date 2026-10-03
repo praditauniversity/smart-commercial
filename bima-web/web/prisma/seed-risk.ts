@@ -7,7 +7,7 @@ import { DEFAULT_SIGN_TAGS, SUBTYPE_PROFILES } from '../src/lib/risk';
 /**
  * Seed purwarupa RQ4 (idempotent):
  *  1. Kelas deteksi dari 6 model YOLO (8 subtipe) beserta kategori, kelompok, dan Severity bawaan.
- *  2. Zona contoh -> Exposure. SEMUA zona ini DATA CONTOH (isSimulated = true), bukan data lokasi riil.
+ *  2. Zona demo -> Exposure (Tingkat Paparan); dapat diubah admin di data master.
  *  3. 35 klip uji RQ3 dari prisma/data/rq3_clips.json (data riil dari Tracker Evaluasi).
  */
 const prisma = new PrismaClient();
@@ -67,9 +67,9 @@ const CLASS_TEXT: Record<string, { visual: string; condition: string; feasibilit
 };
 
 const ZONES = [
-  { code: 'ZN-SIM-01', name: 'Jalan Utama Township (data contoh)', zoneType: 'jalan_utama', exposure: 3, description: 'Jalan umum ramai / akses utama township. Nilai Exposure adalah data contoh.' },
-  { code: 'ZN-SIM-02', name: 'Kawasan Hunian Cluster (data contoh)', zoneType: 'hunian', exposure: 2, description: 'Kawasan hunian. Nilai Exposure adalah data contoh.' },
-  { code: 'ZN-SIM-03', name: 'Taman dan Jalur Jogging (data contoh)', zoneType: 'area_minim_aktivitas', exposure: 1, description: 'Area minim aktivitas di dalam kawasan hunian. Nilai Exposure adalah data contoh.' },
+  { code: 'ZN-SIM-01', name: 'Jalan Utama Township', zoneType: 'jalan_utama', exposure: 3, description: 'Jalan umum ramai / akses utama township.' },
+  { code: 'ZN-SIM-02', name: 'Kawasan Hunian Cluster', zoneType: 'hunian', exposure: 2, description: 'Kawasan hunian.' },
+  { code: 'ZN-SIM-03', name: 'Taman dan Jalur Jogging', zoneType: 'area_minim_aktivitas', exposure: 1, description: 'Area minim aktivitas di dalam kawasan hunian.' },
 ];
 
 async function main() {
@@ -119,7 +119,7 @@ async function main() {
       create: { ...z, isSimulated: true },
     });
   }
-  console.log(`Zona contoh: ${ZONES.length} (isSimulated = true)`);
+  console.log(`Zona demo: ${ZONES.length}`);
 
   // Model deteksi lokal YOLO. Dijadikan default hanya bila belum ada model default aktif lain.
   const existingDefault = await prisma.modelConfig.findFirst({ where: { isDefault: true, isActive: true } });

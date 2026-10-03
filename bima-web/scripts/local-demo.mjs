@@ -453,7 +453,7 @@ async function demo(state) {
     const sr = await fetch(`${base}/api/sessions`, {
       method: 'POST',
       headers: { ...H, 'content-type': 'application/json' },
-      body: JSON.stringify({ name: `Demo: ${name}`.slice(0, 80), zoneId: zone?.id, locationAddress: 'Lokasi contoh (data simulasi)' }),
+      body: JSON.stringify({ name: `Demo: ${name}`.slice(0, 80), zoneId: zone?.id, locationAddress: 'Lokasi demo' }),
     });
     const sj = await sr.json();
     if (!sr.ok) throw new Error(sj.error ?? 'Gagal membuat sesi.');

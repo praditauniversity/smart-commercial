@@ -64,15 +64,6 @@ export function GroupLabel({ group }: { group: string | null | undefined }) {
   return <>Belum dikelompokkan</>;
 }
 
-/** Penanda data contoh: nilai Exposure berasal dari zona simulasi, bukan lokasi riil. */
-export function SimulatedTag({ label = 'data contoh' }: { label?: string }) {
-  return (
-    <span className="inline-flex items-center rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Nilai ini berasal dari data contoh/simulasi, bukan data lokasi riil">
-      {label}
-    </span>
-  );
-}
-
 /**
  * Hasil Tahap 2 rambu. normal = tanpa skor risiko; rusak = skor dihitung, subtipe dari tag supervisor
  * (sebelum dipilih: "subtipe belum ditentukan" dengan severity sementara).

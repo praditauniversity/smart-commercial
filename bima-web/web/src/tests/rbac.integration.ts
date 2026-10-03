@@ -193,9 +193,8 @@ async function main() {
     assert.equal((await call(surveyor, 'GET', '/api/corrections')).status, 403);
     assert.equal((await call(surveyor, 'GET', '/api/dashboard/latency')).status, 403);
   });
-  await check('permintaan koreksi tidak valid ditolak (jenis tak dikenal, keliru tanpa alasan)', async () => {
+  await check('permintaan koreksi tidak valid ditolak (jenis tak dikenal, severity di luar 1-3)', async () => {
     assert.equal((await call(supervisor, 'POST', `/api/detections/${det.id}/correct`, { kind: 'hapus' })).status, 400);
-    assert.equal((await call(supervisor, 'POST', `/api/detections/${det.id}/correct`, { kind: 'keliru' })).status, 400);
     assert.equal((await call(supervisor, 'POST', `/api/detections/${det.id}/correct`, { kind: 'severity_diubah', severity: 7 })).status, 400);
   });
   await check('supervisor mengonfirmasi temuan: skor tidak berubah', async () => {
@@ -231,6 +230,33 @@ async function main() {
     assert.equal(r.json.detection.severitySource, 'bawaan');
     assert.equal(r.json.detection.riskScore, 9);
     assert.equal(r.json.detection.priorityBand, 'kritikal');
+  });
+  await check('koreksi massal: surveyor ditolak; jenis/ids tidak valid 400; temuan tak ada 404', async () => {
+    assert.equal((await call(surveyor, 'POST', '/api/detections/bulk-correct', { ids: [det.id], kind: 'dikonfirmasi' })).status, 403);
+    assert.equal((await call(supervisor, 'POST', '/api/detections/bulk-correct', { ids: [det.id], kind: 'kelas_diubah' })).status, 400);
+    assert.equal((await call(supervisor, 'POST', '/api/detections/bulk-correct', { ids: [], kind: 'keliru' })).status, 400);
+    assert.equal((await call(supervisor, 'POST', '/api/detections/bulk-correct', { ids: [det.id, 'tidak-ada'], kind: 'keliru' })).status, 404);
+  });
+  await check('koreksi massal tanpa alasan: konfirmasi benar lalu tandai keliru; tiap temuan punya riwayat sendiri', async () => {
+    const before = await prisma.officerCorrection.count({ where: { detectionId: det.id } });
+    const ok = await call(supervisor, 'POST', '/api/detections/bulk-correct', { ids: [det.id], kind: 'dikonfirmasi' });
+    assert.equal(ok.status, 200);
+    assert.equal(ok.json.updated, 1);
+    assert.equal((await prisma.detection.findUniqueOrThrow({ where: { id: det.id } })).reviewStatus, 'dikonfirmasi');
+    const wrong = await call(supervisor, 'POST', '/api/detections/bulk-correct', { ids: [det.id], kind: 'keliru' });
+    assert.equal(wrong.status, 200);
+    const d = await prisma.detection.findUniqueOrThrow({ where: { id: det.id } });
+    assert.equal(d.reviewStatus, 'keliru');
+    assert.equal(await prisma.officerCorrection.count({ where: { detectionId: det.id } }), before + 2);
+  });
+  await check('antrean review membedakan benar / keliru / terlewat dari data sesi saat ini', async () => {
+    const q = await call(supervisor, 'GET', '/api/admin/reviews?status=all');
+    assert.equal(q.status, 200);
+    const mine = (q.json.submissions as any[]).find((s) => s.sessionId === sessionId);
+    if (mine) {
+      assert.ok(typeof mine.review.benar === 'number' && mine.review.keliru >= 1);
+      assert.equal(mine.review.totalTemuan, mine.review.benar + mine.review.keliru + mine.review.belumDitinjau);
+    }
   });
   await check('supervisor menandai temuan keliru (dengan alasan): tetap tersimpan, ditandai', async () => {
     const r = await call(supervisor, 'POST', `/api/detections/${det.id}/correct`, { kind: 'keliru', reason: 'bayangan, bukan lubang' });
@@ -376,7 +402,7 @@ async function main() {
     const code = `ZN-T${stamp % 100000}`;
     const created = await call(admin, 'POST', '/api/admin/zones', { code, name: 'Zona uji', zoneType: 'hunian', exposure: 2 });
     assert.equal(created.status, 201);
-    assert.equal(created.json.zone.isSimulated, false, 'zona buatan admin bukan data contoh kecuali ditandai');
+    assert.equal(created.json.zone.isSimulated, false, 'zona buatan admin tidak ditandai simulasi');
     const zid = created.json.zone.id;
     assert.equal((await call(admin, 'POST', '/api/admin/zones', { code, name: 'dup', zoneType: 'hunian', exposure: 2 })).status, 409);
     assert.equal((await call(admin, 'POST', '/api/admin/zones', { code: 'ZN-Y', name: 'y', zoneType: 'hunian', exposure: 4 })).status, 400);

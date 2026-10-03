@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import MapPicker from '@/components/MapPicker';
 import { useToast } from '@/components/ToastProvider';
-import { SimulatedTag } from '@/components/RiskBadge';
 import { EXPOSURE_LABEL, type Exposure } from '@/lib/risk';
 import { MapPin, Calendar, FileText, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 
@@ -156,11 +155,6 @@ export default function NewSurveySessionPage() {
                     </option>
                   ))}
                 </select>
-                {zones.some((z) => z.isSimulated) && (
-                  <p className="text-[11px] text-violet-700 flex items-center gap-1.5">
-                    <SimulatedTag /> Daftar zona ini adalah data contoh untuk purwarupa, bukan data lokasi riil.
-                  </p>
-                )}
               </div>
             </div>
 
