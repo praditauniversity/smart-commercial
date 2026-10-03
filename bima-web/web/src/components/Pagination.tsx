@@ -19,14 +19,14 @@ export default function Pagination({ page, pageSize, total, onPageChange, itemLa
   const to = Math.min(total, page * pageSize);
 
   const buttonClass =
-    'px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white flex items-center gap-1 transition-all';
+    'px-3 py-1.5 rounded-md text-xs font-medium border border-zinc-200 bg-white text-zinc-900 shadow-sm hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white flex items-center gap-1 transition-all';
 
   return (
     <nav
       aria-label="Navigasi halaman"
       className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2"
     >
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-zinc-500">
         Menampilkan {from}–{to} dari {total} {itemLabel}
       </p>
       <div className="flex items-center gap-2">
@@ -34,7 +34,7 @@ export default function Pagination({ page, pageSize, total, onPageChange, itemLa
           <ChevronLeft className="w-3.5 h-3.5" />
           Sebelumnya
         </button>
-        <span className="text-xs font-semibold text-slate-700 px-2">
+        <span className="text-xs font-medium text-zinc-900 px-2">
           Halaman {page} / {totalPages}
         </span>
         <button

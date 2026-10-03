@@ -43,20 +43,20 @@ export default function MediaBoxOverlay({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   return (
-    <div className={`flex items-center justify-center bg-slate-950/90 rounded-2xl p-2 sm:p-3 overflow-hidden shadow-inner ${className}`}>
+    <div className={`flex items-center justify-center bg-zinc-950 rounded-xl p-2 sm:p-3 overflow-hidden ${className}`}>
       {/* Intrinsic Media Frame (Wraps exact image/video bounds without letterbox margin shift) */}
       <div className="relative inline-block max-w-full max-h-[340px] sm:max-h-[500px]">
         {mediaType === 'video' ? (
           <video
             src={mediaUrl}
             controls
-            className="block w-auto h-auto max-w-full max-h-[340px] sm:max-h-[500px] object-contain rounded-xl shadow-lg"
+            className="block w-auto h-auto max-w-full max-h-[340px] sm:max-h-[500px] object-contain rounded-lg"
           />
         ) : (
           <img
             src={mediaUrl}
             alt="Visual Media"
-            className="block w-auto h-auto max-w-full max-h-[340px] sm:max-h-[500px] object-contain rounded-xl shadow-lg"
+            className="block w-auto h-auto max-w-full max-h-[340px] sm:max-h-[500px] object-contain rounded-lg"
           />
         )}
 
@@ -80,13 +80,13 @@ export default function MediaBoxOverlay({
                 onMouseLeave={() => setHoveredId(null)}
                 style={{ left, top, width, height, borderColor: color, backgroundColor: `${color}1f` }}
                 className={`absolute border-2 transition-all cursor-pointer pointer-events-auto rounded-xs ${
-                  isSelected || isHovered ? 'ring-4 ring-blue-400 scale-[1.01] z-30 shadow-lg' : 'z-20'} ${
+                  isSelected || isHovered ? 'ring-4 ring-white/80 scale-[1.01] z-30 shadow-md' : 'z-20'} ${
                   det.hasConflict ? 'animate-pulse' : ''
                 }`}
               >
                 {/* Badge Tag */}
                 <div
-                  className="absolute -top-6 sm:-top-7 left-0 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] font-semibold whitespace-nowrap shadow-xs flex items-center gap-1"
+                  className="absolute -top-6 sm:-top-7 left-0 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] font-semibold whitespace-nowrap shadow-sm flex items-center gap-1"
                   style={{ backgroundColor: color, color: readableTextColor(color) }}
                 >
                   {det.hasConflict && <AlertTriangle className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
@@ -100,11 +100,11 @@ export default function MediaBoxOverlay({
 
                 {/* Hover Tooltip Details */}
                 {(isHovered || isSelected) && (
-                  <div className="absolute left-0 top-full mt-1 bg-slate-900/95 text-white p-2 rounded-lg text-[11px] shadow-xl min-w-[150px] sm:min-w-[180px] max-w-[220px] sm:max-w-[260px] z-40 backdrop-blur-xs border border-slate-700 pointer-events-none break-words">
-                    <div className="font-bold text-slate-100 mb-0.5">
+                  <div className="absolute left-0 top-full mt-1 bg-zinc-900/95 text-white p-2 rounded-lg text-[11px] shadow-lg min-w-[150px] sm:min-w-[180px] max-w-[220px] sm:max-w-[260px] z-40 backdrop-blur-xs border border-zinc-700 pointer-events-none break-words">
+                    <div className="font-semibold text-zinc-100 mb-0.5">
                       {det.displayName || det.className}
                     </div>
-                    <div className="text-slate-300 text-[10px] sm:text-[11px] leading-relaxed mb-1 line-clamp-3">
+                    <div className="text-zinc-300 text-[10px] sm:text-[11px] leading-relaxed mb-1 line-clamp-3">
                       {det.condition}
                     </div>
                     {det.hasConflict && det.conflictDetails && (
