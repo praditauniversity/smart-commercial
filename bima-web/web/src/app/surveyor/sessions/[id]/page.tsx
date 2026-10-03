@@ -502,7 +502,7 @@ export default function SurveyorSessionWorkspace() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <div className="min-h-screen bg-dashboard-bg flex flex-col">
         <Navbar />
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <DetailWorkspaceSkeleton />
@@ -513,13 +513,13 @@ export default function SurveyorSessionWorkspace() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <div className="min-h-screen bg-dashboard-bg flex flex-col">
         <Navbar />
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-          <h2 className="text-xl font-bold text-slate-800 mb-2">Sesi Tidak Ditemukan</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-zinc-900 mb-2">Sesi Tidak Ditemukan</h2>
           <button
             onClick={() => router.push('/surveyor/sessions')}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold active:scale-95 transition-all shadow-md cursor-pointer"
+            className="px-4 py-2 bg-brand-green hover:bg-brand-green/90 text-white rounded-md text-sm font-medium active:scale-95 transition-colors shadow-sm cursor-pointer"
           >
             Kembali ke Daftar Sesi
           </button>
@@ -582,30 +582,30 @@ export default function SurveyorSessionWorkspace() {
   const lastSubmission = session.submissions?.[0];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-24 sm:pb-16">
+    <div className="min-h-screen bg-dashboard-bg flex flex-col pb-24 sm:pb-16">
       <Navbar />
 
       {/* Main Workspace Header Banner */}
-      <div className="bg-white border-b border-slate-200 shadow-xs">
+      <div className="bg-white border-b border-zinc-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 break-words">{session.name}</h1>
+                <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-900 break-words">{session.name}</h1>
                 {/* State Badge */}
                 <span
-                  className={`px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider ${
+                  className={`px-2 py-0.5 rounded-md text-xs font-medium capitalize ${
                     session.status === 'berlangsung'
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      ? 'bg-brand-green/10 text-brand-green border border-brand-green/20'
                       : session.status === 'selesai_menunggu_submit'
-                      ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                      ? 'bg-zinc-100 text-zinc-700 border border-zinc-200'
                       : session.status === 'menunggu_review'
-                      ? 'bg-purple-100 text-purple-800 border border-purple-300'
+                      ? 'bg-brand-orange/10 text-orange-700 border border-brand-orange/30'
                       : session.status === 'disetujui'
-                      ? 'bg-teal-100 text-teal-800 border border-teal-300'
+                      ? 'bg-brand-green/10 text-brand-green border border-brand-green/20'
                       : session.status === 'ditolak'
-                      ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                      : 'bg-amber-100 text-amber-800 border border-amber-300'
+                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                      : 'bg-amber-50 text-amber-700 border border-amber-200'
                   }`}
                 >
                   {session.status.replace(/_/g, ' ')}
@@ -613,15 +613,15 @@ export default function SurveyorSessionWorkspace() {
               </div>
 
               {/* Metadata Details */}
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-slate-500 mt-2">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-zinc-500 mt-2">
                 {session.locationAddress && (
                   <span className="flex items-center gap-1 break-words">
-                    <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <MapPin className="w-3.5 h-3.5 text-brand-green shrink-0" />
                     {session.locationAddress}
                   </span>
                 )}
                 <span className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <Calendar className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                   {new Date(session.surveyDate).toLocaleDateString('id-ID', {
                     day: 'numeric',
                     month: 'short',
@@ -629,7 +629,7 @@ export default function SurveyorSessionWorkspace() {
                   })}
                 </span>
                 <span className="flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <Clock className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                   Mulai: {new Date(session.startedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                   {session.finishedAt &&
                     ` • Selesai: ${new Date(session.finishedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`}
@@ -643,9 +643,9 @@ export default function SurveyorSessionWorkspace() {
                 <button
                   type="button"
                   onClick={() => setEditModalOpen(true)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 active:scale-95 text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  className="px-3 py-2 rounded-md border border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50 active:scale-95 text-sm font-medium flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
                 >
-                  <Edit3 className="w-3.5 h-3.5 text-slate-500" />
+                  <Edit3 className="w-3.5 h-3.5 text-zinc-500" />
                   Edit Info
                 </button>
               )}
@@ -656,7 +656,7 @@ export default function SurveyorSessionWorkspace() {
                   type="button"
                   onClick={handleEndSurvey}
                   disabled={actionLoading}
-                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-black active:scale-95 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-md bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-white text-sm font-medium flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Lock className="w-3.5 h-3.5" />
                   Akhiri Survei
@@ -669,7 +669,7 @@ export default function SurveyorSessionWorkspace() {
                   type="button"
                   onClick={handleSubmitSurvey}
                   disabled={actionLoading || processingMedia.length > 0 || unresolvedConflicts.length > 0}
-                  className="px-4 sm:px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold shadow-md flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+                  className="px-4 sm:px-5 py-2 rounded-md bg-brand-green hover:bg-brand-green/90 active:scale-95 text-white text-sm font-medium shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   Submit ke Supervisor
@@ -682,7 +682,7 @@ export default function SurveyorSessionWorkspace() {
                   type="button"
                   onClick={handleCreateRevision}
                   disabled={actionLoading}
-                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-md bg-brand-orange hover:bg-brand-orange/90 active:scale-95 text-white text-sm font-medium shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Edit3 className="w-4 h-4" />
                   Buat Revisi
@@ -695,7 +695,7 @@ export default function SurveyorSessionWorkspace() {
                   type="button"
                   onClick={handleResubmitSurvey}
                   disabled={actionLoading || processingMedia.length > 0 || unresolvedConflicts.length > 0}
-                  className="px-4 sm:px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold shadow-md flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+                  className="px-4 sm:px-5 py-2 rounded-md bg-brand-green hover:bg-brand-green/90 active:scale-95 text-white text-sm font-medium shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   Kirim Revisi Baru
@@ -706,8 +706,8 @@ export default function SurveyorSessionWorkspace() {
 
           {/* Rejection Details Banner (US-006) */}
           {isRejected && lastSubmission && (
-            <div className="mt-4 p-3.5 sm:p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 text-xs">
-              <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-rose-800 mb-1">
+            <div className="mt-4 p-3.5 sm:p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-900 text-xs">
+              <div className="flex items-center gap-2 font-semibold text-xs sm:text-sm text-rose-800 mb-1">
                 <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
                 Sesi Survei Ditolak oleh {lastSubmission.reviewer?.name || 'Supervisor'} ({lastSubmission.rejectReason || 'Alasan tidak disebutkan'})
               </div>
@@ -725,15 +725,15 @@ export default function SurveyorSessionWorkspace() {
           {/* Action Alert Banner */}
           {actionAlert && (
             <div
-              className={`mt-4 p-3 rounded-xl text-xs flex items-center justify-between gap-3 ${
+              className={`mt-4 p-3 rounded-lg text-xs flex items-center justify-between gap-3 ${
                 actionAlert.type === 'success'
-                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                  ? 'bg-brand-green/10 text-brand-green border border-brand-green/20'
                   : 'bg-rose-50 text-rose-800 border border-rose-200'
               }`}
             >
               <div className="flex items-center gap-2 font-medium">
                 {actionAlert.type === 'success' ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-brand-green shrink-0" />
                 ) : (
                   <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                 )}
@@ -741,7 +741,7 @@ export default function SurveyorSessionWorkspace() {
               </div>
               <button
                 onClick={() => setActionAlert(null)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="text-zinc-400 hover:text-zinc-600 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -750,7 +750,7 @@ export default function SurveyorSessionWorkspace() {
 
           {/* Processing / Conflict Warnings */}
           {unresolvedConflicts.length > 0 && (
-            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>
@@ -762,7 +762,7 @@ export default function SurveyorSessionWorkspace() {
                   setActiveConflictDetection(unresolvedConflicts[0]);
                   setConflictModalOpen(true);
                 }}
-                className="px-3 py-1.5 bg-amber-600 active:scale-95 text-white rounded-lg text-xs font-semibold hover:bg-amber-700 shrink-0 cursor-pointer"
+                className="px-3 py-1.5 bg-brand-orange active:scale-95 text-white rounded-md text-xs font-medium hover:bg-brand-orange/90 shrink-0 cursor-pointer"
               >
                 Selesaikan Konflik
               </button>
@@ -773,14 +773,14 @@ export default function SurveyorSessionWorkspace() {
 
       {/* Workspace Tabs */}
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-200 mb-6 gap-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-zinc-200 mb-6 gap-3">
           <div className="flex space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar w-full sm:w-auto pb-1 sm:pb-0">
             <button
               onClick={() => setActiveTab('findings')}
-              className={`pb-2.5 sm:pb-3 px-2.5 sm:px-3 text-xs sm:text-sm font-semibold border-b-2 flex items-center gap-1.5 sm:gap-2 transition-colors whitespace-nowrap cursor-pointer ${
+              className={`pb-2.5 sm:pb-3 px-2.5 sm:px-3 text-sm font-medium border-b-2 flex items-center gap-1.5 sm:gap-2 transition-colors whitespace-nowrap cursor-pointer ${
                 activeTab === 'findings'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
+                  ? 'border-brand-green text-brand-green'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-900'
               }`}
             >
               <CheckCircle2 className="w-4 h-4" />
@@ -789,25 +789,25 @@ export default function SurveyorSessionWorkspace() {
 
             <button
               onClick={() => setActiveTab('media')}
-              className={`pb-2.5 sm:pb-3 px-2.5 sm:px-3 text-xs sm:text-sm font-semibold border-b-2 flex items-center gap-1.5 sm:gap-2 transition-colors whitespace-nowrap cursor-pointer ${
+              className={`pb-2.5 sm:pb-3 px-2.5 sm:px-3 text-sm font-medium border-b-2 flex items-center gap-1.5 sm:gap-2 transition-colors whitespace-nowrap cursor-pointer ${
                 activeTab === 'media'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
+                  ? 'border-brand-green text-brand-green'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-900'
               }`}
             >
               <UploadCloud className="w-4 h-4" />
               Media ({mediaAssets.length})
               {processingMedia.length > 0 && (
-                <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+                <span className="w-2 h-2 rounded-full bg-brand-green animate-ping" />
               )}
             </button>
 
             <button
               onClick={() => setActiveTab('history')}
-              className={`pb-2.5 sm:pb-3 px-2.5 sm:px-3 text-xs sm:text-sm font-semibold border-b-2 flex items-center gap-1.5 sm:gap-2 transition-colors whitespace-nowrap cursor-pointer ${
+              className={`pb-2.5 sm:pb-3 px-2.5 sm:px-3 text-sm font-medium border-b-2 flex items-center gap-1.5 sm:gap-2 transition-colors whitespace-nowrap cursor-pointer ${
                 activeTab === 'history'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
+                  ? 'border-brand-green text-brand-green'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-900'
               }`}
             >
               <Clock className="w-4 h-4" />
@@ -822,7 +822,7 @@ export default function SurveyorSessionWorkspace() {
                 type="button"
                 onClick={handleRescanAllMedia}
                 disabled={rescaningAll || uploading}
-                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                className="px-3 py-2 rounded-md bg-white border border-zinc-200 hover:bg-zinc-50 active:scale-95 text-zinc-900 font-medium text-sm flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
                 title="Scan ulang semua media"
               >
                 {rescaningAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
@@ -831,7 +831,7 @@ export default function SurveyorSessionWorkspace() {
             )}
 
             {canUploadMedia && (
-              <label className="cursor-pointer px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-all shrink-0">
+              <label className="cursor-pointer px-3 py-2 rounded-md bg-brand-green hover:bg-brand-green/90 active:scale-95 text-white font-medium text-sm flex items-center gap-1.5 shadow-sm transition-colors shrink-0">
                 <Plus className="w-3.5 h-3.5" />
                 <span>Upload Gambar/Video</span>
                 <span className="hidden sm:inline text-[10px] font-normal opacity-80">(video maks {formatDuration(getMaxVideoSeconds())})</span>
@@ -851,8 +851,8 @@ export default function SurveyorSessionWorkspace() {
 
         {/* Upload Progress Indicator */}
         {uploadProgress && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-xs flex items-center gap-3">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-600 shrink-0" />
+          <div className="mb-6 p-4 bg-white border border-zinc-200 rounded-xl shadow-sm text-zinc-900 text-xs flex items-center gap-3">
+            <Loader2 className="w-5 h-5 animate-spin text-brand-green shrink-0" />
             <span className="font-medium">{uploadProgress}</span>
           </div>
         )}
@@ -867,10 +867,10 @@ export default function SurveyorSessionWorkspace() {
                   setSelectedClassFilter('all');
                   setFindingsPage(1);
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   selectedClassFilter === 'all'
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                    ? 'bg-zinc-900 text-white'
+                    : 'bg-white border border-zinc-200 text-zinc-500 hover:bg-zinc-50'
                 }`}
               >
                 Semua Kelas ({detections.length})
@@ -882,10 +882,10 @@ export default function SurveyorSessionWorkspace() {
                     setSelectedClassFilter(classId);
                     setFindingsPage(1);
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
                     selectedClassFilter === classId
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                      ? 'bg-brand-green text-white shadow-sm'
+                      : 'bg-white border border-zinc-200 text-zinc-500 hover:bg-zinc-50'
                   }`}
                 >
                   <span>{group.displayName}</span>
@@ -897,10 +897,10 @@ export default function SurveyorSessionWorkspace() {
             </div>
 
             {filteredDetections.length === 0 ? (
-              <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-400">
-                <Layers className="w-10 h-10 mx-auto mb-2 text-slate-300" />
-                <h3 className="font-semibold text-slate-700 text-sm">Belum Ada Objek Terdeteksi</h3>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
+              <div className="bg-white border border-zinc-200 rounded-xl shadow-sm p-12 text-center text-zinc-500">
+                <Layers className="w-10 h-10 mx-auto mb-2 text-zinc-300" />
+                <h3 className="font-medium text-zinc-900 text-sm">Belum Ada Objek Terdeteksi</h3>
+                <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1">
                   Upload media gambar/video untuk mendeteksi kondisi infrastruktur dengan AI.
                 </p>
               </div>
@@ -929,16 +929,16 @@ export default function SurveyorSessionWorkspace() {
                     <div
                       key={media.id}
                       onClick={() => setInspectingMediaId(media.id)}
-                      className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-lg hover:border-blue-300 transition-all flex flex-col justify-between cursor-pointer group"
+                      className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-zinc-300 transition-all flex flex-col justify-between cursor-pointer group"
                     >
-                      <div className="relative h-48 bg-slate-950 overflow-hidden">
+                      <div className="relative h-48 bg-zinc-950 overflow-hidden">
                         {media.fileType === 'video' ? (
                           <video src={result.url} muted className="w-full h-48 object-contain" />
                         ) : (
                           <img src={result.url} alt={media.fileName} className="w-full h-48 object-contain" />
                         )}
                         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                          <span className="px-3 py-1.5 bg-blue-600/90 backdrop-blur-xs text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-lg">
+                          <span className="px-3 py-1.5 bg-zinc-900/90 backdrop-blur-xs text-white text-xs font-medium rounded-md flex items-center gap-1.5 shadow-lg">
                             <Eye className="w-3.5 h-3.5" />
                             Lihat Hasil
                           </span>
@@ -946,23 +946,23 @@ export default function SurveyorSessionWorkspace() {
                       </div>
                       <div className="p-4 space-y-2">
                         <div className="flex items-start justify-between gap-2">
-                          <h4 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                          <h4 className="font-semibold text-sm text-zinc-900 transition-colors truncate">
                             {media.fileName}
                           </h4>
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wider shrink-0 ${
                               worst === 'tidak_layak'
-                                ? 'bg-rose-100 text-rose-800'
+                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
                                 : worst === 'cukup_layak'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-emerald-100 text-emerald-800'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-brand-green/10 text-brand-green border border-brand-green/20'
                             }`}
                           >
                             {worst.replace('_', ' ')}
                           </span>
                         </div>
                         <Sam3Chips result={result} />
-                        <p className="text-[11px] text-slate-400">{dets.length} temuan · klik untuk detail</p>
+                        <p className="text-[11px] text-zinc-500">{dets.length} temuan · klik untuk detail</p>
                       </div>
                     </div>
                   );
@@ -989,10 +989,10 @@ export default function SurveyorSessionWorkspace() {
                     <div
                       key={det.id}
                       onClick={() => setInspectingMediaId(det.mediaAssetId)}
-                      className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-lg hover:border-blue-300 transition-all flex flex-col justify-between cursor-pointer group"
+                      className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-zinc-300 transition-all flex flex-col justify-between cursor-pointer group"
                     >
                       {/* Media Image with Box Overlay */}
-                      <div className="relative h-48 bg-slate-950 overflow-hidden">
+                      <div className="relative h-48 bg-zinc-950 overflow-hidden">
                         {det.mediaAsset?.fileUrl ? (
                           <MediaBoxOverlay
                             mediaUrl={det.mediaAsset.fileUrl}
@@ -1001,12 +1001,12 @@ export default function SurveyorSessionWorkspace() {
                             className="w-full h-48"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs">
+                          <div className="w-full h-full flex items-center justify-center text-zinc-500 text-xs">
                             Media tidak tersedia
                           </div>
                         )}
                         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                          <span className="px-3 py-1.5 bg-blue-600/90 backdrop-blur-xs text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-lg">
+                          <span className="px-3 py-1.5 bg-zinc-900/90 backdrop-blur-xs text-white text-xs font-medium rounded-md flex items-center gap-1.5 shadow-lg">
                             <Eye className="w-3.5 h-3.5" />
                             Inspeksi & Edit
                           </span>
@@ -1016,17 +1016,17 @@ export default function SurveyorSessionWorkspace() {
                       {/* Info Content */}
                       <div className="p-4 space-y-2">
                         <div className="flex items-start justify-between gap-2">
-                          <h4 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors">
+                          <h4 className="font-semibold text-sm text-zinc-900 transition-colors">
                             {det.classDefinition?.displayName || det.className}
                           </h4>
                           {isFeasibilityRated(det.feasibility) && (
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wider ${
                                 det.feasibility === 'tidak_layak'
-                                  ? 'bg-rose-100 text-rose-800'
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
                                   : det.feasibility === 'cukup_layak'
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : 'bg-emerald-100 text-emerald-800'
+                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  : 'bg-brand-green/10 text-brand-green border border-brand-green/20'
                               }`}
                             >
                               {feasibilityText(det.feasibility)}
@@ -1034,7 +1034,7 @@ export default function SurveyorSessionWorkspace() {
                           )}
                         </div>
 
-                        <p className="text-xs text-slate-600 line-clamp-2">{det.condition}</p>
+                        <p className="text-xs text-zinc-500 line-clamp-2">{det.condition}</p>
 
                         {det.hasConflict && !det.conflictResolved && (
                           <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-[11px] flex items-center justify-between">
@@ -1049,7 +1049,7 @@ export default function SurveyorSessionWorkspace() {
                                 setActiveConflictDetection(det);
                                 setConflictModalOpen(true);
                               }}
-                              className="text-blue-600 font-bold hover:underline cursor-pointer"
+                              className="text-brand-green font-semibold hover:underline cursor-pointer"
                             >
                               Selesaikan
                             </button>
@@ -1076,14 +1076,14 @@ export default function SurveyorSessionWorkspace() {
         {activeTab === 'media' && (
           <div className="space-y-4">
             {mediaAssets.length === 0 ? (
-              <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-400">
-                <UploadCloud className="w-10 h-10 mx-auto mb-2 text-slate-300" />
-                <h3 className="font-semibold text-slate-700 text-sm">Belum Ada File Media</h3>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1 mb-4">
+              <div className="bg-white border border-zinc-200 rounded-xl shadow-sm p-12 text-center text-zinc-500">
+                <UploadCloud className="w-10 h-10 mx-auto mb-2 text-zinc-300" />
+                <h3 className="font-medium text-zinc-900 text-sm">Belum Ada File Media</h3>
+                <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 mb-4">
                   Upload file foto (JPG, PNG) atau video (MP4, maks {formatDuration(getMaxVideoSeconds())}) untuk sesi survei ini.
                 </p>
                 {canUploadMedia && (
-                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-brand-green text-white rounded-md text-sm font-medium hover:bg-brand-green/90 shadow-sm transition-colors">
                     <Plus className="w-4 h-4" />
                     Pilih File Media
                     <input
@@ -1108,57 +1108,57 @@ export default function SurveyorSessionWorkspace() {
                     <div
                       key={media.id}
                       onClick={() => setInspectingMediaId(media.id)}
-                      className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs hover:shadow-lg hover:border-blue-300 transition-all flex flex-col justify-between cursor-pointer group"
+                      className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all flex flex-col justify-between cursor-pointer group"
                     >
                       <div>
                         <div className="flex items-start justify-between gap-2 mb-2">
-                          <span className="font-semibold text-slate-800 text-xs truncate max-w-[200px] group-hover:text-blue-600 transition-colors">
+                          <span className="font-medium text-zinc-900 text-xs truncate max-w-[200px]">
                             {media.fileName}
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wider ${
                               media.status === 'completed'
-                                ? 'bg-emerald-100 text-emerald-800'
+                                ? 'bg-brand-green/10 text-brand-green border border-brand-green/20'
                                 : media.status === 'processing'
-                                ? 'bg-blue-100 text-blue-800 animate-pulse'
+                                ? 'bg-zinc-100 text-zinc-700 border border-zinc-200 animate-pulse'
                                 : media.status === 'failed'
-                                ? 'bg-rose-100 text-rose-800'
-                                : 'bg-slate-100 text-slate-700'
+                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                : 'bg-zinc-100 text-zinc-700 border border-zinc-200'
                             }`}
                           >
                             {media.status}
                           </span>
                         </div>
 
-                        <div className="relative h-36 bg-slate-900 rounded-xl overflow-hidden mb-3">
+                        <div className="relative h-36 bg-zinc-900 rounded-lg overflow-hidden mb-3">
                           {media.fileType === 'video' ? (
                             <video src={sam3Result?.url || media.fileUrl} className="w-full h-full object-cover" />
                           ) : (
                             <img src={sam3Result?.url || media.fileUrl} alt={media.fileName} className="w-full h-full object-cover" />
                           )}
                           <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <span className="px-3 py-1 bg-blue-600/90 backdrop-blur-xs text-white text-xs font-bold rounded-lg flex items-center gap-1 shadow">
+                            <span className="px-3 py-1 bg-zinc-900/90 backdrop-blur-xs text-white text-xs font-medium rounded-md flex items-center gap-1 shadow">
                               <Eye className="w-3.5 h-3.5" />
                               Lihat Hasil AI
                             </span>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2">
-                          <span className="font-medium text-slate-700">
+                        <div className="flex items-center justify-between text-[11px] text-zinc-500 mb-2">
+                          <span className="font-medium text-zinc-900">
                             {media.status === 'completed' && sam3Result ? (
                               <Sam3Chips result={sam3Result} />
                             ) : media.status === 'completed' ? (
-                              <strong className="text-blue-600">{mediaDetectionsCount} Objek Terdeteksi</strong>
+                              <strong className="text-brand-green">{mediaDetectionsCount} Objek Terdeteksi</strong>
                             ) : media.status === 'processing' ? (
-                              <span className="text-blue-500 animate-pulse">Sedang memproses AI...</span>
+                              <span className="text-zinc-500 animate-pulse">Sedang memproses AI...</span>
                             ) : media.status === 'failed' ? (
                               <span className="text-rose-500">Gagal diproses</span>
                             ) : (
                               <span>Menunggu AI</span>
                             )}
                           </span>
-                          <span className="text-slate-400">Klik untuk detail</span>
+                          <span className="text-zinc-400">Klik untuk detail</span>
                         </div>
 
                         {media.status === 'failed' && media.errorMessage && (
@@ -1168,7 +1168,7 @@ export default function SurveyorSessionWorkspace() {
                         )}
                       </div>
 
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                      <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-500">
                         <span>{media.fileType.toUpperCase()}</span>
 
                         <div className="flex items-center gap-1.5">
@@ -1180,7 +1180,7 @@ export default function SurveyorSessionWorkspace() {
                                 handleRescanSingleMedia(media.id, media.fileName);
                               }}
                               title="Scan ulang media"
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                              className="p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors cursor-pointer"
                             >
                               <RefreshCw className="w-3.5 h-3.5" />
                             </button>
@@ -1193,7 +1193,7 @@ export default function SurveyorSessionWorkspace() {
                                 handleRetryMedia(media.id);
                               }}
                               title="Retry processing"
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                              className="p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors cursor-pointer"
                             >
                               <RefreshCw className="w-3.5 h-3.5" />
                             </button>
@@ -1206,7 +1206,7 @@ export default function SurveyorSessionWorkspace() {
                                 handleDeleteMedia(media.id);
                               }}
                               title="Hapus media permanen"
-                              className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -1223,17 +1223,17 @@ export default function SurveyorSessionWorkspace() {
 
         {/* TAB 3: VERSION HISTORY */}
         {activeTab === 'history' && (
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xs space-y-4">
-            <h3 className="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
-              <Clock className="w-5 h-5 text-blue-600 shrink-0" />
+          <div className="bg-white border border-zinc-200 rounded-xl p-4 sm:p-6 shadow-sm space-y-4">
+            <h3 className="font-semibold text-zinc-900 text-sm sm:text-base flex items-center gap-2">
+              <Clock className="w-5 h-5 text-brand-green shrink-0" />
               Riwayat SubmissionVersion (Snapshot Immutable)
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-zinc-500">
               Setiap kali survei diajukan, sistem membuat snapshot data yang tidak dapat diubah (immutable).
             </p>
 
             {(!session.submissions || session.submissions.length === 0) ? (
-              <div className="p-8 text-center text-slate-400 text-xs">
+              <div className="p-8 text-center text-zinc-500 text-xs">
                 Belum ada SubmissionVersion yang dibuat (Sesi belum pernah dikirim ke supervisor).
               </div>
             ) : (
@@ -1241,26 +1241,26 @@ export default function SurveyorSessionWorkspace() {
                 {session.submissions.map((sub: any) => (
                   <div
                     key={sub.id}
-                    className="p-4 border border-slate-200 rounded-xl bg-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-3"
+                    className="py-4 px-1 border-b border-zinc-100 bg-white flex flex-col md:flex-row justify-between items-start md:items-center gap-3"
                   >
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-sm text-slate-900">
+                        <span className="font-semibold text-sm text-zinc-900">
                           Versi {sub.versionNumber}
                         </span>
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wider ${
                             sub.status === 'disetujui'
-                              ? 'bg-teal-100 text-teal-800'
+                              ? 'bg-brand-green/10 text-brand-green border border-brand-green/20'
                               : sub.status === 'ditolak'
-                              ? 'bg-rose-100 text-rose-800'
-                              : 'bg-purple-100 text-purple-800'
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                              : 'bg-brand-orange/10 text-orange-700 border border-brand-orange/30'
                           }`}
                         >
                           {sub.status.replace('_', ' ')}
                         </span>
                       </div>
-                      <div className="text-xs text-slate-500 mt-1">
+                      <div className="text-xs text-zinc-500 mt-1">
                         Disubmit pada: {new Date(sub.submittedAt).toLocaleString('id-ID')}
                         {sub.reviewedAt && ` • Direview pada: ${new Date(sub.reviewedAt).toLocaleString('id-ID')}`}
                       </div>
@@ -1281,37 +1281,37 @@ export default function SurveyorSessionWorkspace() {
       {/* MODAL: CONFLICT RESOLUTION (US-005 & Section 6.2) */}
       {conflictModalOpen && activeConflictDetection && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+          <div className="bg-white border border-zinc-200 rounded-xl shadow-xl max-w-md w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+              <h3 className="font-semibold text-zinc-900 text-base flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
                 Selesaikan Konflik Kelas
               </h3>
-              <button onClick={() => setConflictModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+              <button onClick={() => setConflictModalOpen(false)} className="text-zinc-400 hover:text-zinc-600 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-zinc-500">
               AI mendeteksi dua kelas mutually exclusive pada area objek yang sama. Pilih kelas yang paling sesuai:
             </p>
 
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-slate-700">Pilih Kelas yang Benar:</label>
+              <label className="block text-sm font-medium text-zinc-900">Pilih Kelas yang Benar:</label>
               <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                 {availableClasses.map((cls) => (
                   <button
                     key={cls.id}
                     onClick={() => handleResolveConflict(cls.id)}
-                    className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 active:scale-95 transition-all group flex items-center justify-between text-xs cursor-pointer"
+                    className="w-full text-left p-3 rounded-lg border border-zinc-200 hover:border-brand-green hover:bg-brand-green/5 active:scale-95 transition-colors group flex items-center justify-between text-xs cursor-pointer"
                   >
                     <div className="min-w-0 pr-2">
-                      <div className="font-bold text-slate-800 group-hover:text-blue-600 truncate">
+                      <div className="font-medium text-zinc-900 group-hover:text-brand-green truncate">
                         {cls.displayName || cls.name}
                       </div>
-                      <div className="text-slate-500 text-[11px] line-clamp-1">{cls.visualDescription}</div>
+                      <div className="text-zinc-500 text-[11px] line-clamp-1">{cls.visualDescription}</div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 shrink-0" />
+                    <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-brand-green shrink-0" />
                   </button>
                 ))}
               </div>
@@ -1323,48 +1323,48 @@ export default function SurveyorSessionWorkspace() {
       {/* MODAL: EDIT METADATA (US-004) */}
       {editModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <form onSubmit={handleSaveMetadata} className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 text-base">Edit Informasi Sesi Survei</h3>
-              <button type="button" onClick={() => setEditModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+          <form onSubmit={handleSaveMetadata} className="bg-white border border-zinc-200 rounded-xl shadow-xl max-w-md w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+              <h3 className="font-semibold text-zinc-900 text-base">Edit Informasi Sesi Survei</h3>
+              <button type="button" onClick={() => setEditModalOpen(false)} className="text-zinc-400 hover:text-zinc-600 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Survei</label>
+                <label className="block text-sm font-medium text-zinc-900 mb-1">Nama Survei</label>
                 <input
                   type="text"
                   required
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md text-sm text-zinc-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Alamat / Catatan Lokasi</label>
+                <label className="block text-sm font-medium text-zinc-900 mb-1">Alamat / Catatan Lokasi</label>
                 <input
                   type="text"
                   value={editAddress}
                   onChange={(e) => setEditAddress(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md text-sm text-zinc-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green transition-colors"
                 />
               </div>
             </div>
 
-            <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+            <div className="pt-3 flex justify-end gap-2 border-t border-zinc-100">
               <button
                 type="button"
                 onClick={() => setEditModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold cursor-pointer"
+                className="px-4 py-2 rounded-md bg-white border border-zinc-200 text-zinc-900 text-sm font-medium shadow-sm hover:bg-zinc-50 transition-colors cursor-pointer"
               >
                 Batal
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold shadow-xs cursor-pointer transition-all"
+                className="px-5 py-2 rounded-md bg-brand-green hover:bg-brand-green/90 active:scale-95 text-white text-sm font-medium shadow-sm cursor-pointer transition-colors"
               >
                 Simpan Perubahan
               </button>
