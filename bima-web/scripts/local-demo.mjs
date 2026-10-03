@@ -257,6 +257,7 @@ function buildEnvs(s) {
     NEXT_PUBLIC_DEFAULT_SAM3_MODEL_NAME: 'sam3_1',
     NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:9',
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'tidak-dipakai-pada-mode-lokal',
+    DEMO_LOGIN_ENABLED: 'true',
     SEED_ADMIN_EMAIL: 'admin@demo.local',
     SEED_ADMIN_PASSWORD: s.passwords.admin,
     SEED_SURVEYOR_EMAIL: 'surveyor@demo.local',

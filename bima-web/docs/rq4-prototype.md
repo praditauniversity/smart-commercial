@@ -53,6 +53,7 @@ Kata sandi dibuat acak dan disimpan di `.demo/kredensial.txt`. File `.env` Anda 
 2. Weight (di luar git): letakkan `<kategori>-best.pt` di `ai-service/models/yolo11n_seed0/` (pavedroad, vegetation, weeds, sign, banner, house_notice).
 3. ai-service: `pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu`, `pip install -r requirements.txt -r requirements-yolo.txt`, isi `YOLO_*` di `.env`, `python main.py`.
 4. web: isi `.env` (lihat `.env.example`; `FRAME_*`, `YOLO_REQUEST_TIMEOUT_MS`; tanpa Supabase gunakan `STORAGE_BACKEND=local` + `LOCAL_STORAGE_DIR`), `npm run dev`. Akses dev lewat `localhost`, atau isi `ALLOWED_DEV_ORIGINS`.
+4a. Opsional, hanya demo lokal: `DEMO_LOGIN_ENABLED=true` di `web/.env` menampilkan tombol "Akses Cepat" di halaman login yang mengisi email dan kata sandi dari `SEED_*`. Restart server setelah mengubah `.env`. Tidak aktif pada mode production.
 5. Di menu Model AI, jadikan model `YOLO11n seed0` sebagai default (seed menjadikannya default hanya bila belum ada default lain).
 
 ## 4. Pengujian
