@@ -311,6 +311,59 @@ async function main() {
     assert.equal((await call(admin, 'GET', '/api/admin/users')).status, 200);
   });
 
+  console.log('\nApproval survei oleh supervisor');
+  const sidR = (await call(surveyor, 'POST', '/api/sessions', { name: `review ${stamp}` })).json.session.id;
+  const sidR2 = (await call(surveyor, 'POST', '/api/sessions', { name: `review tolak ${stamp}` })).json.session.id;
+  await prisma.surveySession.updateMany({ where: { id: { in: [sidR, sidR2] } }, data: { status: 'selesai_menunggu_submit' } });
+  let subId = '';
+  let subId2 = '';
+  await check('surveyor submit: pesan menyebut supervisor (bukan admin)', async () => {
+    const r = await call(surveyor, 'POST', `/api/sessions/${sidR}/submit`);
+    assert.equal(r.status, 200, JSON.stringify(r.json));
+    assert.match(r.json.message, /supervisor/i);
+    assert.doesNotMatch(r.json.message, /admin/i);
+    const r2 = await call(surveyor, 'POST', `/api/sessions/${sidR2}/submit`);
+    assert.equal(r2.status, 200);
+  });
+  await check('supervisor melihat antrean review; surveyor tidak', async () => {
+    const q = await call(supervisor, 'GET', '/api/admin/reviews?status=menunggu_review');
+    assert.equal(q.status, 200);
+    subId = q.json.submissions.find((x: any) => x.sessionId === sidR)?.id;
+    subId2 = q.json.submissions.find((x: any) => x.sessionId === sidR2)?.id;
+    assert.ok(subId && subId2, 'pengajuan tidak muncul di antrean supervisor');
+    assert.equal((await call(supervisor, 'GET', `/api/admin/reviews/${subId}`)).status, 200);
+    assert.equal((await call(surveyor, 'GET', '/api/admin/reviews')).status, 403);
+    assert.equal((await call(surveyor, 'GET', `/api/admin/reviews/${subId}`)).status, 403);
+  });
+  await check('surveyor TIDAK dapat menyetujui/menolak sendiri', async () => {
+    assert.equal((await call(surveyor, 'POST', `/api/admin/reviews/${subId}/approve`, {})).status, 403);
+    assert.equal((await call(surveyor, 'POST', `/api/admin/reviews/${subId}/reject`, { rejectReason: 'x' })).status, 403);
+  });
+  await check('supervisor menyetujui: status sesi menjadi disetujui, reviewer tercatat', async () => {
+    const r = await call(supervisor, 'POST', `/api/admin/reviews/${subId}/approve`, { notes: 'sesuai' });
+    assert.equal(r.status, 200, JSON.stringify(r.json));
+    const s = await prisma.surveySession.findUniqueOrThrow({ where: { id: sidR } });
+    assert.equal(s.status, 'disetujui');
+    const sub = await prisma.submissionVersion.findUniqueOrThrow({ where: { id: subId }, include: { reviewer: true } });
+    assert.equal(sub.reviewer?.role, 'supervisor');
+  });
+  await check('supervisor menolak: wajib alasan; dengan alasan -> ditolak', async () => {
+    assert.equal((await call(supervisor, 'POST', `/api/admin/reviews/${subId2}/reject`, {})).status, 400);
+    const r = await call(supervisor, 'POST', `/api/admin/reviews/${subId2}/reject`, { rejectReason: 'Foto buram', reviewNotes: 'ulangi' });
+    assert.equal(r.status, 200, JSON.stringify(r.json));
+    assert.equal((await prisma.surveySession.findUniqueOrThrow({ where: { id: sidR2 } })).status, 'ditolak');
+  });
+  await check('pengajuan yang sudah diputuskan tidak dapat disetujui ulang', async () => {
+    assert.equal((await call(supervisor, 'POST', `/api/admin/reviews/${subId}/approve`, {})).status, 400);
+  });
+  await check('halaman antrean review: supervisor dan admin masuk; surveyor dialihkan', async () => {
+    assert.equal((await call(supervisor, 'GET', '/supervisor/reviews')).status, 200);
+    assert.equal((await call(admin, 'GET', '/supervisor/reviews')).status, 200);
+    const r = await call(surveyor, 'GET', '/supervisor/reviews');
+    assert.ok([301, 302, 303, 307, 308].includes(r.status), `status ${r.status}`);
+  });
+  await prisma.surveySession.deleteMany({ where: { id: { in: [sidR, sidR2] } } });
+
   console.log('\nData master risiko: hanya admin');
   for (const [who, c] of [['surveyor', surveyor], ['supervisor', supervisor]] as [string, Client][]) {
     await check(`${who} tidak dapat membaca/membuat/mengubah zona master atau Severity kelas`, async () => {

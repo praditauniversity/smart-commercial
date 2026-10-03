@@ -145,7 +145,7 @@ export async function POST(
             sessionId: session.id,
             sessionName: session.name,
             versionNumber: nextVersionNumber,
-            actionDescription: `Surveyor mengajukan hasil survei (Versi Snapshot: ${nextVersionNumber}) untuk direview Admin.`,
+            actionDescription: `Surveyor mengajukan hasil survei (Versi Snapshot: ${nextVersionNumber}) untuk direview Supervisor.`,
             totalMedia: session.mediaAssets.length,
             totalDetections: session.detections.length,
           }),
@@ -155,7 +155,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: 'Hasil survei berhasil disubmit dan menunggu review admin.',
+      message: 'Hasil survei berhasil disubmit dan menunggu disetujui/direview oleh supervisor.',
       submissionVersion,
       session: updatedSession,
     });

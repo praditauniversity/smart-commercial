@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ submissionId: string }> }
 ) {
   try {
-    const admin = await requireAuth(['admin']);
+    const admin = await requireAuth(['supervisor', 'admin']);
     const { submissionId } = await params;
     const { notes } = await request.json().catch(() => ({ notes: '' }));
 
@@ -38,7 +38,7 @@ export async function POST(
           status: 'disetujui',
           reviewedAt: new Date(),
           reviewerId: admin.userId,
-          reviewNotes: notes || 'Disetujui oleh admin.',
+          reviewNotes: notes || `Disetujui oleh ${admin.role}.`,
         },
       }),
       prisma.surveySession.update({

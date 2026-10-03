@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ submissionId: string }> }
 ) {
   try {
-    await requireAuth(['admin']);
+    await requireAuth(['supervisor', 'admin']);
     const { submissionId } = await params;
 
     const submission = await prisma.submissionVersion.findUnique({

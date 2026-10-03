@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { CardSkeleton } from '@/components/SkeletonLoaders';
 import { useToast } from '@/components/ToastProvider';
@@ -40,6 +41,8 @@ interface SubmissionQueueItem {
 }
 
 export default function AdminReviewQueuePage() {
+  // Halaman yang sama dipakai di /admin/reviews dan /supervisor/reviews; tautan mengikuti bagian aktif.
+  const reviewBase = usePathname().startsWith('/supervisor') ? '/supervisor/reviews' : '/admin/reviews';
   const toast = useToast();
   const [submissions, setSubmissions] = useState<SubmissionQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -195,7 +198,7 @@ export default function AdminReviewQueuePage() {
                   </div>
 
                   <Link
-                    href={`/admin/reviews/${sub.id}`}
+                    href={`${reviewBase}/${sub.id}`}
                     className="px-3.5 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
                   >
                     <span>Buka Review</span>

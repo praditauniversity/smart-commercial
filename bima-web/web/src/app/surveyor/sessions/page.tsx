@@ -82,7 +82,7 @@ export default function SurveyorSessionsPage() {
         return (
           <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            Menunggu Review Admin
+            Menunggu Review Supervisor
           </span>
         );
       case 'disetujui':

@@ -24,6 +24,11 @@ export interface ValidationContext {
   role?: string;
 }
 
+/** Yang berhak menyetujui/menolak survei: supervisor (reviewer utama) dan admin. */
+export function canReview(role: string | undefined): boolean {
+  return role === 'supervisor' || role === 'admin';
+}
+
 export class StateMachineError extends Error {
   constructor(message: string) {
     super(message);
@@ -69,19 +74,19 @@ export function validateSurveySessionTransition(
 
   // 3. menunggu_review -> disetujui (Approve)
   if (currentStatus === 'menunggu_review' && nextStatus === 'disetujui') {
-    if (context.role !== 'admin') {
-      return { allowed: false, reason: 'Hanya admin yang berhak menyetujui survei.' };
+    if (!canReview(context.role)) {
+      return { allowed: false, reason: 'Hanya supervisor (atau admin) yang berhak menyetujui survei.' };
     }
     return { allowed: true };
   }
 
   // 4. menunggu_review -> ditolak (Reject)
   if (currentStatus === 'menunggu_review' && nextStatus === 'ditolak') {
-    if (context.role !== 'admin') {
-      return { allowed: false, reason: 'Hanya admin yang berhak menolak survei.' };
+    if (!canReview(context.role)) {
+      return { allowed: false, reason: 'Hanya supervisor (atau admin) yang berhak menolak survei.' };
     }
     if (!context.rejectReason || context.rejectReason.trim() === '') {
-      return { allowed: false, reason: 'Admin wajib memilih alasan penolakan survei.' };
+      return { allowed: false, reason: 'Alasan penolakan survei wajib dipilih.' };
     }
     return { allowed: true };
   }

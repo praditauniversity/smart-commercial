@@ -379,10 +379,10 @@ export default function SurveyorSessionWorkspace() {
       const res = await fetch(`/api/sessions/${sessionId}/submit`, { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
-        toast.success('Hasil survei berhasil diajukan ke admin untuk direview.', 'Pengajuan Berhasil');
+        toast.success('Hasil survei berhasil diajukan. Menunggu disetujui/direview oleh supervisor.', 'Pengajuan Berhasil');
         setActionAlert({
           type: 'success',
-          message: 'Hasil survei berhasil dikirim ke admin (Status: Menunggu Review).',
+          message: 'Hasil survei berhasil dikirim dan menunggu disetujui/direview oleh supervisor (Status: Menunggu Review).',
         });
         fetchSessionDetails();
       } else {
@@ -431,10 +431,10 @@ export default function SurveyorSessionWorkspace() {
       const res = await fetch(`/api/sessions/${sessionId}/resubmit`, { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
-        toast.success('Revisi hasil survei berhasil dikirim kembali ke admin!', 'Revisi Dikirim');
+        toast.success('Revisi hasil survei berhasil dikirim kembali. Menunggu direview oleh supervisor.', 'Revisi Dikirim');
         setActionAlert({
           type: 'success',
-          message: 'Revisi hasil survei berhasil dikirim kembali ke admin!',
+          message: 'Revisi hasil survei berhasil dikirim kembali dan menunggu direview oleh supervisor.',
         });
         fetchSessionDetails();
       } else {
@@ -671,7 +671,7 @@ export default function SurveyorSessionWorkspace() {
                   className="px-4 sm:px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold shadow-md flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  Submit ke Admin
+                  Submit ke Supervisor
                 </button>
               )}
 
@@ -708,11 +708,11 @@ export default function SurveyorSessionWorkspace() {
             <div className="mt-4 p-3.5 sm:p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 text-xs">
               <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-rose-800 mb-1">
                 <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                Sesi Survei Ditolak oleh Admin ({lastSubmission.rejectReason || 'Alasan tidak disebutkan'})
+                Sesi Survei Ditolak oleh {lastSubmission.reviewer?.name || 'Supervisor'} ({lastSubmission.rejectReason || 'Alasan tidak disebutkan'})
               </div>
               {lastSubmission.reviewNotes && (
                 <p className="text-rose-700 mt-1 pl-6 break-words">
-                  <strong>Catatan Admin:</strong> {lastSubmission.reviewNotes}
+                  <strong>Catatan Reviewer:</strong> {lastSubmission.reviewNotes}
                 </p>
               )}
               <p className="text-rose-600 mt-2 pl-6 font-medium">
@@ -1231,7 +1231,7 @@ export default function SurveyorSessionWorkspace() {
 
             {(!session.submissions || session.submissions.length === 0) ? (
               <div className="p-8 text-center text-slate-400 text-xs">
-                Belum ada SubmissionVersion yang dibuat (Sesi belum pernah dikirim ke admin).
+                Belum ada SubmissionVersion yang dibuat (Sesi belum pernah dikirim ke supervisor).
               </div>
             ) : (
               <div className="space-y-3">

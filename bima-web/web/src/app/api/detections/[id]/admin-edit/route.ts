@@ -8,7 +8,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const admin = await requireAuth(['admin']);
+    const admin = await requireAuth(['supervisor', 'admin']);
     const { id } = await params;
     const { classId, condition, feasibility, notes } = await request.json();
 

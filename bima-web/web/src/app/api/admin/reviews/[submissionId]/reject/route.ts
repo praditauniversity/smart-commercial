@@ -8,13 +8,13 @@ export async function POST(
   { params }: { params: Promise<{ submissionId: string }> }
 ) {
   try {
-    const admin = await requireAuth(['admin']);
+    const admin = await requireAuth(['supervisor', 'admin']);
     const { submissionId } = await params;
     const { rejectReason, reviewNotes } = await request.json();
 
     if (!rejectReason || rejectReason.trim() === '') {
       return NextResponse.json(
-        { error: 'Alasan penolakan survei wajib dipilih oleh admin.' },
+        { error: 'Alasan penolakan survei wajib dipilih oleh reviewer.' },
         { status: 400 }
       );
     }

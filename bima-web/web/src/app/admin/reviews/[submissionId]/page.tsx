@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import MediaBoxOverlay, { OverlayDetection } from '@/components/MediaBoxOverlay';
 import MediaInspectionModal from '@/components/MediaInspectionModal';
@@ -31,6 +31,7 @@ export default function AdminReviewDetailPage() {
   const params = useParams();
   const router = useRouter();
   const submissionId = params.submissionId as string;
+  const reviewBase = usePathname().startsWith('/supervisor') ? '/supervisor/reviews' : '/admin/reviews';
 
   const [submission, setSubmission] = useState<any>(null);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -153,7 +154,7 @@ export default function AdminReviewDetailPage() {
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <h2 className="text-xl font-bold text-slate-800 mb-2">Submission Tidak Ditemukan</h2>
           <button
-            onClick={() => router.push('/admin/reviews')}
+            onClick={() => router.push(reviewBase)}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold active:scale-95 transition-all shadow-md cursor-pointer"
           >
             Kembali ke Antrean Review

@@ -153,7 +153,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: `Revisi Versi ${nextVersionNumber} berhasil dikirim ke admin.`,
+      message: `Revisi Versi ${nextVersionNumber} berhasil dikirim dan menunggu direview oleh supervisor.`,
       submissionVersion,
       session: updatedSession,
     });

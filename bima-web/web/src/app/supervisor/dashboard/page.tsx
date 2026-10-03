@@ -4,6 +4,7 @@ import React from 'react';
 import Navbar from '@/components/Navbar';
 import RiskOverview from '@/components/RiskOverview';
 import CorrectionsLog from '@/components/CorrectionsLog';
+import PendingReviewBanner from '@/components/PendingReviewBanner';
 import { ClipboardCheck } from 'lucide-react';
 
 export default function SupervisorDashboardPage() {
@@ -20,6 +21,7 @@ export default function SupervisorDashboardPage() {
             Temuan dari seluruh surveyor untuk ditinjau dan dikoreksi. Buka sebuah sesi untuk menandai temuan keliru atau terlewat dan mengubah severity.
           </p>
         </div>
+        <PendingReviewBanner />
         <RiskOverview detailHref={(id) => `/supervisor/sessions/${id}`} showSurveyorFilter />
         <CorrectionsLog />
       </main>
