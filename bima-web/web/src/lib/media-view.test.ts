@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isAcceptedFinding, reviewLabel, visibleBoxes } from './media-view';
+import { isAcceptedFinding, nearestFrame, reviewLabel, visibleBoxes } from './media-view';
 
 const D = (id: string, reviewStatus: string) => ({ id, reviewStatus });
 const dets = [D('a', 'dikonfirmasi'), D('b', 'keliru'), D('c', 'belum_ditinjau'), D('d', 'dikoreksi')];
@@ -42,4 +42,18 @@ test('showAll (slider digeser): semua kotak tampil, tetapi pilihan tetap menang'
     assert.deepEqual(visibleBoxes(dets, { mode, selectedIds: [], mediaHasReview: true, showAll: true }).map((d) => d.id), ['a', 'b', 'c', 'd']);
     assert.deepEqual(visibleBoxes(dets, { mode, selectedIds: ['c'], mediaHasReview: true, showAll: true }).map((d) => d.id), ['c']);
   }
+});
+
+const F = (frameIndex: number, timestampSeconds: number) => ({ id: `f${frameIndex}`, frameIndex, timestampSeconds, imageUrl: '' });
+
+test('nearestFrame: memilih frame sampel terdekat dari posisi putar', () => {
+  const frames = [F(0, 0), F(1, 2), F(2, 4)];
+  assert.equal(nearestFrame(frames, 0.9, 1)?.frameIndex, 0);
+  assert.equal(nearestFrame(frames, 1.1, 1)?.frameIndex, 1);
+  assert.equal(nearestFrame(frames, 3.9, 1)?.frameIndex, 2);
+});
+
+test('nearestFrame: null bila terlalu jauh dari semua frame sampel atau tanpa frame', () => {
+  assert.equal(nearestFrame([F(0, 0), F(1, 2)], 9, 1), null);
+  assert.equal(nearestFrame([], 0, 1), null);
 });

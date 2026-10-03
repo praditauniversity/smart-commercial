@@ -79,6 +79,20 @@ export function formatTimestamp(seconds: number | null | undefined): string {
   return `${String(m).padStart(2, '0')}:${s.toFixed(1).padStart(4, '0')}`;
 }
 
+/** Frame sampel yang paling dekat dengan waktu putar; null bila jaraknya melebihi `maxGap` (di luar cakupan sampel). */
+export function nearestFrame(frames: FrameView[], time: number, maxGap: number): FrameView | null {
+  let best: FrameView | null = null;
+  let bestGap = Infinity;
+  for (const f of frames) {
+    const gap = Math.abs(f.timestampSeconds - time);
+    if (gap < bestGap) {
+      best = f;
+      bestGap = gap;
+    }
+  }
+  return best && bestGap <= maxGap ? best : null;
+}
+
 export type GalleryMode = 'pratinjau' | 'koreksi';
 
 /** Status tinjau yang dianggap "benar": dikonfirmasi supervisor, atau dikoreksi (kelas/severity/kondisi) lalu dipertahankan. */

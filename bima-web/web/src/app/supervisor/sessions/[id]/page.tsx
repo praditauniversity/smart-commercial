@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, Loader2, MapPin, Video } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import FrameGallery from '@/components/FrameGallery';
+import VideoWithBoxes from '@/components/VideoWithBoxes';
 import { ClipEvaluationBadge, NarrativePanel } from '@/components/ClipEvaluation';
 import { ComplianceBadge, ConditionBadge, RiskBadge } from '@/components/RiskBadge';
 import CorrectionsLog from '@/components/CorrectionsLog';
@@ -37,7 +38,7 @@ export default function SupervisorSessionPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [logKey, setLogKey] = useState(0);
-  const [playing, setPlaying] = useState<string | null>(null);
+  const [playing, setPlaying] = useState<{ id: string; boxes: boolean } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -138,10 +139,27 @@ export default function SupervisorSessionPage() {
                   )}
                   {m.fileType === 'video' && (
                     <div>
-                      <button type="button" onClick={() => setPlaying(playing === m.id ? null : m.id)} className="text-xs font-medium text-zinc-900 underline-offset-2 hover:underline">
-                        {playing === m.id ? 'Sembunyikan video' : 'Putar video (versi 720p, hanya untuk tampilan)'}
-                      </button>
-                      {playing === m.id && <video src={m.fileUrl} controls preload="metadata" className="mt-2 w-full rounded-lg bg-black" />}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {([[false, 'Putar video 720p (tanpa kotak)'], [true, 'Putar video dengan bounding box']] as const).map(([boxes, label]) => {
+                          const active = playing?.id === m.id && playing.boxes === boxes;
+                          const disabled = boxes && (m.frames.length === 0 || dets.length === 0);
+                          return (
+                            <button
+                              key={String(boxes)} type="button" disabled={disabled} aria-pressed={active}
+                              title={disabled ? 'Belum ada frame deteksi untuk video ini.' : undefined}
+                              onClick={() => setPlaying(active ? null : { id: m.id, boxes })}
+                              className={`rounded-md border px-2.5 py-1 text-xs font-medium shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${active ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50'}`}
+                            >
+                              {active ? 'Sembunyikan video' : label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {playing?.id === m.id && (
+                        playing.boxes
+                          ? <VideoWithBoxes key="boxes" src={m.fileUrl} frames={m.frames} detections={dets} selectedIds={selectedIds.filter((sid) => dets.some((d) => d.id === sid))} />
+                          : <video key="plain" src={m.fileUrl} controls preload="metadata" className="mt-2 w-full rounded-lg bg-black" />
+                      )}
                     </div>
                   )}
                   {m.fileType === 'video' ? <NarrativePanel clip={m.evaluatedClip} note={m.clipMatchNote} /> : <p className="text-[11px] text-zinc-500">Deskripsi naratif hanya tersedia untuk video.</p>}
