@@ -4,7 +4,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { formatTimestamp, parseBBox, reviewLabel, visibleBoxes, type DetectionView, type FrameView, type GalleryMode } from '@/lib/media-view';
 import { BAND_LABEL, CONDITION_MODEL_LABEL, GROUP_LABEL } from '@/lib/risk';
-import { BAND_STYLE, COMPLIANCE_STYLE, ComplianceBadge, ConditionBadge, RiskBadge } from './RiskBadge';
+import { classColor, readableTextColor } from '@/lib/class-colors';
+import { BAND_STYLE, ComplianceBadge, ConditionBadge, RiskBadge } from './RiskBadge';
 
 export type BulkKind = 'dikonfirmasi' | 'keliru';
 
@@ -33,11 +34,11 @@ interface FrameGalleryProps {
 
 type GroupFilter = 'semua' | 'keselamatan_infrastruktur' | 'monitoring_kepatuhan';
 
-function boxStyle(d: DetectionView): string {
-  if (d.reviewStatus === 'keliru') return 'border-slate-400 border-dashed opacity-60';
-  if (d.classDefinition?.categoryGroup === 'monitoring_kepatuhan') return COMPLIANCE_STYLE.box;
-  if (d.conditionLabel === 'normal') return 'border-emerald-600 border-dashed';
-  return d.priorityBand ? BAND_STYLE[d.priorityBand].box : 'border-sky-500';
+/** Gaya garis kotak: warna mengikuti kelas objek; putus-putus untuk temuan keliru dan rambu normal. */
+function boxClass(d: DetectionView): string {
+  if (d.reviewStatus === 'keliru') return 'border-dashed opacity-60';
+  if (d.conditionLabel === 'normal') return 'border-dashed';
+  return '';
 }
 
 /**
@@ -58,6 +59,8 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
   );
   const [showBoxes, setShowBoxes] = useState(true);
   const [minConf, setMinConf] = useState(initialMinConfidence);
+  // Setelah slider confidence digeser, semua kotak yang lolos filter ditampilkan (bukan hanya default per status tinjau).
+  const [sliderTouched, setSliderTouched] = useState(false);
   const [group, setGroup] = useState<GroupFilter>('semua');
   const [innerSelected, setInnerSelected] = useState<string[]>([]);
   const [bulkReason, setBulkReason] = useState('');
@@ -90,7 +93,12 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
   const frame = frames[Math.min(index, Math.max(0, frames.length - 1))];
   const current = frame ? byFrame.get(frame.frameIndex) ?? [] : [];
   const mediaHasReview = useMemo(() => detections.some((d) => d.reviewStatus !== 'belum_ditinjau'), [detections]);
-  const drawn = visibleBoxes(current, { mode, selectedIds, mediaHasReview });
+  const legendClasses = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const d of detections) if (!m.has(d.className)) m.set(d.className, d.classDefinition?.displayName ?? d.className);
+    return Array.from(m, ([name, label]) => ({ name, label }));
+  }, [detections]);
+  const drawn = visibleBoxes(current, { mode, selectedIds, mediaHasReview, showAll: sliderTouched });
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -122,7 +130,7 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
           Confidence ≥ <span className="w-10 font-mono">{minConf.toFixed(2)}</span>
           <input
             type="range" min={0} max={0.95} step={0.05} value={minConf}
-            onChange={(e) => setMinConf(parseFloat(e.target.value))}
+            onChange={(e) => { setMinConf(parseFloat(e.target.value)); setSliderTouched(true); }}
             aria-label="Ambang confidence tampilan" className="w-32 accent-blue-600"
           />
         </label>
@@ -134,6 +142,14 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
           <option value="keselamatan_infrastruktur">{GROUP_LABEL.keselamatan_infrastruktur}</option>
           <option value="monitoring_kepatuhan">{GROUP_LABEL.monitoring_kepatuhan}</option>
         </select>
+        {sliderTouched && (
+          <button
+            type="button" onClick={() => { setMinConf(initialMinConfidence); setSliderTouched(false); }}
+            className="rounded-md border border-slate-300 bg-white px-2 py-1 font-semibold text-slate-700 hover:bg-slate-100"
+          >
+            Tampilan awal
+          </button>
+        )}
         <button
           type="button" onClick={() => setShowBoxes((v) => !v)}
           className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 font-semibold text-slate-700 hover:bg-slate-100"
@@ -159,10 +175,10 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
               <button
                 key={d.id} type="button" onClick={() => pickOnly(d.id)}
                 aria-label={`${d.classDefinition?.displayName ?? d.className}, confidence ${d.confidence?.toFixed(2) ?? '-'}`}
-                className={`absolute border-2 ${boxStyle(d)} ${selected ? 'ring-2 ring-white' : ''}`}
-                style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.width * 100}%`, height: `${b.height * 100}%` }}
+                className={`absolute border-2 ${boxClass(d)} ${selected ? 'ring-2 ring-white' : ''}`}
+                style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.width * 100}%`, height: `${b.height * 100}%`, borderColor: classColor(d.className), backgroundColor: `${classColor(d.className)}1f` }}
               >
-                <span className="absolute -top-5 left-0 whitespace-nowrap rounded bg-black/70 px-1 text-[10px] font-semibold text-white">
+                <span className="absolute -top-5 left-0 whitespace-nowrap rounded px-1 text-[10px] font-semibold" style={{ backgroundColor: classColor(d.className), color: readableTextColor(classColor(d.className)) }}>
                   {d.classDefinition?.displayName ?? d.className} {d.confidence !== null ? d.confidence.toFixed(2) : ''}
                 </span>
               </button>
@@ -195,6 +211,15 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
         })}
       </ul>
 
+      <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600" aria-label="Warna kotak per kelas">
+        {legendClasses.map((c) => (
+          <li key={c.name} className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: classColor(c.name) }} />
+            {c.label}
+          </li>
+        ))}
+      </ul>
+
       </div>
 
       {!hidePanel && <section className="flex min-w-0 flex-col rounded-lg border border-slate-200 bg-white lg:max-h-[34rem]" aria-label="Temuan pada frame ini">
@@ -224,6 +249,7 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
                     <input type="checkbox" className="mt-0.5" checked={chosen} onChange={() => toggle(d.id)} aria-label={`Pilih ${d.classDefinition?.displayName ?? d.className}`} />
                   )}
                   <button type="button" onClick={() => pickOnly(d.id)} className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-left">
+                    <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: classColor(d.className) }} aria-hidden />
                     <span className="font-semibold text-slate-900">{d.classDefinition?.displayName ?? d.className}</span>
                     <span className="font-mono text-slate-500">conf {d.confidence?.toFixed(2) ?? '-'}</span>
                     {d.classDefinition?.categoryGroup === 'monitoring_kepatuhan' ? (
@@ -261,7 +287,7 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
       </div>
 
       <p className="text-[11px] text-slate-500">
-        Pita: {Object.values(BAND_LABEL).join(' · ')}. {mode === 'pratinjau' ? 'Kotak yang tampil: temuan yang sudah dikonfirmasi benar; pilih temuan di panel untuk melihat kotaknya saja. ' : 'Pilih temuan di panel untuk menampilkan kotaknya saja. '}Garis putus-putus abu-abu = Monitoring Kepatuhan (tanpa skor) atau temuan keliru; hijau putus-putus = rambu normal (tanpa skor).
+        Warna kotak menunjukkan kelas objek; tingkat risiko ({Object.values(BAND_LABEL).join(' · ')}) tampil pada lencana. {mode === 'pratinjau' ? 'Kotak awal: temuan yang sudah dikonfirmasi benar; menggeser slider confidence menampilkan semua kotak. ' : 'Menggeser slider confidence menampilkan semua kotak. '}Pilih temuan untuk menampilkan kotaknya saja. Garis putus-putus = temuan keliru atau rambu normal (tanpa skor).
       </p>
       {detections.some((d) => d.classDefinition?.hasConditionStage && d.conditionLabel) && (
         <p className="text-[11px] text-slate-500">Kondisi rambu (normal/rusak): {CONDITION_MODEL_LABEL}. Subtipe kerusakan ditetapkan supervisor.</p>

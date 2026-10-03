@@ -36,3 +36,10 @@ test('label status tinjau', () => {
   assert.equal(reviewLabel('dikoreksi').tone, 'benar');
   assert.equal(reviewLabel('keliru').tone, 'keliru');
 });
+
+test('showAll (slider digeser): semua kotak tampil, tetapi pilihan tetap menang', () => {
+  for (const mode of ['pratinjau', 'koreksi'] as const) {
+    assert.deepEqual(visibleBoxes(dets, { mode, selectedIds: [], mediaHasReview: true, showAll: true }).map((d) => d.id), ['a', 'b', 'c', 'd']);
+    assert.deepEqual(visibleBoxes(dets, { mode, selectedIds: ['c'], mediaHasReview: true, showAll: true }).map((d) => d.id), ['c']);
+  }
+});

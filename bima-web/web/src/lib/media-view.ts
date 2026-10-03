@@ -89,15 +89,17 @@ export function isAcceptedFinding(status: string): boolean {
 /**
  * Kotak yang digambar pada satu frame, agar kotak tidak bertumpuk:
  * - ada pilihan: hanya kotak yang dipilih (temuan keliru atau lainnya baru tampil saat dipilih di panel);
+ * - showAll (slider confidence digeser): semua kotak yang lolos filter, termasuk temuan keliru;
  * - pratinjau (hanya baca): hanya temuan yang sudah dikonfirmasi benar. Bila media belum pernah ditinjau sama sekali,
  *   semua kecuali keliru ditampilkan (kalau tidak, hasil AI tidak akan terlihat);
  * - koreksi: semua kecuali keliru (yang belum ditinjau tetap terlihat agar bisa dikoreksi).
  */
 export function visibleBoxes<T extends { id: string; reviewStatus: string }>(
   frameDetections: T[],
-  opts: { mode: GalleryMode; selectedIds: readonly string[]; mediaHasReview: boolean }
+  opts: { mode: GalleryMode; selectedIds: readonly string[]; mediaHasReview: boolean; /** Pengguna menggeser ambang confidence: tampilkan semua kotak yang lolos filter. */ showAll?: boolean }
 ): T[] {
   if (opts.selectedIds.length > 0) return frameDetections.filter((d) => opts.selectedIds.includes(d.id));
+  if (opts.showAll) return frameDetections;
   if (opts.mode === 'pratinjau' && opts.mediaHasReview) return frameDetections.filter((d) => isAcceptedFinding(d.reviewStatus));
   return frameDetections.filter((d) => d.reviewStatus !== 'keliru');
 }
