@@ -74,20 +74,20 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+      <nav className="bg-white border-b border-zinc-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-14 sm:h-16 items-center">
             {/* Brand Logo & Desktop Links */}
-            <div className="flex items-center gap-4 lg:gap-6">
-              <Link href="/" className="flex items-center gap-2 group shrink-0">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform shrink-0">
-                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="flex items-center gap-4 lg:gap-8">
+              <Link href="/" className="flex items-center gap-2.5 group shrink-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-brand-green flex items-center justify-center text-white shadow-xs shrink-0">
+                  <MapPin className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
                 </div>
                 <div>
-                  <span className="text-base sm:text-lg font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent leading-tight block">
+                  <span className="text-base sm:text-lg font-semibold tracking-tight text-zinc-900 leading-tight block">
                     BIMA Vision
                   </span>
-                  <span className="hidden xl:block text-[10px] text-slate-400 font-medium tracking-wide uppercase">
+                  <span className="hidden xl:block text-[10px] text-zinc-500 font-medium tracking-wide uppercase">
                     Pemantauan Kawasan AI
                   </span>
                 </div>
@@ -95,20 +95,21 @@ export default function Navbar() {
 
               {/* Desktop Nav links (Visible on md and above) */}
               {user && (
-                <div className={`hidden items-center gap-0.5 ${navLinksFor(user.role).length > 5 ? '2xl:flex' : 'md:flex'}`}>
+                <div className={`hidden items-center gap-1 ${navLinksFor(user.role).length > 5 ? '2xl:flex' : 'md:flex'}`}>
                   {navLinksFor(user.role).map((l) => {
                     const Icon = ICONS[l.icon];
+                    const active = isLinkActive(l, pathname);
                     return (
                       <Link
                         key={l.href}
                         href={l.href}
-                        className={`flex items-center gap-1.5 whitespace-nowrap px-2.5 py-2 rounded-lg text-[13px] font-semibold transition-colors ${
-                          isLinkActive(l, pathname)
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        className={`flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-md text-[13px] transition-colors ${
+                          active
+                            ? 'bg-zinc-100 text-zinc-900 font-semibold'
+                            : 'text-zinc-500 font-medium hover:bg-zinc-50 hover:text-zinc-900'
                         }`}
                       >
-                        <Icon className="w-4 h-4" />
+                        <Icon className={`w-4 h-4 ${active ? 'text-brand-green' : ''}`} />
                         {l.label}
                       </Link>
                     );
@@ -120,23 +121,23 @@ export default function Navbar() {
             {/* User Profile & Actions */}
             <div className="flex items-center gap-2 sm:gap-3">
               {loading ? (
-                <div className="w-16 sm:w-24 h-8 bg-slate-100 rounded-lg animate-pulse" />
+                <div className="w-16 sm:w-24 h-8 bg-zinc-100 rounded-md animate-pulse" />
               ) : user ? (
-                <div className="flex items-center gap-1.5 sm:gap-2.5">
+                <div className="flex items-center gap-2 sm:gap-3">
                   {/* User badge */}
-                  <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-slate-50 border border-slate-200">
-                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
+                  <div className="flex items-center gap-2 sm:gap-2.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md bg-white border border-zinc-200">
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center font-semibold text-xs shrink-0">
                       {user.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="hidden sm:block text-left">
-                      <span className="block text-xs font-semibold text-slate-800 leading-tight truncate max-w-[120px]">
+                      <span className="block text-xs font-semibold text-zinc-900 leading-tight truncate max-w-[120px]">
                         {user.name}
                       </span>
-                      <span className="flex items-center gap-1 text-[10px] text-slate-500 capitalize">
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-500 capitalize">
                         {user.role === 'admin' ? (
-                          <Shield className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
+                          <Shield className="w-2.5 h-2.5 text-brand-green shrink-0" />
                         ) : (
-                          <UserIcon className="w-2.5 h-2.5 text-blue-500 shrink-0" />
+                          <UserIcon className="w-2.5 h-2.5 text-brand-green shrink-0" />
                         )}
                         {user.role}
                       </span>
@@ -147,7 +148,7 @@ export default function Navbar() {
                   <button
                     onClick={handleLogout}
                     title="Keluar / Logout"
-                    className="p-1.5 sm:p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition-colors cursor-pointer"
+                    className="p-1.5 sm:p-2 rounded-md text-zinc-500 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition-colors cursor-pointer"
                   >
                     <LogOut className="w-4 h-4" />
                   </button>
@@ -155,7 +156,7 @@ export default function Navbar() {
               ) : (
                 <Link
                   href="/login"
-                  className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs sm:text-sm transition-colors shadow-xs"
+                  className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-md bg-brand-green hover:bg-brand-green/90 text-white font-medium text-xs sm:text-sm transition-colors shadow-xs"
                 >
                   Masuk
                 </Link>
@@ -166,18 +167,18 @@ export default function Navbar() {
 
         {/* ALWAYS-VISIBLE Mobile Horizontal Scrolling Navigation Bar (Screens < md) */}
         {user && (
-          <div className={`${navLinksFor(user.role).length > 5 ? '2xl:hidden' : 'md:hidden'} border-t border-slate-200 bg-slate-50 px-2 py-2 overflow-x-auto no-scrollbar shadow-inner`}>
-            <div className="flex items-center gap-1.5 min-w-max px-1">
+          <div className={`${navLinksFor(user.role).length > 5 ? '2xl:hidden' : 'md:hidden'} border-t border-zinc-200 bg-white px-3 py-2.5 overflow-x-auto no-scrollbar`}>
+            <div className="flex items-center gap-2 min-w-max">
               {navLinksFor(user.role).map((l) => {
                 const Icon = ICONS[l.icon];
                 return (
                   <Link
                     key={l.href}
                     href={l.href}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs whitespace-nowrap transition-all active:scale-95 ${
                       isLinkActive(l, pathname)
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                        ? 'bg-brand-green text-white font-semibold'
+                        : 'bg-white text-zinc-500 font-medium border border-zinc-200 hover:bg-zinc-50 hover:text-zinc-900'
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5 shrink-0" />
@@ -192,15 +193,15 @@ export default function Navbar() {
 
       {/* FIXED MOBILE BOTTOM APP BAR (Screens < md) for 1-Tap Navigation */}
       {user && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg px-2 py-1.5 flex justify-around items-center">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-zinc-200 px-2 py-2 flex justify-around items-center">
           {navLinksFor(user.role).filter((l) => l.short).map((l) => {
             const Icon = ICONS[l.icon];
             return (
               <Link
                 key={l.href}
                 href={l.href}
-                className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl text-[10px] font-semibold transition-all ${
-                  isLinkActive(l, pathname) ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+                className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-md text-[10px] transition-all ${
+                  isLinkActive(l, pathname) ? 'text-brand-green font-semibold' : 'text-zinc-500 font-medium hover:text-zinc-900'
                 }`}
               >
                 <Icon className="w-5 h-5" />
