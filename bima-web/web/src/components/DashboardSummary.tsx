@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowRight, ClipboardCheck, ImageOff, Layers, Loader2, MapPin, ShieldAlert, X } from 'lucide-react';
 import type { Overview, SessionSummary } from '@/lib/overview';
 import type { FindingTile } from '@/lib/dashboard-findings';
-import { BAND_LABEL, GROUP_LABEL, type PriorityBand } from '@/lib/risk';
+import { BAND_LABEL, GROUP_LABEL, type CategoryGroup, type PriorityBand } from '@/lib/risk';
 import { classColor } from '@/lib/class-colors';
 import { BAND_STYLE, RiskBadge } from './RiskBadge';
 
@@ -40,9 +40,9 @@ function Kpi({ label, value, hint, icon, tone }: { label: string; value: React.R
   );
 }
 
-function Panel({ title, hint, children, aside }: { title: string; hint?: string; children: React.ReactNode; aside?: React.ReactNode }) {
+function Panel({ title, hint, children, aside, fill }: { title: string; hint?: string; children: React.ReactNode; aside?: React.ReactNode; fill?: boolean }) {
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <section className={`rounded-xl border border-zinc-200 bg-white p-5 shadow-sm ${fill ? 'flex h-full flex-col' : ''}`}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="text-base font-semibold tracking-tight text-zinc-900">{title}</h2>
@@ -100,6 +100,7 @@ export default function DashboardSummary({ sessionHref, workflow, allSessionsHre
   const [data, setData] = useState<Overview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [band, setBand] = useState<PriorityBand | ''>('');
+  const [group, setGroup] = useState<CategoryGroup>('keselamatan_infrastruktur');
   const [className, setClassName] = useState('');
   const [tiles, setTiles] = useState<FindingTile[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -144,6 +145,18 @@ export default function DashboardSummary({ sessionHref, workflow, allSessionsHre
   const topSessions = data.sessions.filter((s) => s.worstBand).slice(0, 5);
   const items = workflow?.(data.sessions, data.totals) ?? [];
   const activeClass = data.byClass.find((c) => c.className === className);
+  const complianceClasses = data.byClass.filter((c) => c.group === 'monitoring_kepatuhan');
+  const complianceMax = Math.max(1, ...complianceClasses.map((c) => c.count));
+  const complianceTotal = complianceClasses.reduce((n, c) => n + c.count, 0);
+  const infraTotal = BANDS.reduce((n, b) => n + data.bands[b], 0) + data.bands.belumDinilai;
+
+  // Filter band hanya berlaku untuk Keselamatan Infrastruktur; filter kelas dibersihkan bila kelasnya milik kelompok lain.
+  const selectGroup = (g: CategoryGroup) => {
+    if (g === group) return;
+    setGroup(g);
+    if (g === 'monitoring_kepatuhan') setBand('');
+    else if (activeClass?.group === 'monitoring_kepatuhan') setClassName('');
+  };
 
   return (
     <div className="space-y-5">
@@ -174,27 +187,61 @@ export default function DashboardSummary({ sessionHref, workflow, allSessionsHre
 
       <div className="grid gap-4 lg:grid-cols-5">
         <div className="lg:col-span-2">
-          <Panel title="Sebaran prioritas" hint={`${GROUP_LABEL.keselamatan_infrastruktur}. Klik baris untuk memfilter gambar temuan.`}>
-            <ul className="space-y-1">
-              {BANDS.map((b) => (
-                <li key={b}>
-                  <button type="button" onClick={() => setBand(band === b ? '' : b)} disabled={data.bands[b] === 0} aria-pressed={band === b}
-                    className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs transition-colors enabled:hover:bg-zinc-50 disabled:opacity-50 ${band === b ? 'bg-brand-green/5 ring-1 ring-brand-green/40' : ''}`}>
-                    <span className="w-16 shrink-0 font-medium text-zinc-900">{BAND_LABEL[b]}</span>
-                    <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-zinc-100"><span className={`block h-full rounded-full ${BAND_STYLE[b].dot}`} style={{ width: `${(data.bands[b] / bandMax) * 100}%` }} /></span>
-                    <b className="w-8 shrink-0 text-right font-mono font-semibold text-zinc-900">{data.bands[b]}</b>
-                  </button>
-                </li>
+          <Panel title="Sebaran prioritas" hint="Pilih kelompok, lalu klik baris untuk memfilter gambar temuan." fill>
+            <div role="tablist" aria-label="Kelompok prioritas" className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-zinc-100 p-1">
+              {([['keselamatan_infrastruktur', infraTotal], ['monitoring_kepatuhan', complianceTotal]] as const).map(([g, n]) => (
+                <button key={g} type="button" role="tab" aria-selected={group === g} onClick={() => selectGroup(g)}
+                  className={`flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition-colors ${group === g ? 'bg-white font-semibold text-zinc-900 shadow-sm' : 'font-medium text-zinc-500 hover:text-zinc-900'}`}>
+                  <span className="truncate">{GROUP_LABEL[g]}</span>
+                  <span className="shrink-0 font-mono text-[10px] text-zinc-500">{n}</span>
+                </button>
               ))}
-            </ul>
-            <p className="mt-3 border-t border-zinc-100 pt-3 text-xs text-zinc-500">
-              Skor = Severity × Exposure (1, 2, 3, 4, 6, 9). {data.bands.belumDinilai > 0 && <>Belum dinilai: <b className="font-mono">{data.bands.belumDinilai}</b>. </>}
-              {data.totals.normalSigns > 0 && <>Rambu normal: <b className="font-mono">{data.totals.normalSigns}</b> (tanpa skor).</>}
-            </p>
+            </div>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <div className="flex h-full transition-transform duration-300 ease-out motion-reduce:transition-none" style={{ transform: `translateX(${group === 'monitoring_kepatuhan' ? '-100%' : '0'})` }}>
+                <div role="tabpanel" aria-hidden={group !== 'keselamatan_infrastruktur'} inert={group !== 'keselamatan_infrastruktur'} className="w-full shrink-0 px-0.5">
+                  <ul className="space-y-1">
+                    {BANDS.map((b) => (
+                      <li key={b}>
+                        <button type="button" onClick={() => setBand(band === b ? '' : b)} disabled={data.bands[b] === 0} aria-pressed={band === b}
+                          className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs transition-colors enabled:hover:bg-zinc-50 disabled:opacity-50 ${band === b ? 'bg-brand-green/5 ring-1 ring-brand-green/40' : ''}`}>
+                          <span className="w-16 shrink-0 font-medium text-zinc-900">{BAND_LABEL[b]}</span>
+                          <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-zinc-100"><span className={`block h-full rounded-full ${BAND_STYLE[b].dot}`} style={{ width: `${(data.bands[b] / bandMax) * 100}%` }} /></span>
+                          <b className="w-8 shrink-0 text-right font-mono font-semibold text-zinc-900">{data.bands[b]}</b>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-3 border-t border-zinc-100 pt-3 text-xs text-zinc-500">
+                    Skor = Severity × Exposure (1, 2, 3, 4, 6, 9). {data.bands.belumDinilai > 0 && <>Belum dinilai: <b className="font-mono">{data.bands.belumDinilai}</b>. </>}
+                    {data.totals.normalSigns > 0 && <>Rambu normal: <b className="font-mono">{data.totals.normalSigns}</b> (tanpa skor).</>}
+                  </p>
+                </div>
+                <div role="tabpanel" aria-hidden={group !== 'monitoring_kepatuhan'} inert={group !== 'monitoring_kepatuhan'} className="w-full shrink-0 px-0.5">
+                  {complianceClasses.length === 0 ? <p className="py-4 text-sm text-zinc-500">Belum ada temuan Monitoring Kepatuhan.</p> : (
+                    <ul className="max-h-48 space-y-1 overflow-y-auto">
+                      {complianceClasses.map((c) => (
+                        <li key={c.className}>
+                          <button type="button" onClick={() => setClassName(className === c.className ? '' : c.className)} aria-pressed={className === c.className}
+                            className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs transition-colors hover:bg-zinc-50 ${className === c.className ? 'bg-brand-green/5 ring-1 ring-brand-green/40' : ''}`}>
+                            <span className="w-24 shrink-0 truncate font-medium text-zinc-900" title={c.displayName}>{c.displayName}</span>
+                            <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-zinc-100"><span className="block h-full rounded-full" style={{ width: `${(c.count / complianceMax) * 100}%`, backgroundColor: classColor(c.className) }} /></span>
+                            <b className="w-8 shrink-0 text-right font-mono font-semibold text-zinc-900">{c.count}</b>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="mt-3 border-t border-zinc-100 pt-3 text-xs text-zinc-500">
+                    Kelompok ini tidak ikut skor Severity × Exposure, jadi tidak punya pita prioritas.
+                  </p>
+                </div>
+              </div>
+            </div>
           </Panel>
         </div>
         <div className="lg:col-span-3">
-          <Panel title="Temuan per kelas" hint="Warna kelas sama dengan kotak pada gambar. Klik batang untuk memfilter.">
+          <Panel title="Temuan per kelas" hint="Warna kelas sama dengan kotak pada gambar. Klik batang untuk memfilter." fill>
             {data.byClass.length === 0 ? <p className="py-4 text-sm text-zinc-500">Belum ada temuan.</p> : (
               <ul className="max-h-64 divide-y divide-zinc-100 overflow-y-auto pr-1">
                 {data.byClass.map((c) => (
