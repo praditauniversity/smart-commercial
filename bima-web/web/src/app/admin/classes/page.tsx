@@ -218,26 +218,26 @@ export default function AdminClassesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-24 sm:pb-16">
+    <div className="min-h-screen bg-dashboard-bg flex flex-col pb-24 sm:pb-16">
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2.5">
-              <Layers className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 shrink-0" />
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-900 flex items-center gap-2.5">
+              <Layers className="w-6 h-6 sm:w-7 sm:h-7 text-brand-green shrink-0" />
               {isYolo ? 'Manajemen Kelas Deteksi Objek' : 'Manajemen Kelas Deteksi Objek (Prompt Engineering)'}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            <p className="text-xs sm:text-sm text-zinc-500 mt-1">
               {isYolo
                 ? 'Kelas ditentukan oleh model YOLO yang sudah dilatih, tanpa prompt. Di sini admin mengatur nama tampilan dan status aktif kelas; kategori, kelompok, dan Severity ada di Data Master Risiko. Menambah kelas baru memerlukan pelatihan ulang model. Deskripsi naratif video (video-to-text) juga tidak diatur lewat halaman ini.'
                 : 'Atur kelas pemantauan tanpa retraining model AI. Setiap perubahan disimpan dengan version snapshot.'}
             </p>
             {engine && (
-              <p className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+              <p className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-zinc-100 text-zinc-700 border border-zinc-200">
                 {isYolo ? 'Mode: YOLO (detektor terlatih)' : `Mode prompt: ${isSam ? 'SAM3 Lokal (SAM Prompt)' : 'VLM (Deskripsi Visual)'}`}
-                {activeModelName && <span className="text-blue-500 font-normal">· model aktif: {activeModelName}</span>}
+                {activeModelName && <span className="text-zinc-500 font-normal">· model aktif: {activeModelName}</span>}
               </p>
             )}
           </div>
@@ -245,7 +245,7 @@ export default function AdminClassesPage() {
           {!isYolo && <button
             type="button"
             onClick={openCreateModal}
-            className="w-full sm:w-auto px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer"
+            className="w-full sm:w-auto px-4 py-2.5 bg-brand-green hover:bg-brand-green/90 active:scale-95 text-white font-medium text-xs rounded-md shadow-sm flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Tambah Kelas Baru
@@ -253,8 +253,8 @@ export default function AdminClassesPage() {
         </div>
 
         {alertMsg && (
-          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <div className="p-3 bg-brand-green/10 border border-brand-green/20 text-brand-green text-xs rounded-md flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-brand-green shrink-0" />
             <span>{alertMsg.message}</span>
           </div>
         )}
@@ -263,43 +263,43 @@ export default function AdminClassesPage() {
         {loading || engine === null ? (
           <TableSkeleton rows={5} cols={5} />
         ) : (
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+          <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
             <div className="max-h-[32rem] overflow-auto">
-              <table className="w-full text-left text-xs text-slate-600 min-w-[640px]">
-                <thead className="sticky top-0 z-10 bg-slate-50 text-slate-700 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
+              <table className="w-full text-left text-sm text-zinc-500 min-w-[640px]">
+                <thead className="sticky top-0 z-10 bg-white text-zinc-500 font-medium text-sm border-b border-zinc-200">
                   <tr>
-                    <th className="py-3.5 px-4">Nama Kelas</th>
+                    <th className="py-3 px-4">Nama Kelas</th>
                     {isYolo ? (
                       <>
-                        <th className="py-3.5 px-4">Kelas keluaran model</th>
-                        <th className="py-3.5 px-4">Kategori</th>
+                        <th className="py-3 px-4">Kelas keluaran model</th>
+                        <th className="py-3 px-4">Kategori</th>
                       </>
                     ) : (
                       <>
-                        <th className="py-3.5 px-4">{isSam ? 'SAM Prompt' : 'Deskripsi Visual AI'}</th>
-                        {!isSam && <th className="py-3.5 px-4">Kriteria Kelayakan</th>}
+                        <th className="py-3 px-4">{isSam ? 'SAM Prompt' : 'Deskripsi Visual AI'}</th>
+                        {!isSam && <th className="py-3 px-4">Kriteria Kelayakan</th>}
                       </>
                     )}
-                    <th className="py-3.5 px-4">Versi & Temuan</th>
-                    <th className="py-3.5 px-4">Status</th>
-                    <th className="py-3.5 px-4 text-right">Aksi</th>
+                    <th className="py-3 px-4">Versi & Temuan</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-zinc-100">
                   {visibleClasses.map((cls) => (
-                    <tr key={cls.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={cls.id} className="hover:bg-zinc-50 transition-colors">
                       <td className="py-4 px-4">
-                        <div className="font-bold text-slate-900 text-sm">{cls.displayName}</div>
-                        <div className="text-[11px] text-slate-400 font-mono">id: {cls.name}</div>
+                        <div className="font-medium text-zinc-900 text-sm">{cls.displayName}</div>
+                        <div className="text-[11px] text-zinc-500 font-mono">id: {cls.name}</div>
                       </td>
                       {isYolo ? (
                         <>
-                          <td className="py-4 px-4 font-mono text-[11px] text-slate-700">{cls.modelClass || <span className="font-sans text-slate-400">tidak dipakai YOLO</span>}</td>
-                          <td className="py-4 px-4 text-slate-700">{cls.category || '-'}</td>
+                          <td className="py-4 px-4 font-mono text-[11px] text-zinc-900">{cls.modelClass || <span className="font-sans text-zinc-500">tidak dipakai YOLO</span>}</td>
+                          <td className="py-4 px-4 text-zinc-900">{cls.category || '-'}</td>
                         </>
                       ) : isSam ? (
                         <td className="py-4 px-4 max-w-xs">
-                          <p className="flex items-start gap-1.5 text-slate-700">
+                          <p className="flex items-start gap-1.5 text-zinc-900">
                             <span
                               className="inline-block w-2.5 h-2.5 rounded-full shrink-0 mt-1"
                               style={{ backgroundColor: cls.samColor || '#ef4444' }}
@@ -307,7 +307,7 @@ export default function AdminClassesPage() {
                             {cls.samPrompt?.trim() ? (
                               <span className="line-clamp-2">{cls.samPrompt}</span>
                             ) : (
-                              <span className="text-amber-600 font-semibold">
+                              <span className="text-amber-600 font-medium">
                                 Belum diisi (dilewati SAM3)
                               </span>
                             )}
@@ -316,26 +316,26 @@ export default function AdminClassesPage() {
                       ) : (
                         <>
                           <td className="py-4 px-4 max-w-xs">
-                            <p className="line-clamp-2 text-slate-700">{cls.visualDescription}</p>
+                            <p className="line-clamp-2 text-zinc-900">{cls.visualDescription}</p>
                           </td>
                           <td className="py-4 px-4 max-w-xs">
-                            <p className="line-clamp-2 text-slate-600">{cls.feasibilityCriteria}</p>
+                            <p className="line-clamp-2 text-zinc-500">{cls.feasibilityCriteria}</p>
                           </td>
                         </>
                       )}
                       <td className="py-4 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1 font-semibold text-slate-800">
-                          <History className="w-3.5 h-3.5 text-blue-500" />
+                        <div className="flex items-center gap-1 font-medium text-zinc-900">
+                          <History className="w-3.5 h-3.5 text-zinc-500" />
                           Versi {cls.versions?.length || 1}
                         </div>
-                        <div className="text-[11px] text-slate-400">
+                        <div className="text-[11px] text-zinc-500">
                           {cls._count?.detections || 0} data deteksi
                         </div>
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap">
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            cls.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                          className={`px-2.5 py-0.5 rounded-md border text-[11px] font-medium ${
+                            cls.isActive ? 'bg-brand-green/10 text-brand-green border-brand-green/20' : 'bg-zinc-100 text-zinc-500 border-zinc-200'
                           }`}
                         >
                           {cls.isActive ? 'Aktif' : 'Nonaktif'}
@@ -345,14 +345,14 @@ export default function AdminClassesPage() {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => openEditModal(cls)}
-                            className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors cursor-pointer"
                             title="Edit kelas"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteClass(cls.id)}
-                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
                             title="Hapus / Nonaktifkan"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -373,21 +373,21 @@ export default function AdminClassesPage() {
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <form
             onSubmit={handleSaveClass}
-            className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+            className="bg-white border border-zinc-200 rounded-xl shadow-xl max-w-lg w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto"
           >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-                <Layers className="w-5 h-5 text-blue-600 shrink-0" />
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+              <h3 className="font-semibold text-zinc-900 text-base flex items-center gap-2">
+                <Layers className="w-5 h-5 text-brand-green shrink-0" />
                 {editingClass ? 'Edit Konfigurasi Kelas' : 'Tambah Kelas Deteksi Baru'}
               </h3>
-              <button type="button" onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+              <button type="button" onClick={() => setModalOpen(false)} className="text-zinc-500 hover:text-zinc-900 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-medium text-zinc-900 mb-1">
                   Nama Label Tampilan <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -396,13 +396,13 @@ export default function AdminClassesPage() {
                   placeholder="Contoh: Rambu Jalan Rusak"
                   value={formDisplayName}
                   onChange={(e) => setFormDisplayName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-zinc-200 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-brand-green/40 focus:border-zinc-300 focus:outline-none"
                 />
               </div>
 
               {!editingClass && (
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
+                  <label className="block font-medium text-zinc-900 mb-1">
                     System Identifier Name (Snake_case) <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -411,20 +411,20 @@ export default function AdminClassesPage() {
                     placeholder="Contoh: rambu_jalan_rusak"
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="w-full px-3 py-2 border border-zinc-200 rounded-md text-xs sm:text-sm font-mono focus:ring-2 focus:ring-brand-green/40 focus:border-zinc-300 focus:outline-none"
                   />
                 </div>
               )}
 
               {isYolo ? (
                 editingClass?.modelClass && (
-                  <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600">
-                    Kelas keluaran model: <span className="font-mono font-semibold text-slate-800">{editingClass.modelClass}</span> (tetap; ditentukan oleh weight YOLO).
+                  <p className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-zinc-500">
+                    Kelas keluaran model: <span className="font-mono font-medium text-zinc-900">{editingClass.modelClass}</span> (tetap; ditentukan oleh weight YOLO).
                   </p>
                 )
               ) : isSam ? (
-              <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-xl space-y-2">
-                <label className="block font-semibold text-slate-700">
+              <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-md space-y-2">
+                <label className="block font-medium text-zinc-900">
                   SAM Prompt {!editingClass && <span className="text-rose-500">*</span>}
                 </label>
                 <textarea
@@ -433,25 +433,25 @@ export default function AdminClassesPage() {
                   placeholder='Frasa benda dalam bahasa Inggris, contoh: "pothole on the road, damaged asphalt hole."'
                   value={formSamPrompt}
                   onChange={(e) => setFormSamPrompt(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-zinc-200 rounded-md text-xs sm:text-sm bg-white focus:ring-2 focus:ring-brand-green/40 focus:border-zinc-300 focus:outline-none"
                 />
                 <div className="flex items-center gap-2">
-                  <label className="font-semibold text-slate-700">Warna overlay</label>
+                  <label className="font-medium text-zinc-900">Warna overlay</label>
                   <input
                     type="color"
                     value={formSamColor}
                     onChange={(e) => setFormSamColor(e.target.value)}
-                    className="h-7 w-10 p-0 border border-slate-200 rounded cursor-pointer bg-white"
+                    className="h-7 w-10 p-0 border border-zinc-200 rounded cursor-pointer bg-white"
                   />
                   {editingClass && (
-                    <span className="text-[11px] text-slate-500">Kosongkan prompt agar kelas ini dilewati SAM3.</span>
+                    <span className="text-[11px] text-zinc-500">Kosongkan prompt agar kelas ini dilewati SAM3.</span>
                   )}
                 </div>
               </div>
               ) : (
                 <>
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-medium text-zinc-900 mb-1">
                   Deskripsi Visual untuk AI Prompt <span className="text-rose-500">*</span>
                 </label>
                 <textarea
@@ -460,12 +460,12 @@ export default function AdminClassesPage() {
                   placeholder="Jelaskan karakteristik visual objek yang harus dicari AI..."
                   value={formVisual}
                   onChange={(e) => setFormVisual(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-zinc-200 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-brand-green/40 focus:border-zinc-300 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-medium text-zinc-900 mb-1">
                   Kriteria Kondisi Objek <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -474,12 +474,12 @@ export default function AdminClassesPage() {
                   placeholder="Contoh: Kerusakan fisik tiang atau daun rambu"
                   value={formCondition}
                   onChange={(e) => setFormCondition(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-zinc-200 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-brand-green/40 focus:border-zinc-300 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-medium text-zinc-900 mb-1">
                   Kriteria Tingkat Kelayakan (Kualitatif) <span className="text-rose-500">*</span>
                 </label>
                 <textarea
@@ -487,12 +487,12 @@ export default function AdminClassesPage() {
                   rows={3}
                   value={formFeasibility}
                   onChange={(e) => setFormFeasibility(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-zinc-200 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-brand-green/40 focus:border-zinc-300 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-medium text-zinc-900 mb-1">
                   IoU Conflict Threshold (Default 0.5)
                 </label>
                 <input
@@ -502,25 +502,25 @@ export default function AdminClassesPage() {
                   max="0.9"
                   value={formIou}
                   onChange={(e) => setFormIou(parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-zinc-200 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-brand-green/40 focus:border-zinc-300 focus:outline-none"
                 />
               </div>
                 </>
               )}
             </div>
 
-            <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+            <div className="pt-3 flex justify-end gap-2 border-t border-zinc-100">
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold cursor-pointer"
+                className="px-4 py-2 rounded-md border border-zinc-200 bg-white text-zinc-900 text-xs font-medium shadow-sm hover:bg-zinc-50 cursor-pointer"
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold shadow-md cursor-pointer transition-all disabled:opacity-50"
+                className="px-5 py-2 rounded-md bg-brand-green hover:bg-brand-green/90 active:scale-95 text-white text-xs font-medium shadow-sm cursor-pointer transition-all disabled:opacity-50"
               >
                 {saving ? 'Menyimpan...' : 'Simpan Konfigurasi'}
               </button>
