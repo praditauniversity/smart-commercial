@@ -13,6 +13,8 @@ export interface NavLink {
   match: string[];
   /** true = hanya cocok persis (mis. /surveyor/new tidak boleh ikut mengaktifkan /surveyor/sessions). */
   exact?: boolean;
+  /** true = masuk dropdown "More Menu" di navbar desktop (bar mobile tetap menampilkan semuanya). */
+  more?: boolean;
 }
 
 const LINKS: Record<Role, NavLink[]> = {
@@ -32,14 +34,20 @@ const LINKS: Record<Role, NavLink[]> = {
     { href: '/admin/reviews', label: 'Antrean Review', short: 'Review', icon: 'review', match: ['/admin/reviews'] },
     { href: '/admin/classes', label: 'Kelas Deteksi', short: 'Kelas', icon: 'classes', match: ['/admin/classes'] },
     { href: '/admin/risk-master', label: 'Risiko & Zona', icon: 'risk', match: ['/admin/risk-master'] },
-    { href: '/admin/validasi-ahli', label: 'Validasi Ahli', icon: 'expert', match: ['/admin/validasi-ahli'] },
-    { href: '/admin/models', label: 'Model AI', short: 'Model AI', icon: 'models', match: ['/admin/models'] },
-    { href: '/admin/users', label: 'User', short: 'User', icon: 'users', match: ['/admin/users'] },
+    { href: '/admin/users', label: 'User', short: 'User', icon: 'users', match: ['/admin/users'], more: true },
+    { href: '/admin/models', label: 'Model AI', short: 'Model AI', icon: 'models', match: ['/admin/models'], more: true },
+    { href: '/admin/validasi-ahli', label: 'Validasi Ahli', icon: 'expert', match: ['/admin/validasi-ahli'], more: true },
   ],
 };
 
 export function navLinksFor(role: Role): NavLink[] {
   return LINKS[role];
+}
+
+/** Pisahkan menu utama (selalu terlihat) dari menu yang masuk dropdown "More Menu". */
+export function splitNavLinks(role: Role): { primary: NavLink[]; more: NavLink[] } {
+  const links = LINKS[role];
+  return { primary: links.filter((l) => !l.more), more: links.filter((l) => l.more) };
 }
 
 export function isLinkActive(link: NavLink, pathname: string): boolean {

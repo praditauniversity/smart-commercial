@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isLinkActive, navLinksFor } from './nav-links';
+import { isLinkActive, navLinksFor, splitNavLinks } from './nav-links';
 import { canEnterSection } from './access';
 
 test('setiap peran memiliki menu Dashboard dan hanya menu yang boleh dimasukinya', () => {
@@ -20,4 +20,12 @@ test('menu aktif mengikuti path; /surveyor/new tidak mengaktifkan Sesi Survei', 
   assert.equal(isLinkActive(fresh, '/surveyor/new'), true);
   const sup = navLinksFor('supervisor')[0];
   assert.equal(isLinkActive(sup, '/supervisor/sessions/xyz'), true);
+});
+
+test('admin: 5 menu utama + dropdown More Menu berurutan User, Model AI, Validasi Ahli', () => {
+  const { primary, more } = splitNavLinks('admin');
+  assert.equal(primary.length, 5);
+  assert.deepEqual(more.map((l) => l.label), ['User', 'Model AI', 'Validasi Ahli']);
+  assert.equal(splitNavLinks('surveyor').more.length, 0);
+  assert.equal(splitNavLinks('supervisor').more.length, 0);
 });

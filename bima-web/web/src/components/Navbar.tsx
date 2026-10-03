@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -14,11 +14,13 @@ import {
   Layers,
   Cpu,
   Users,
+  MoreHorizontal,
+  ChevronDown,
   LogOut,
   Shield,
   User as UserIcon,
 } from 'lucide-react';
-import { isLinkActive, navLinksFor, type NavIcon } from '@/lib/nav-links';
+import { isLinkActive, navLinksFor, splitNavLinks, type NavIcon } from '@/lib/nav-links';
 
 const ICONS: Record<NavIcon, React.ComponentType<{ className?: string }>> = {
   dashboard: LayoutDashboard,
@@ -45,6 +47,29 @@ export default function Navbar() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+
+  // Tutup dropdown saat pindah halaman, klik di luar, atau tekan Escape.
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMoreOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [moreOpen]);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -87,7 +112,7 @@ export default function Navbar() {
                   <span className="text-base sm:text-lg font-semibold tracking-tight text-zinc-900 leading-tight block">
                     BIMA Vision
                   </span>
-                  <span className="hidden xl:block text-[10px] text-zinc-500 font-medium tracking-wide uppercase">
+                  <span className="hidden 2xl:block text-[10px] text-zinc-500 font-medium tracking-wide uppercase">
                     Pemantauan Kawasan AI
                   </span>
                 </div>
@@ -95,8 +120,8 @@ export default function Navbar() {
 
               {/* Desktop Nav links (Visible on md and above) */}
               {user && (
-                <div className={`hidden items-center gap-1 ${navLinksFor(user.role).length > 5 ? '2xl:flex' : 'md:flex'}`}>
-                  {navLinksFor(user.role).map((l) => {
+                <div className={`hidden items-center gap-1 ${splitNavLinks(user.role).more.length > 0 ? 'xl:flex' : 'md:flex'}`}>
+                  {splitNavLinks(user.role).primary.map((l) => {
                     const Icon = ICONS[l.icon];
                     const active = isLinkActive(l, pathname);
                     return (
@@ -114,6 +139,57 @@ export default function Navbar() {
                       </Link>
                     );
                   })}
+
+                  {/* More Menu (dropdown) */}
+                  {splitNavLinks(user.role).more.length > 0 && (
+                    <div ref={moreRef} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setMoreOpen((o) => !o)}
+                        aria-haspopup="menu"
+                        aria-expanded={moreOpen}
+                        className={`flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-md text-[13px] transition-colors cursor-pointer ${
+                          moreOpen || splitNavLinks(user.role).more.some((l) => isLinkActive(l, pathname))
+                            ? 'bg-zinc-100 text-zinc-900 font-semibold'
+                            : 'text-zinc-500 font-medium hover:bg-zinc-50 hover:text-zinc-900'
+                        }`}
+                      >
+                        <MoreHorizontal
+                          className={`w-4 h-4 ${splitNavLinks(user.role).more.some((l) => isLinkActive(l, pathname)) ? 'text-brand-green' : ''}`}
+                        />
+                        More Menu
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {moreOpen && (
+                        <div
+                          role="menu"
+                          className="absolute left-0 top-full mt-2 w-52 bg-white border border-zinc-200 rounded-xl shadow-lg p-1.5 z-50"
+                        >
+                          {splitNavLinks(user.role).more.map((l) => {
+                            const Icon = ICONS[l.icon];
+                            const active = isLinkActive(l, pathname);
+                            return (
+                              <Link
+                                key={l.href}
+                                href={l.href}
+                                role="menuitem"
+                                onClick={() => setMoreOpen(false)}
+                                className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] transition-colors ${
+                                  active
+                                    ? 'bg-zinc-100 text-zinc-900 font-semibold'
+                                    : 'text-zinc-500 font-medium hover:bg-zinc-50 hover:text-zinc-900'
+                                }`}
+                              >
+                                <Icon className={`w-4 h-4 ${active ? 'text-brand-green' : ''}`} />
+                                {l.label}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -167,7 +243,7 @@ export default function Navbar() {
 
         {/* ALWAYS-VISIBLE Mobile Horizontal Scrolling Navigation Bar (Screens < md) */}
         {user && (
-          <div className={`${navLinksFor(user.role).length > 5 ? '2xl:hidden' : 'md:hidden'} border-t border-zinc-200 bg-white px-3 py-2.5 overflow-x-auto no-scrollbar`}>
+          <div className={`${splitNavLinks(user.role).more.length > 0 ? 'xl:hidden' : 'md:hidden'} border-t border-zinc-200 bg-white px-3 py-2.5 overflow-x-auto no-scrollbar`}>
             <div className="flex items-center gap-2 min-w-max">
               {navLinksFor(user.role).map((l) => {
                 const Icon = ICONS[l.icon];
