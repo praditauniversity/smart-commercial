@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { seesAllSurveyors } from '@/lib/access';
 import { buildOverview, type OverviewSessionInput } from '@/lib/overview';
 import type { PriorityBand } from '@/lib/risk';
+import { isSchemaOutdatedError, SCHEMA_OUTDATED_HINT } from '@/lib/db-errors';
 
 /**
  * Ringkasan dashboard per peran: admin dan supervisor melihat semua surveyor; surveyor hanya sesinya sendiri
@@ -66,6 +67,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     if (error.message === 'UNAUTHORIZED') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     console.error('Overview error:', error);
+    if (isSchemaOutdatedError(error)) return NextResponse.json({ error: SCHEMA_OUTDATED_HINT }, { status: 500 });
     return NextResponse.json({ error: 'Gagal mengambil ringkasan dashboard.' }, { status: 500 });
   }
 }
