@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import crypto from 'crypto';
-import { compressAndUpload, MediaLimitError } from '@/lib/media-storage';
+import { compressAndUpload, MediaLimitError, MediaToolError } from '@/lib/media-storage';
 import { clipMatchNote, matchEvaluatedClip } from '@/lib/clip-match';
 
 export async function POST(request: Request) {
@@ -125,6 +125,10 @@ export async function POST(request: Request) {
     }
     if (error instanceof MediaLimitError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    if (error instanceof MediaToolError) {
+      console.error('Media tool error:', error.message);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
     console.error('Media upload registration error:', error);
     return NextResponse.json({ error: 'Gagal mendaftarkan media asset.' }, { status: 500 });

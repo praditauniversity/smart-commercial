@@ -20,6 +20,14 @@ export class MediaLimitError extends Error {
   }
 }
 
+/** Thrown when ffmpeg/ffprobe cannot be started (wrong FFMPEG_PATH/FFPROBE_PATH); shown to the user as-is. */
+export class MediaToolError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MediaToolError';
+  }
+}
+
 const BUCKETS = { image: 'img', video: 'vids' } as const;
 export type MediaKind = keyof typeof BUCKETS;
 
@@ -73,7 +81,7 @@ function runFfmpeg(args: string[], timeoutMs: number): Promise<void> {
     }, timeoutMs);
     proc.on('error', (err) => {
       clearTimeout(timer);
-      reject(new Error(`ffmpeg tidak bisa dijalankan (${ffmpegPath()}): ${err.message}`));
+      reject(new MediaToolError(`ffmpeg tidak bisa dijalankan (${ffmpegPath()}). Periksa FFMPEG_PATH di web/.env: harus menunjuk ke file ffmpeg yang benar (atau cukup "ffmpeg" bila sudah ada di PATH), lalu restart server. Detail: ${err.message}`));
     });
     proc.on('close', (code) => {
       clearTimeout(timer);
@@ -99,7 +107,7 @@ function probeDurationSeconds(filePath: string): Promise<number | null> {
     });
     proc.on('error', (err) => {
       clearTimeout(timer);
-      reject(new Error(`ffprobe tidak bisa dijalankan (${ffprobePath()}): ${err.message}`));
+      reject(new MediaToolError(`ffprobe tidak bisa dijalankan (${ffprobePath()}). Periksa FFPROBE_PATH di web/.env (atau cukup "ffprobe" bila sudah ada di PATH), lalu restart server. Detail: ${err.message}`));
     });
     proc.on('close', () => {
       clearTimeout(timer);
