@@ -12,7 +12,7 @@ demonstrasi/uji (tidak ditandai per baris di antarmuka); jawaban Validasi Ahli t
 | Dua kelompok: Keselamatan Infrastruktur vs Monitoring Kepatuhan | `ClassDefinition.categoryGroup`; Monitoring Kepatuhan **tidak pernah** diberi skor (hanya status terdeteksi) |
 | Deteksi dari weight yang sudah ditraining | `ai-service`: provider `yolo` (6 model, CPU), endpoint `POST /api/v1/yolo/detect` |
 | Video + bounding box, Opsi A (galeri frame) | Frame sampel dari **berkas asli** saat unggah; `FrameGallery`; video 720p hanya untuk diputar |
-| Kotak halus pada pemutar video | Deteksi rapat (~5 fps) pada video 720p + pelacak IoU: `POST /api/v1/yolo/playback` (ai-service), `MediaPlayback` (tabel terpisah dari temuan), `web/src/lib/playback-tracks.ts`. Lintasan ditautkan ke temuan resmi sehingga koreksi supervisor ikut berlaku |
+| Kotak halus pada pemutar video | Deteksi rapat (~5 fps) pada video 720p + pelacak IoU: `POST /api/v1/yolo/playback/jobs` + `GET .../jobs/{id}` (ai-service, job lalu polling), `MediaPlayback` (tabel terpisah dari temuan), `web/src/lib/playback-tracks.ts`. Lintasan ditautkan ke temuan resmi sehingga koreksi supervisor ikut berlaku |
 | Pencocokan 35 klip RQ3 | `web/src/lib/clip-match.ts`: nama berkas **dan** durasi; badge "Data uji — dievaluasi" / "Video baru — belum dievaluasi" |
 | Jalur koreksi petugas | `OfficerCorrection` + `POST /api/detections/[id]/correct` dan `POST /api/sessions/[id]/missed` |
 | 3 peran + dasbor masing-masing | admin, surveyor, supervisor: `web/src/lib/access.ts`, proxy, guard API |

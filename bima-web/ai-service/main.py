@@ -245,20 +245,29 @@ async def yolo_detect(req: YoloDetectRequest, _: bool = Depends(verify_internal_
         logger.error(f"YOLO gagal untuk media {req.media_asset_id}: {e}", exc_info=True)
         return YoloDetectResponse(success=False, media_asset_id=req.media_asset_id, error_message=str(e))
 
-@app.post("/api/v1/yolo/playback", response_model=PlaybackResponse)
-async def yolo_playback(req: PlaybackRequest, _: bool = Depends(verify_internal_secret)):
-    """
-    Deteksi rapat + pelacakan pada video 720p, hanya untuk menggambar kotak pada pemutar video.
-    Tidak membuat temuan resmi; penautan ke temuan dilakukan di sisi web.
-    """
+# --- Playback (kotak halus pemutar video) -----------------------------------------
+# Deteksi rapat bisa memakan beberapa menit, jadi web memulai job lalu memantaunya (bukan satu permintaan HTTP panjang
+# yang bisa diputus oleh batas waktu header klien). Satu thread menjaga model YOLO dipakai satu pekerjaan pada satu waktu.
+_playback_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="playback-job")
+_playback_jobs: Dict[str, dict] = {}
+_playback_jobs_lock = threading.Lock()
+
+
+def _run_playback_job_bg(job_id: str, req: PlaybackRequest):
     from services.yolo_engine import engine as yolo_engine
 
+    def set_state(**kw):
+        with _playback_jobs_lock:
+            _playback_jobs[job_id].update(kw)
+
+    set_state(status="running")
     try:
-        await asyncio.to_thread(yolo_engine.load)
-        result = await asyncio.to_thread(
-            run_playback, req.video_url, req.fps, req.sample_timestamps, req.iou_min, req.max_missed
+        yolo_engine.load()
+        result = run_playback(
+            req.video_url, req.fps, req.sample_timestamps, req.iou_min, req.max_missed,
+            on_progress=lambda p: set_state(progress=round(p, 3)),
         )
-        return PlaybackResponse(
+        payload = PlaybackResponse(
             success=True,
             media_asset_id=req.media_asset_id,
             tracks=[
@@ -267,9 +276,32 @@ async def yolo_playback(req: PlaybackRequest, _: bool = Depends(verify_internal_
             ],
             metrics=result.metrics,
         )
+        set_state(status="completed", progress=1.0, result=payload.model_dump())
     except Exception as e:
-        logger.error(f"Playback gagal untuk media {req.media_asset_id}: {e}", exc_info=True)
-        return PlaybackResponse(success=False, media_asset_id=req.media_asset_id, error_message=str(e))
+        logger.error(f"Playback job {job_id} gagal (media {req.media_asset_id}): {e}", exc_info=True)
+        set_state(status="failed", error=str(e))
+
+
+@app.post("/api/v1/yolo/playback/jobs", status_code=status.HTTP_202_ACCEPTED)
+def create_playback_job(req: PlaybackRequest, _: bool = Depends(verify_internal_secret)):
+    """Deteksi rapat + pelacakan pada video 720p, hanya untuk menggambar kotak pada pemutar (bukan temuan resmi)."""
+    job_id = str(uuid.uuid4())
+    with _playback_jobs_lock:
+        _playback_jobs[job_id] = {"status": "queued", "progress": 0.0, "result": None, "error": None}
+        while len(_playback_jobs) > _MAX_KEPT_JOBS:
+            _playback_jobs.pop(next(iter(_playback_jobs)))
+    _playback_executor.submit(_run_playback_job_bg, job_id, req)
+    return {"job_id": job_id}
+
+
+@app.get("/api/v1/yolo/playback/jobs/{job_id}")
+def get_playback_job(job_id: str, _: bool = Depends(verify_internal_secret)):
+    with _playback_jobs_lock:
+        job = _playback_jobs.get(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job tidak ditemukan (service mungkin di-restart).")
+        return dict(job)
+
 
 @app.get("/health")
 def health_check():

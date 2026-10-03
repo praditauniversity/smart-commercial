@@ -76,7 +76,7 @@ def run_playback(
     sample_timestamps: List[float],
     iou_min: float,
     max_missed: int,
-    should_stop: Optional[Callable[[], bool]] = None,
+    on_progress: Optional[Callable[[float], None]] = None,
 ) -> PlaybackResult:
     t_start = time.perf_counter()
     path, tmp = _open_local(video_source)
@@ -98,8 +98,6 @@ def run_playback(
             inference_ms = 0.0
             idx = 0
             while idx <= last_wanted:
-                if should_stop and should_stop():
-                    raise RuntimeError("Dibatalkan.")
                 if not cap.grab():
                     break
                 if idx in wanted:
@@ -109,6 +107,8 @@ def run_playback(
                         raw, _ = engine.detect(frame)
                         inference_ms += (time.perf_counter() - t0) * 1000.0
                         per_frame.append((wanted[idx], [FrameDetection(d.model_class, (d.x, d.y, d.width, d.height), d.confidence) for d in raw]))
+                        if on_progress:
+                            on_progress(min(1.0, idx / last_wanted) if last_wanted else 1.0)
                 idx += 1
         finally:
             cap.release()

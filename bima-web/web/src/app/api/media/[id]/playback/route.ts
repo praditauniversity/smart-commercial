@@ -41,7 +41,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     if (media.status !== 'completed') return NextResponse.json({ error: 'Deteksi media belum selesai.' }, { status: 409 });
 
     const p = media.playback;
-    if (p?.status === 'processing' && Date.now() - p.updatedAt.getTime() < requireEnvNumber('PLAYBACK_REQUEST_TIMEOUT_MS')) {
+    if (p?.status === 'processing' && Date.now() - p.updatedAt.getTime() < requireEnvNumber('PLAYBACK_MAX_WAIT_MS')) {
       return NextResponse.json({ error: 'Kotak pemutar sedang dibuat.' }, { status: 409 });
     }
     // Status "processing" ditulis sebelum menjawab agar polling klien langsung melihatnya.

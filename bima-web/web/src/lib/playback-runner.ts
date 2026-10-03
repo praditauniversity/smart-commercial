@@ -10,6 +10,44 @@ export function effectivePlaybackFps(durationSeconds: number, cfg: { fps: number
   return fps >= cfg.minFps ? fps : null;
 }
 
+/** Pesan galat jaringan yang bisa ditindaklanjuti: "fetch failed" saja tidak memberi tahu apa yang harus diperiksa. */
+export function describeFetchError(err: any, url: string): string {
+  if (err?.message !== 'fetch failed') return err?.message ?? String(err);
+  const cause = err.cause?.code || err.cause?.message;
+  return `Tidak dapat menghubungi ai-service di ${url}${cause ? ` (${cause})` : ''}. Pastikan ai-service berjalan, URL pada FASTAPI_SERVICE_URL benar, dan ai-service sudah dijalankan ulang setelah pembaruan.`;
+}
+
+/** Memulai job deteksi rapat di ai-service lalu memantaunya sampai selesai (tanpa satu permintaan HTTP yang panjang). */
+async function runWorkerJob(payload: Record<string, unknown>, pollMs: number, maxWaitMs: number): Promise<any> {
+  const base = requireEnv('FASTAPI_SERVICE_URL');
+  const headers = { 'Content-Type': 'application/json', 'X-Internal-Secret': requireEnv('INTERNAL_API_SECRET') };
+  const call = async (path: string, init?: RequestInit) => {
+    try {
+      return await fetch(`${base}${path}`, { ...init, headers, signal: AbortSignal.timeout(60_000) });
+    } catch (err: any) {
+      throw new Error(describeFetchError(err, base));
+    }
+  };
+
+  const create = await call('/api/v1/yolo/playback/jobs', { method: 'POST', body: JSON.stringify(payload) });
+  if (!create.ok) throw new Error(`Worker HTTP ${create.status}: ${await create.text()}`);
+  const { job_id: jobId } = await create.json();
+
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, pollMs));
+    const res = await call(`/api/v1/yolo/playback/jobs/${jobId}`);
+    if (!res.ok) throw new Error(`Worker HTTP ${res.status}: ${await res.text()}`);
+    const job = await res.json();
+    if (job.status === 'failed') throw new Error(job.error || 'Deteksi rapat gagal.');
+    if (job.status === 'completed') {
+      if (!job.result?.success) throw new Error(job.result?.error_message || 'Deteksi rapat gagal.');
+      return job.result;
+    }
+  }
+  throw new Error(`Deteksi rapat melebihi batas waktu ${Math.round(maxWaitMs / 1000)} dtk.`);
+}
+
 /** Dengan backend lokal, ai-service membaca video langsung dari disk (satu mesin), bukan lewat HTTP. */
 function videoUrlForWorker(fileUrl: string): string {
   if (storageBackend() === 'local') {
@@ -56,22 +94,18 @@ export async function runPlaybackJob(mediaAssetId: string): Promise<void> {
     }
     const maxMissed = requireEnvNumber('PLAYBACK_MAX_MISSED');
 
-    const res = await fetch(`${requireEnv('FASTAPI_SERVICE_URL')}/api/v1/yolo/playback`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': requireEnv('INTERNAL_API_SECRET') },
-      body: JSON.stringify({
+    const result = await runWorkerJob(
+      {
         media_asset_id: media.id,
         video_url: videoUrlForWorker(media.fileUrl),
         fps,
         sample_timestamps: media.frames.map((f) => f.timestampSeconds),
         iou_min: requireEnvNumber('PLAYBACK_IOU_MIN'),
         max_missed: maxMissed,
-      }),
-      signal: AbortSignal.timeout(requireEnvNumber('PLAYBACK_REQUEST_TIMEOUT_MS')),
-    });
-    if (!res.ok) throw new Error(`Worker HTTP ${res.status}: ${await res.text()}`);
-    const result = await res.json();
-    if (!result.success) throw new Error(result.error_message || 'Deteksi rapat gagal.');
+      },
+      requireEnvNumber('PLAYBACK_POLL_INTERVAL_MS'),
+      requireEnvNumber('PLAYBACK_MAX_WAIT_MS')
+    );
 
     const classes = await prisma.classDefinition.findMany({ where: { isActive: true, modelClass: { not: null } }, select: { id: true, name: true, modelClass: true } });
     const byModelClass = new Map(classes.map((c) => [c.modelClass as string, c] as const));
