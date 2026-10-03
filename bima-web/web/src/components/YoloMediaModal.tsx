@@ -108,7 +108,7 @@ export default function YoloMediaModal({ media, detections, session, onClose }: 
             </div>
             <div className="rounded-xl bg-slate-50 p-3">
               <FrameGallery
-                frames={frames} detections={detections} mode="pratinjau" hidePanel hideControls
+                frames={frames} detections={detections} mode="pratinjau" hidePanel
                 selectedIds={selectedId ? [selectedId] : []}
                 onSelectionChange={(ids) => {
                   const d = ordered.find((x) => x.id === ids[0]);

@@ -26,8 +26,6 @@ interface FrameGalleryProps {
   bulkBusy?: boolean;
   /** Sembunyikan panel "Temuan pada frame ini" (induk menampilkan daftar temuannya sendiri). */
   hidePanel?: boolean;
-  /** Sembunyikan batang kontrol (ambang confidence, filter kelompok, sembunyikan kotak). */
-  hideControls?: boolean;
   /** Indeks frame (urutan dalam daftar frame) yang dikendalikan induk. */
   activeIndex?: number;
   onActiveIndexChange?: (index: number) => void;
@@ -46,7 +44,7 @@ function boxStyle(d: DetectionView): string {
  * Galeri frame kunci (Opsi A): satu frame besar dengan kotak pembatas + strip miniatur. Kotak digambar di
  * klien dari data tersimpan, sehingga ambang confidence dan filter dapat diubah tanpa memproses ulang.
  */
-export default function FrameGallery({ frames, detections, initialMinConfidence = 0, mode = 'pratinjau', selectedIds: controlled, onSelectionChange, onBulk, bulkBusy = false, hidePanel = false, hideControls = false, activeIndex, onActiveIndexChange }: FrameGalleryProps) {
+export default function FrameGallery({ frames, detections, initialMinConfidence = 0, mode = 'pratinjau', selectedIds: controlled, onSelectionChange, onBulk, bulkBusy = false, hidePanel = false, activeIndex, onActiveIndexChange }: FrameGalleryProps) {
   const [innerIndex, setInnerIndex] = useState(0);
   // Indeks frame bisa dikendalikan induk (mis. modal pratinjau melompat ke frame temuan yang diklik).
   const index = activeIndex ?? innerIndex;
@@ -119,7 +117,7 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
 
   return (
     <div className="space-y-3">
-      {!hideControls && <div className="flex flex-wrap items-center gap-3 rounded-lg bg-slate-50 p-2.5 text-xs">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg bg-slate-50 p-2.5 text-xs">
         <label className="flex items-center gap-2 font-semibold text-slate-700">
           Confidence ≥ <span className="w-10 font-mono">{minConf.toFixed(2)}</span>
           <input
@@ -146,7 +144,7 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
         <span className="ml-auto text-slate-500">
           {drawn.length} kotak digambar pada frame ini · {visible.length} dari {detections.length} lolos filter · {frames.length} frame
         </span>
-      </div>}
+      </div>
 
       <div className={hidePanel ? '' : 'grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px]'}>
       <div className="min-w-0 space-y-3">
