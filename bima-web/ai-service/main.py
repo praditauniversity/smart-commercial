@@ -22,6 +22,9 @@ from schemas import (
     YoloDetectMetrics,
     YoloDetectRequest,
     YoloDetectResponse,
+    PlaybackRequest,
+    PlaybackResponse,
+    PlaybackTrackOut,
     ProcessMediaRequest,
     ProcessMediaResponse,
     TestConnectionRequest,
@@ -39,6 +42,7 @@ from services.deduplication import deduplicate_temporal_detections
 from services.conflict_detector import detect_class_conflicts
 from services.video_splitter import plan_video_segments
 from services.sam3_service import run_sam3_job
+from services.playback import run_playback
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ai_service")
@@ -240,6 +244,32 @@ async def yolo_detect(req: YoloDetectRequest, _: bool = Depends(verify_internal_
     except Exception as e:
         logger.error(f"YOLO gagal untuk media {req.media_asset_id}: {e}", exc_info=True)
         return YoloDetectResponse(success=False, media_asset_id=req.media_asset_id, error_message=str(e))
+
+@app.post("/api/v1/yolo/playback", response_model=PlaybackResponse)
+async def yolo_playback(req: PlaybackRequest, _: bool = Depends(verify_internal_secret)):
+    """
+    Deteksi rapat + pelacakan pada video 720p, hanya untuk menggambar kotak pada pemutar video.
+    Tidak membuat temuan resmi; penautan ke temuan dilakukan di sisi web.
+    """
+    from services.yolo_engine import engine as yolo_engine
+
+    try:
+        await asyncio.to_thread(yolo_engine.load)
+        result = await asyncio.to_thread(
+            run_playback, req.video_url, req.fps, req.sample_timestamps, req.iou_min, req.max_missed
+        )
+        return PlaybackResponse(
+            success=True,
+            media_asset_id=req.media_asset_id,
+            tracks=[
+                PlaybackTrackOut(track_id=t.track_id, model_class=t.model_class, points=[[float(v) for v in p] for p in t.points])
+                for t in result.tracks
+            ],
+            metrics=result.metrics,
+        )
+    except Exception as e:
+        logger.error(f"Playback gagal untuk media {req.media_asset_id}: {e}", exc_info=True)
+        return PlaybackResponse(success=False, media_asset_id=req.media_asset_id, error_message=str(e))
 
 @app.get("/health")
 def health_check():

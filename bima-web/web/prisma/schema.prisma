@@ -117,6 +117,7 @@ model MediaAsset {
   frames            MediaFrame[]
   detections        Detection[]
   corrections       OfficerCorrection[]
+  playback          MediaPlayback?
 }
 
 model MediaSegment {
@@ -284,6 +285,20 @@ model MediaFrame {
   mediaAsset       MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
 
   @@unique([mediaAssetId, frameIndex])
+}
+
+// Lintasan kotak rapat untuk pemutar video 720p (bukan temuan resmi). Dibuat dari deteksi ~5 fps pada video 720p,
+// lalu tiap lintasan ditautkan ke temuan resmi (detectionIds) agar status koreksi supervisor ikut berlaku saat diputar.
+model MediaPlayback {
+  id           String     @id @default(uuid())
+  mediaAssetId String     @unique
+  status       String // "processing" | "ready" | "failed" | "skipped"
+  note         String? // alasan bila gagal/dilewati
+  data         String? // JSON PlaybackData (lihat src/lib/playback-tracks.ts); null sampai status "ready"
+  metrics      String? // JSON: frame, lintasan, waktu proses
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  mediaAsset   MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
 }
 
 // Master tag subtipe kerusakan untuk kelas dengan Tahap 2 (rambu). Severity per tag dapat diubah admin.

@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma';
 import { requireEnv, requireEnvNumber } from '@/lib/env';
 import { riskFields } from '@/lib/corrections';
 import { localPathForUrl, storageBackend } from '@/lib/media-storage';
+import { runPlaybackJob } from '@/lib/playback-runner';
 
 async function markFailed(mediaId: string, message: string) {
   await prisma.mediaAsset
@@ -172,6 +173,9 @@ export async function runYoloJob(params: {
         },
       });
     });
+
+    // Kotak pemutar (deteksi rapat) dibuat di latar belakang; media sudah "completed" dan dapat ditinjau tanpa menunggu.
+    if (media.fileType === 'video') void runPlaybackJob(media.id);
   } catch (err: any) {
     console.error('YOLO job error:', err);
     await markFailed(mediaAssetId, `YOLO Error: ${err.message}`);

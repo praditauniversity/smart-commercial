@@ -157,7 +157,7 @@ export default function SupervisorSessionPage() {
                       </div>
                       {playing?.id === m.id && (
                         playing.boxes
-                          ? <VideoWithBoxes key="boxes" src={m.fileUrl} frames={m.frames} detections={dets} selectedIds={selectedIds.filter((sid) => dets.some((d) => d.id === sid))} />
+                          ? <VideoWithBoxes key="boxes" src={m.fileUrl} mediaId={m.id} frames={m.frames} detections={dets} selectedIds={selectedIds.filter((sid) => dets.some((d) => d.id === sid))} />
                           : <video key="plain" src={m.fileUrl} controls preload="metadata" className="mt-2 w-full rounded-lg bg-black" />
                       )}
                     </div>

@@ -126,3 +126,27 @@ class YoloDetectResponse(BaseModel):
     detections: List[DetectionItem] = Field(default_factory=list)
     metrics: Optional[YoloDetectMetrics] = None
     error_message: Optional[str] = None
+
+
+class PlaybackRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    media_asset_id: str
+    video_url: str  # path lokal atau http(s) URL video 720p yang tersimpan
+    fps: float = Field(..., gt=0)  # laju deteksi rapat
+    sample_timestamps: List[float] = Field(default_factory=list)  # waktu frame sampel; ikut dideteksi agar bisa ditautkan ke temuan resmi
+    iou_min: float = Field(..., gt=0, le=1)  # ambang IoU pencocokan antar-frame
+    max_missed: int = Field(..., ge=0)  # frame berturut-turut tanpa pasangan sebelum lintasan ditutup
+
+class PlaybackTrackOut(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    track_id: int
+    model_class: str
+    points: List[List[float]]  # [waktu_detik, x, y, width, height, confidence]
+
+class PlaybackResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    success: bool
+    media_asset_id: str
+    tracks: List[PlaybackTrackOut] = Field(default_factory=list)
+    metrics: Dict[str, object] = Field(default_factory=dict)
+    error_message: Optional[str] = None

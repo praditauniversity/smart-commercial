@@ -12,6 +12,7 @@ demonstrasi/uji (tidak ditandai per baris di antarmuka); jawaban Validasi Ahli t
 | Dua kelompok: Keselamatan Infrastruktur vs Monitoring Kepatuhan | `ClassDefinition.categoryGroup`; Monitoring Kepatuhan **tidak pernah** diberi skor (hanya status terdeteksi) |
 | Deteksi dari weight yang sudah ditraining | `ai-service`: provider `yolo` (6 model, CPU), endpoint `POST /api/v1/yolo/detect` |
 | Video + bounding box, Opsi A (galeri frame) | Frame sampel dari **berkas asli** saat unggah; `FrameGallery`; video 720p hanya untuk diputar |
+| Kotak halus pada pemutar video | Deteksi rapat (~5 fps) pada video 720p + pelacak IoU: `POST /api/v1/yolo/playback` (ai-service), `MediaPlayback` (tabel terpisah dari temuan), `web/src/lib/playback-tracks.ts`. Lintasan ditautkan ke temuan resmi sehingga koreksi supervisor ikut berlaku |
 | Pencocokan 35 klip RQ3 | `web/src/lib/clip-match.ts`: nama berkas **dan** durasi; badge "Data uji — dievaluasi" / "Video baru — belum dievaluasi" |
 | Jalur koreksi petugas | `OfficerCorrection` + `POST /api/detections/[id]/correct` dan `POST /api/sessions/[id]/missed` |
 | 3 peran + dasbor masing-masing | admin, surveyor, supervisor: `web/src/lib/access.ts`, proxy, guard API |
@@ -68,6 +69,7 @@ Kata sandi dibuat acak dan disimpan di `.demo/kredensial.txt`. File `.env` Anda 
 ## 5. Keputusan desain yang perlu diketahui
 
 - **Sampling frame**: ~0,5 fps, maksimal 24 frame, **disebar merata** di seluruh durasi (bukan 24 frame pertama). Klip 60 dtk menghasilkan 24 frame (jarak ±2,5 dtk).
+- **Kotak halus pada pemutar**: temuan resmi tetap dari frame sampel. Untuk pemutar, video 720p dideteksi ulang ~5 fps (`PLAYBACK_FPS`; dibatasi `PLAYBACK_MAX_FRAMES` per video, dilewati bila laju tersisa di bawah `PLAYBACK_MIN_FPS`), frame sampel ikut dideteksi tepat pada waktunya, lalu kotak digabung menjadi lintasan per objek. Tiap lintasan ditautkan ke temuan resmi (kelas sama, IoU ≥ `PLAYBACK_LINK_IOU_MIN`); temuan tanpa pasangan dibuatkan lintasan satu titik dari kotaknya sendiri. Status koreksi dibaca dari temuan tertaut saat video diputar: temuan **keliru tidak digambar**, kelas hasil koreksi ikut tampil. Objek yang hanya muncul di antara frame sampel (tanpa temuan tertaut) tidak pernah ditinjau, jadi disembunyikan secara bawaan. Biaya CPU ±165 ms per frame (5 model); klip 60 dtk ≈ 300 frame ≈ 1 menit, berjalan di latar belakang setelah deteksi selesai. Video lama dibuat lewat tombol "Buat kotak halus".
 - **Pencocokan klip**: nama berkas saja tidak cukup. Nama sama tetapi durasi berbeda > 3 dtk **tidak** dianggap terevaluasi, dan alasannya dicatat di `clipMatchNote`, agar narasi/skor klip lain tidak menempel pada video yang berbeda.
 - **Sesi tanpa zona**: temuan Keselamatan Infrastruktur tidak diberi skor (Exposure tidak diketahui); tidak ditebak.
 - **Rambu, dua tahap** (opsi B): Tahap 1 mendeteksi semua rambu; setiap rambu dipotong dengan `adaptive_crop_box` (disalin apa adanya dari notebook; kotak rambu lain dari Tahap 1 menjadi `other_boxes`) lalu diklasifikasi `normal`/`damaged` pada imgsz 224 oleh **classifier fold0, hasil 5-fold cross-validation** (`fold0_best.pt`, yolo11n-cls). Aturan:
