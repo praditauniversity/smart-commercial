@@ -1379,6 +1379,7 @@ export default function SurveyorSessionWorkspace() {
             <YoloMediaModal
               media={inspected}
               detections={(session?.detections || []).filter((d: any) => d.mediaAssetId === inspected.id && !d.isDeleted)}
+              session={session}
               onClose={() => setInspectingMediaId(null)}
             />
           );

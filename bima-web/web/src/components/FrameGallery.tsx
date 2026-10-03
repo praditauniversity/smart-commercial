@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { formatTimestamp, parseBBox, reviewLabel, visibleBoxes, type DetectionView, type FrameView, type GalleryMode } from '@/lib/media-view';
 import { BAND_LABEL, CONDITION_MODEL_LABEL, GROUP_LABEL } from '@/lib/risk';
@@ -24,6 +24,13 @@ interface FrameGalleryProps {
   /** Bila diberikan, panel menampilkan kotak centang dan aksi massal (konfirmasi benar / tandai keliru). Mengembalikan true bila berhasil. */
   onBulk?: (ids: string[], kind: BulkKind, reason: string) => Promise<boolean>;
   bulkBusy?: boolean;
+  /** Sembunyikan panel "Temuan pada frame ini" (induk menampilkan daftar temuannya sendiri). */
+  hidePanel?: boolean;
+  /** Sembunyikan batang kontrol (ambang confidence, filter kelompok, sembunyikan kotak). */
+  hideControls?: boolean;
+  /** Indeks frame (urutan dalam daftar frame) yang dikendalikan induk. */
+  activeIndex?: number;
+  onActiveIndexChange?: (index: number) => void;
 }
 
 type GroupFilter = 'semua' | 'keselamatan_infrastruktur' | 'monitoring_kepatuhan';
@@ -39,8 +46,18 @@ function boxStyle(d: DetectionView): string {
  * Galeri frame kunci (Opsi A): satu frame besar dengan kotak pembatas + strip miniatur. Kotak digambar di
  * klien dari data tersimpan, sehingga ambang confidence dan filter dapat diubah tanpa memproses ulang.
  */
-export default function FrameGallery({ frames, detections, initialMinConfidence = 0, mode = 'pratinjau', selectedIds: controlled, onSelectionChange, onBulk, bulkBusy = false }: FrameGalleryProps) {
-  const [index, setIndex] = useState(0);
+export default function FrameGallery({ frames, detections, initialMinConfidence = 0, mode = 'pratinjau', selectedIds: controlled, onSelectionChange, onBulk, bulkBusy = false, hidePanel = false, hideControls = false, activeIndex, onActiveIndexChange }: FrameGalleryProps) {
+  const [innerIndex, setInnerIndex] = useState(0);
+  // Indeks frame bisa dikendalikan induk (mis. modal pratinjau melompat ke frame temuan yang diklik).
+  const index = activeIndex ?? innerIndex;
+  const setIndex = useCallback(
+    (v: number | ((i: number) => number)) => {
+      const next = typeof v === 'function' ? v(index) : v;
+      if (activeIndex === undefined) setInnerIndex(next);
+      onActiveIndexChange?.(next);
+    },
+    [index, activeIndex, onActiveIndexChange]
+  );
   const [showBoxes, setShowBoxes] = useState(true);
   const [minConf, setMinConf] = useState(initialMinConfidence);
   const [group, setGroup] = useState<GroupFilter>('semua');
@@ -85,7 +102,7 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [frames.length]);
+  }, [frames.length, setIndex]);
 
   if (frames.length === 0) {
     return <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Belum ada frame untuk media ini.</div>;
@@ -102,7 +119,7 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3 rounded-lg bg-slate-50 p-2.5 text-xs">
+      {!hideControls && <div className="flex flex-wrap items-center gap-3 rounded-lg bg-slate-50 p-2.5 text-xs">
         <label className="flex items-center gap-2 font-semibold text-slate-700">
           Confidence ≥ <span className="w-10 font-mono">{minConf.toFixed(2)}</span>
           <input
@@ -129,9 +146,9 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
         <span className="ml-auto text-slate-500">
           {drawn.length} kotak digambar pada frame ini · {visible.length} dari {detections.length} lolos filter · {frames.length} frame
         </span>
-      </div>
+      </div>}
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className={hidePanel ? '' : 'grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px]'}>
       <div className="min-w-0 space-y-3">
       <div className="relative overflow-hidden rounded-xl bg-slate-900">
         <img src={frame.imageUrl} alt={`Frame ${frame.frameIndex + 1} pada ${formatTimestamp(frame.timestampSeconds)}`} className="block h-auto w-full" />
@@ -182,7 +199,7 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
 
       </div>
 
-      <section className="flex min-w-0 flex-col rounded-lg border border-slate-200 bg-white lg:max-h-[34rem]" aria-label="Temuan pada frame ini">
+      {!hidePanel && <section className="flex min-w-0 flex-col rounded-lg border border-slate-200 bg-white lg:max-h-[34rem]" aria-label="Temuan pada frame ini">
         <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2 text-xs font-bold text-slate-700">
           <span className="mr-auto min-w-0">Temuan pada frame ini ({current.length})</span>
           {onBulk && current.length > 0 && (
@@ -242,7 +259,7 @@ export default function FrameGallery({ frames, detections, initialMinConfidence 
             <p className="text-[11px] text-slate-500">Pilih satu temuan untuk koreksi rinci (kelas, kondisi, severity) di panel koreksi.</p>
           </div>
         )}
-      </section>
+      </section>}
       </div>
 
       <p className="text-[11px] text-slate-500">

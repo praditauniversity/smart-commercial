@@ -23,6 +23,7 @@ import MediaBoxOverlay, { OverlayDetection, BoundingBox } from './MediaBoxOverla
 import FindingLocationMap from './FindingLocationMap';
 import { Sam3Stage, Sam3Controls, Sam3Result, useSam3View } from './Sam3Result';
 import { useToast } from './ToastProvider';
+import { reviewLabel, visibleBoxes } from '@/lib/media-view';
 
 interface ClassItem {
   id: string;
@@ -44,6 +45,8 @@ interface DetectionRecord {
   frameIndex?: number | null;
   modelName?: string | null;
   hasConflict?: boolean;
+  /** Status tinjau supervisor (belum_ditinjau | dikonfirmasi | dikoreksi | keliru); kosong pada data lama. */
+  reviewStatus?: string;
   conflictResolved?: boolean;
   conflictDetails?: string | null;
   createdAt: string;
@@ -163,11 +166,8 @@ export default function MediaInspectionModal({
       };
     }
     setEditStates(initial);
-    if (detections.length > 0) {
-      setSelectedDetId(detections[0].id);
-    } else {
-      setSelectedDetId(null);
-    }
+    // Tampilan awal tanpa pilihan: kotak yang tampil mengikuti status tinjau (lihat visibleBoxes).
+    setSelectedDetId(null);
     setFeedback(null);
   }, [isOpen, mediaAsset?.id]);
 
@@ -194,6 +194,23 @@ export default function MediaInspectionModal({
       conflictDetails: det.conflictDetails ? JSON.parse(det.conflictDetails) : undefined,
     };
   });
+
+  /** Klik kartu/kotak: pilih objek itu (hanya kotaknya yang tampil); klik lagi untuk kembali ke tampilan awal. */
+  const toggleSelected = (id: string) => setSelectedDetId((cur) => (cur === id ? null : id));
+
+  // Pratinjau: default hanya temuan yang sudah dikonfirmasi benar (semua selain keliru bila belum pernah ditinjau).
+  // Mode edit: semua selain keliru. Objek terpilih selalu tampil sendirian.
+  const shownIds = new Set(
+    visibleBoxes(
+      detections.map((d) => ({ id: d.id, reviewStatus: d.reviewStatus ?? 'belum_ditinjau' })),
+      {
+        mode: canEdit ? 'koreksi' : 'pratinjau',
+        selectedIds: selectedDetId ? [selectedDetId] : [],
+        mediaHasReview: detections.some((d) => d.reviewStatus && d.reviewStatus !== 'belum_ditinjau'),
+      }
+    ).map((d) => d.id)
+  );
+  const shownOverlay = overlayDetections.filter((d) => shownIds.has(d.id));
 
   const handleFieldChange = (
     detId: string,
@@ -492,7 +509,7 @@ export default function MediaInspectionModal({
                   <Layers className="w-4 h-4 text-blue-400" />
                   Visual Bounding Box AI
                 </span>
-                <span>{overlayDetections.length} Objek</span>
+                <span>{shownOverlay.length} dari {overlayDetections.length} Objek tampil</span>
               </div>
 
               {/* Media Image / Video with Overlays */}
@@ -509,9 +526,9 @@ export default function MediaInspectionModal({
                   <MediaBoxOverlay
                     mediaUrl={mediaAsset.fileUrl}
                     mediaType={mediaAsset.fileType as any}
-                    detections={overlayDetections}
+                    detections={shownOverlay}
                     selectedDetectionId={selectedDetId}
-                    onSelectDetection={(d) => setSelectedDetId(d.id)}
+                    onSelectDetection={(d) => toggleSelected(d.id)}
                     className="w-full h-full"
                   />
                 )}
@@ -663,7 +680,7 @@ export default function MediaInspectionModal({
                     return (
                       <div
                         key={det.id}
-                        onClick={() => setSelectedDetId(det.id)}
+                        onClick={() => toggleSelected(det.id)}
                         className={`p-3.5 sm:p-4 rounded-xl border transition-all ${
                           isSelected
                             ? 'border-blue-500 ring-2 ring-blue-100 bg-blue-50/20 shadow-xs'
@@ -684,6 +701,12 @@ export default function MediaInspectionModal({
                           </div>
 
                           <div className="flex items-center gap-1.5 shrink-0">
+                            {det.reviewStatus && (() => {
+                              const rv = reviewLabel(det.reviewStatus);
+                              return (
+                                <span className={`px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${rv.tone === 'benar' ? 'bg-emerald-100 text-emerald-800' : rv.tone === 'keliru' ? 'bg-slate-200 text-slate-700' : 'bg-amber-100 text-amber-800'}`}>{rv.text}</span>
+                              );
+                            })()}
                             <span
                               className={`px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${
                                 edit.feasibility === 'tidak_layak'
