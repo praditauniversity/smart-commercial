@@ -453,7 +453,13 @@ async function demo(state) {
     const sr = await fetch(`${base}/api/sessions`, {
       method: 'POST',
       headers: { ...H, 'content-type': 'application/json' },
-      body: JSON.stringify({ name: `Demo: ${name}`.slice(0, 80), zoneId: zone?.id, locationAddress: 'Lokasi demo' }),
+      body: JSON.stringify({
+        name: `Demo: ${name}`.slice(0, 80),
+        zoneId: zone?.id,
+        locationAddress: 'Lokasi demo',
+        // Titik contoh agar sesi muncul di peta Analitik; disebar sedikit supaya penanda tidak bertumpuk.
+        locationGeojson: { type: 'Point', coordinates: [106.8456 + 0.004 * videos.indexOf(file), -6.2088 - 0.002 * videos.indexOf(file)] },
+      }),
     });
     const sj = await sr.json();
     if (!sr.ok) throw new Error(sj.error ?? 'Gagal membuat sesi.');

@@ -21,7 +21,7 @@ test('normalizeRole: nilai tak dikenal jatuh ke surveyor (paling terbatas)', () 
 test('halaman awal tiap peran', () => {
   assert.equal(homePathForRole('admin'), '/admin/dashboard');
   assert.equal(homePathForRole('supervisor'), '/supervisor/dashboard');
-  assert.equal(homePathForRole('surveyor'), '/surveyor/sessions');
+  assert.equal(homePathForRole('surveyor'), '/surveyor/dashboard');
 });
 
 test('akses bagian aplikasi', () => {

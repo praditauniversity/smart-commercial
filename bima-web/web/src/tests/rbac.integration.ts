@@ -316,6 +316,22 @@ async function main() {
     assert.equal((await call(admin, 'GET', '/api/dashboard/latency')).status, 200);
   });
 
+  await check('panel gambar temuan: surveyor hanya miliknya; supervisor/admin semua; band tidak valid ditolak', async () => {
+    const other = await call(surveyor2, 'GET', '/api/dashboard/findings');
+    assert.equal(other.status, 200);
+    assert.ok(!other.json.tiles.some((t: any) => t.sessionId === sessionId));
+    for (const c of [surveyor, supervisor, admin]) assert.equal((await call(c, 'GET', '/api/dashboard/findings?limit=3')).status, 200);
+    assert.equal((await call(admin, 'GET', '/api/dashboard/findings?band=ungu')).status, 400);
+  });
+  await check('peta dashboard: supervisor dan admin boleh, surveyor tidak', async () => {
+    assert.equal((await call(surveyor, 'GET', '/api/dashboard/map-points')).status, 403);
+    for (const c of [supervisor, admin]) {
+      const r = await call(c, 'GET', '/api/dashboard/map-points');
+      assert.equal(r.status, 200);
+      assert.ok(Array.isArray(r.json.markers));
+    }
+  });
+
   console.log('\nData master & dashboard admin');
   for (const [who, c] of [['surveyor', surveyor], ['supervisor', supervisor]] as [string, Client][]) {
     await check(`${who} tidak dapat membaca daftar pengguna admin`, async () => {
@@ -428,8 +444,8 @@ async function main() {
 
   console.log('\nGuard halaman (proxy)');
   const redirects: [string, Client, string, string][] = [
-    ['surveyor', surveyor, '/admin/dashboard', '/surveyor/sessions'],
-    ['surveyor', surveyor, '/supervisor/dashboard', '/surveyor/sessions'],
+    ['surveyor', surveyor, '/admin/dashboard', '/surveyor/dashboard'],
+    ['surveyor', surveyor, '/supervisor/dashboard', '/surveyor/dashboard'],
     ['supervisor', supervisor, '/admin/dashboard', '/supervisor/dashboard'],
     ['supervisor', supervisor, '/surveyor/sessions', '/supervisor/dashboard'],
   ];

@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
-import RiskOverview from '@/components/RiskOverview';
 import { CardSkeleton } from '@/components/SkeletonLoaders';
 import { useToast } from '@/components/ToastProvider';
 import {
@@ -40,7 +39,11 @@ export default function SurveyorSessionsPage() {
   const toast = useToast();
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'all';
+    const q = new URLSearchParams(window.location.search).get('status');
+    return q || 'all';
+  });
 
   const fetchSessions = async (status = 'all') => {
     setLoading(true);
@@ -119,15 +122,6 @@ export default function SurveyorSessionsPage() {
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Ringkasan risiko: hanya sesi milik surveyor ini (dibatasi di server) */}
-        <div className="mb-8">
-          <RiskOverview
-            title="Ringkasan risiko sesi saya"
-            subtitle="Hanya sesi dan temuan milik Anda. Tinjauan dan koreksi dilakukan oleh supervisor."
-            detailHref={(id) => `/surveyor/sessions/${id}`}
-          />
-        </div>
-
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>

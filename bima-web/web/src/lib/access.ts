@@ -33,7 +33,7 @@ export function homePathForRole(role: Role): string {
     case 'supervisor':
       return '/supervisor/dashboard';
     default:
-      return '/surveyor/sessions';
+      return '/surveyor/dashboard';
   }
 }
 

@@ -8,6 +8,8 @@ import {
   ClipboardList,
   PlusCircle,
   BarChart3,
+  LayoutDashboard,
+  Activity,
   CheckSquare,
   Layers,
   Cpu,
@@ -16,6 +18,20 @@ import {
   Shield,
   User as UserIcon,
 } from 'lucide-react';
+import { isLinkActive, navLinksFor, type NavIcon } from '@/lib/nav-links';
+
+const ICONS: Record<NavIcon, React.ComponentType<{ className?: string }>> = {
+  dashboard: LayoutDashboard,
+  analytics: Activity,
+  sessions: ClipboardList,
+  new: PlusCircle,
+  review: CheckSquare,
+  classes: Layers,
+  risk: BarChart3,
+  expert: ClipboardList,
+  models: Cpu,
+  users: Users,
+};
 
 interface User {
   id: string;
@@ -71,7 +87,7 @@ export default function Navbar() {
                   <span className="text-base sm:text-lg font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent leading-tight block">
                     BIMA Vision
                   </span>
-                  <span className="block text-[8px] sm:text-[10px] text-slate-400 font-medium tracking-wide uppercase">
+                  <span className="hidden xl:block text-[10px] text-slate-400 font-medium tracking-wide uppercase">
                     Pemantauan Kawasan AI
                   </span>
                 </div>
@@ -79,142 +95,24 @@ export default function Navbar() {
 
               {/* Desktop Nav links (Visible on md and above) */}
               {user && (
-                <div className="hidden md:flex items-center gap-1">
-                  {user.role === 'surveyor' && (
-                    <>
+                <div className={`hidden items-center gap-0.5 ${navLinksFor(user.role).length > 5 ? '2xl:flex' : 'md:flex'}`}>
+                  {navLinksFor(user.role).map((l) => {
+                    const Icon = ICONS[l.icon];
+                    return (
                       <Link
-                        href="/surveyor/sessions"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/surveyor/sessions') && pathname !== '/surveyor/new'
+                        key={l.href}
+                        href={l.href}
+                        className={`flex items-center gap-1.5 whitespace-nowrap px-2.5 py-2 rounded-lg text-[13px] font-semibold transition-colors ${
+                          isLinkActive(l, pathname)
                             ? 'bg-blue-50 text-blue-700 font-bold'
                             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                         }`}
                       >
-                        <ClipboardList className="w-4 h-4" />
-                        Sesi Survei
+                        <Icon className="w-4 h-4" />
+                        {l.label}
                       </Link>
-                      <Link
-                        href="/surveyor/new"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname === '/surveyor/new'
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <PlusCircle className="w-4 h-4" />
-                        Buat Sesi Baru
-                      </Link>
-                    </>
-                  )}
-
-                  {user.role === 'supervisor' && (
-                    <>
-                      <Link
-                        href="/supervisor/dashboard"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/supervisor/dashboard') || pathname.startsWith('/supervisor/sessions')
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <BarChart3 className="w-4 h-4" />
-                        Dashboard Supervisor
-                      </Link>
-                      <Link
-                        href="/supervisor/reviews"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/supervisor/reviews')
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <CheckSquare className="w-4 h-4" />
-                        Antrean Review
-                      </Link>
-                    </>
-                  )}
-
-                  {user.role === 'admin' && (
-                    <>
-                      <Link
-                        href="/admin/dashboard"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname === '/admin/dashboard'
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <BarChart3 className="w-4 h-4" />
-                        Dashboard
-                      </Link>
-                      <Link
-                        href="/admin/reviews"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/admin/reviews')
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <CheckSquare className="w-4 h-4" />
-                        Antrean Review
-                      </Link>
-                      <Link
-                        href="/admin/classes"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/admin/classes')
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <Layers className="w-4 h-4" />
-                        Kelas Deteksi
-                      </Link>
-                      <Link
-                        href="/admin/risk-master"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/admin/risk-master')
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <BarChart3 className="w-4 h-4" />
-                        Risiko &amp; Zona
-                      </Link>
-                      <Link
-                        href="/admin/validasi-ahli"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/admin/validasi-ahli')
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <ClipboardList className="w-4 h-4" />
-                        Validasi Ahli
-                      </Link>
-                      <Link
-                        href="/admin/models"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/admin/models')
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <Cpu className="w-4 h-4" />
-                        Model AI
-                      </Link>
-                      <Link
-                        href="/admin/users"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/admin/users')
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <Users className="w-4 h-4" />
-                        User
-                      </Link>
-                    </>
-                  )}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -268,143 +166,25 @@ export default function Navbar() {
 
         {/* ALWAYS-VISIBLE Mobile Horizontal Scrolling Navigation Bar (Screens < md) */}
         {user && (
-          <div className="md:hidden border-t border-slate-200 bg-slate-50 px-2 py-2 overflow-x-auto no-scrollbar shadow-inner">
+          <div className={`${navLinksFor(user.role).length > 5 ? '2xl:hidden' : 'md:hidden'} border-t border-slate-200 bg-slate-50 px-2 py-2 overflow-x-auto no-scrollbar shadow-inner`}>
             <div className="flex items-center gap-1.5 min-w-max px-1">
-              {user.role === 'surveyor' && (
-                <>
+              {navLinksFor(user.role).map((l) => {
+                const Icon = ICONS[l.icon];
+                return (
                   <Link
-                    href="/surveyor/sessions"
+                    key={l.href}
+                    href={l.href}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/surveyor/sessions') && pathname !== '/surveyor/new'
+                      isLinkActive(l, pathname)
                         ? 'bg-blue-600 text-white shadow-xs font-bold'
                         : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    <ClipboardList className="w-3.5 h-3.5 shrink-0" />
-                    Sesi Survei
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
+                    {l.label}
                   </Link>
-                  <Link
-                    href="/surveyor/new"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname === '/surveyor/new'
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <PlusCircle className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
-                    Buat Sesi Baru
-                  </Link>
-                </>
-              )}
-
-              {user.role === 'supervisor' && (
-                <>
-                  <Link
-                    href="/supervisor/dashboard"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/supervisor/dashboard') || pathname.startsWith('/supervisor/sessions')
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <BarChart3 className="w-3.5 h-3.5 shrink-0" />
-                    Dashboard Supervisor
-                  </Link>
-                  <Link
-                    href="/supervisor/reviews"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/supervisor/reviews')
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <CheckSquare className="w-3.5 h-3.5 shrink-0" />
-                    Antrean Review
-                  </Link>
-                </>
-              )}
-
-              {user.role === 'admin' && (
-                <>
-                  <Link
-                    href="/admin/dashboard"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname === '/admin/dashboard'
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <BarChart3 className="w-3.5 h-3.5 shrink-0" />
-                    Dashboard
-                  </Link>
-                  <Link
-                    href="/admin/reviews"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/admin/reviews')
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <CheckSquare className="w-3.5 h-3.5 shrink-0" />
-                    Antrean Review
-                  </Link>
-                  <Link
-                    href="/admin/classes"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/admin/classes')
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Layers className="w-3.5 h-3.5 shrink-0" />
-                    Kelas Deteksi
-                  </Link>
-                  <Link
-                    href="/admin/risk-master"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/admin/risk-master')
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <BarChart3 className="w-3.5 h-3.5 shrink-0" />
-                    Risiko &amp; Zona
-                  </Link>
-                  <Link
-                    href="/admin/validasi-ahli"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/admin/validasi-ahli')
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <ClipboardList className="w-3.5 h-3.5 shrink-0" />
-                    Validasi Ahli
-                  </Link>
-                  <Link
-                    href="/admin/models"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/admin/models')
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Cpu className="w-3.5 h-3.5 shrink-0" />
-                    Model AI
-                  </Link>
-                  <Link
-                    href="/admin/users"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/admin/users')
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Users className="w-3.5 h-3.5 shrink-0" />
-                    User
-                  </Link>
-                </>
-              )}
+                );
+              })}
             </div>
           </div>
         )}
@@ -413,115 +193,21 @@ export default function Navbar() {
       {/* FIXED MOBILE BOTTOM APP BAR (Screens < md) for 1-Tap Navigation */}
       {user && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg px-2 py-1.5 flex justify-around items-center">
-          {user.role === 'surveyor' && (
-            <>
+          {navLinksFor(user.role).filter((l) => l.short).map((l) => {
+            const Icon = ICONS[l.icon];
+            return (
               <Link
-                href="/surveyor/sessions"
-                className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname.startsWith('/surveyor/sessions') && pathname !== '/surveyor/new'
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <ClipboardList className="w-5 h-5" />
-                <span>Sesi Survei</span>
-              </Link>
-              <Link
-                href="/surveyor/new"
-                className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname === '/surveyor/new'
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <PlusCircle className="w-5 h-5 text-emerald-600" />
-                <span>Sesi Baru</span>
-              </Link>
-            </>
-          )}
-
-          {user.role === 'supervisor' && (
-            <>
-              <Link
-                href="/supervisor/dashboard"
-                className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname.startsWith('/supervisor/dashboard') || pathname.startsWith('/supervisor/sessions') ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <BarChart3 className="w-5 h-5" />
-                Dashboard
-              </Link>
-              <Link
-                href="/supervisor/reviews"
-                className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname.startsWith('/supervisor/reviews') ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <CheckSquare className="w-5 h-5" />
-                Review
-              </Link>
-            </>
-          )}
-
-          {user.role === 'admin' && (
-            <>
-              <Link
-                href="/admin/dashboard"
+                key={l.href}
+                href={l.href}
                 className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname === '/admin/dashboard'
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
+                  isLinkActive(l, pathname) ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                <BarChart3 className="w-5 h-5" />
-                <span>Dashboard</span>
+                <Icon className="w-5 h-5" />
+                <span>{l.short}</span>
               </Link>
-              <Link
-                href="/admin/reviews"
-                className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname.startsWith('/admin/reviews')
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <CheckSquare className="w-5 h-5" />
-                <span>Review</span>
-              </Link>
-              <Link
-                href="/admin/classes"
-                className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname.startsWith('/admin/classes')
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <Layers className="w-5 h-5" />
-                <span>Kelas</span>
-              </Link>
-              <Link
-                href="/admin/models"
-                className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname.startsWith('/admin/models')
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <Cpu className="w-5 h-5" />
-                <span>Model AI</span>
-              </Link>
-              <Link
-                href="/admin/users"
-                className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname.startsWith('/admin/users')
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <Users className="w-5 h-5" />
-                <span>User</span>
-              </Link>
-            </>
-          )}
+            );
+          })}
         </div>
       )}
     </>

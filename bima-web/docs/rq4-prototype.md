@@ -15,7 +15,7 @@ demonstrasi/uji (tidak ditandai per baris di antarmuka); jawaban Validasi Ahli t
 | Pencocokan 35 klip RQ3 | `web/src/lib/clip-match.ts`: nama berkas **dan** durasi; badge "Data uji — dievaluasi" / "Video baru — belum dievaluasi" |
 | Jalur koreksi petugas | `OfficerCorrection` + `POST /api/detections/[id]/correct` dan `POST /api/sessions/[id]/missed` |
 | 3 peran + dasbor masing-masing | admin, surveyor, supervisor: `web/src/lib/access.ts`, proxy, guard API |
-| Instrumentasi latensi per modul | `MediaAsset.processingMetrics`, panel di dasbor admin |
+| Instrumentasi latensi per modul | `MediaAsset.processingMetrics`, panel di menu Analitik admin |
 | Instrumen Validasi Ahli | `/admin/validasi-ahli` (lembar kosong, DRAF, sesuaikan dengan Tabel 3.30) |
 
 ## 2. Peran dan hak akses
@@ -26,7 +26,7 @@ demonstrasi/uji (tidak ditandai per baris di antarmuka); jawaban Validasi Ahli t
 | `surveyor` | Hanya mengentri dan melihat sesi/temuan miliknya sendiri |
 | `supervisor` (Supervisor/Manajer, satu peran) | Melihat seluruh sesi semua surveyor dan mengoreksinya lewat jalur koreksi. **Tidak** dapat mengubah/menghapus data surveyor (403 pada 13 endpoint tulis) |
 
-Pembatasan data dasbor dilakukan di server (`/api/dashboard/overview`), bukan di klien. Uji: `npm run test:rbac` (60 pengecekan).
+Pembatasan data dasbor dilakukan di server (`/api/dashboard/overview`), bukan di klien. Uji: `npm run test:rbac` (72 pengecekan).
 
 ## 3a. Cara tercepat: satu perintah (demo lokal)
 
@@ -78,6 +78,8 @@ Kata sandi dibuat acak dan disimpan di `.demo/kredensial.txt`. File `.env` Anda 
   - Probabilitas classifier sengaja **tidak ditampilkan** (val/loss tinggi → kemungkinan terlalu percaya diri); akurasi top-1 0,8922 adalah validasi lipatan-0, bukan uji independen.
   - Aktivasi: salin `fold0_best.pt` menjadi `ai-service/models/yolo11n_seed0/sign_stage2_fold0_best.pt`, set `SIGN_CONDITION_WEIGHTS=sign_stage2_fold0_best.pt` di `ai-service/.env` (otomatis oleh `npm run demo` bila berkas ada), jalankan `npx prisma migrate deploy` dan `npm run seed:risk`, lalu restart ai-service dan web. Deteksi rambu yang diproses sebelum Tahap 2 aktif perlu diproses ulang.
 - **Alur supervisor**: dashboard menampilkan tiga langkah berurutan: (1) entri temuan oleh surveyor, (2) koreksi oleh supervisor, (3) review dan persetujuan/penolakan.
+- **Dashboard (semua peran) dibuat ringkas**: strip status alur kerja (supervisor/admin: entri surveyor → koreksi → review; surveyor: siap diajukan / menunggu review / perlu perbaikan), 4 KPI, grafik prioritas dan grafik per kelas yang dapat diklik (menyaring panel gambar temuan), panel **Gambar temuan** (frame dengan kotak berwarna per kelas, risiko tertinggi dulu), dan 5 lokasi berisiko tertinggi. Data surveyor dibatasi di server (`/api/dashboard/findings`, `/api/dashboard/overview`).
+- **Menu Analitik** (admin dan supervisor): peta sebaran (satu penanda per lokasi, warna = risiko tertinggi), tabel lokasi/sesi dengan filter, hasil koreksi supervisor, dan (admin) latensi sistem. Penanda peta hanya muncul untuk sesi yang memiliki koordinat (diisi surveyor saat membuat sesi).
 - **Halaman koreksi sesi**: panel "Temuan pada frame ini" berada di kanan gambar. Centang beberapa temuan lalu "Konfirmasi benar" atau "Tandai keliru" sekaligus (`POST /api/detections/bulk-correct`, maksimal 200 temuan; tiap temuan tetap punya riwayat koreksi sendiri). Alasan **opsional**. Koreksi rinci (kelas, kondisi rambu, severity) tersedia bila tepat satu temuan dipilih. Severity manual disembunyikan untuk rambu yang sudah diklasifikasi Tahap 2 karena severity mengikuti kondisi dan tag subtipe.
 - **Kotak pada gambar**: tidak bertumpuk. Pratinjau (modal) menampilkan hanya temuan yang sudah dikonfirmasi benar (jika media belum pernah ditinjau sama sekali, semua kecuali keliru agar hasil AI terlihat). Halaman koreksi menampilkan semua kecuali keliru. Memilih temuan di panel menampilkan kotaknya saja, termasuk temuan keliru. Menggeser slider confidence menampilkan kembali semua kotak yang lolos filter (tombol "Tampilan awal" mengembalikan). Warna kotak ditentukan kelas objek (`web/src/lib/class-colors.ts`), bukan tingkat risiko; legenda warna ada di bawah gambar. Semua halaman dengan kotak (galeri frame, modal pratinjau, modal review) memakai warna yang sama.
 - **Menu Kelas Deteksi**: pada model aktif YOLO halaman ini tidak memakai prompt (kelas ditentukan weight terlatih; admin hanya mengubah nama tampilan/status, tanpa tombol tambah kelas). Mode SAM Prompt / deskripsi visual (VLM) hanya muncul bila model aktif SAM3 atau VLM. Deskripsi naratif video (video-to-text) berasal dari evaluasi 35 klip, bukan dari halaman ini.
