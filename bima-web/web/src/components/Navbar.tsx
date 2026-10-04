@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -8,21 +8,40 @@ import {
   ClipboardList,
   PlusCircle,
   BarChart3,
+  LayoutDashboard,
+  Activity,
   CheckSquare,
   Layers,
   Cpu,
   Users,
   SlidersHorizontal,
+  MoreHorizontal,
+  ChevronDown,
   LogOut,
   Shield,
   User as UserIcon,
 } from 'lucide-react';
+import { isLinkActive, navLinksFor, splitNavLinks, type NavIcon } from '@/lib/nav-links';
+
+const ICONS: Record<NavIcon, React.ComponentType<{ className?: string }>> = {
+  dashboard: LayoutDashboard,
+  analytics: Activity,
+  sessions: ClipboardList,
+  new: PlusCircle,
+  review: CheckSquare,
+  classes: Layers,
+  risk: BarChart3,
+  expert: ClipboardList,
+  models: Cpu,
+  users: Users,
+  settings: SlidersHorizontal,
+};
 
 interface User {
   id: string;
   email: string;
   name: string;
-  role: 'surveyor' | 'admin';
+  role: 'surveyor' | 'supervisor' | 'admin';
 }
 
 export default function Navbar() {
@@ -30,6 +49,29 @@ export default function Navbar() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+
+  // Tutup dropdown saat pindah halaman, klik di luar, atau tekan Escape.
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMoreOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [moreOpen]);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -59,20 +101,20 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+      <nav className="bg-white border-b border-zinc-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-14 sm:h-16 items-center">
             {/* Brand Logo & Desktop Links */}
-            <div className="flex items-center gap-4 lg:gap-6">
-              <Link href="/" className="flex items-center gap-2 group shrink-0">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform shrink-0">
-                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="flex items-center gap-4 lg:gap-8">
+              <Link href="/" className="flex items-center gap-2.5 group shrink-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-brand-green flex items-center justify-center text-white shadow-xs shrink-0">
+                  <MapPin className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
                 </div>
                 <div>
-                  <span className="text-base sm:text-lg font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent leading-tight block">
+                  <span className="text-base sm:text-lg font-semibold tracking-tight text-zinc-900 leading-tight block">
                     BIMA Vision
                   </span>
-                  <span className="block text-[8px] sm:text-[10px] text-slate-400 font-medium tracking-wide uppercase">
+                  <span className="hidden 2xl:block text-[10px] text-zinc-500 font-medium tracking-wide uppercase">
                     Pemantauan Kawasan AI
                   </span>
                 </div>
@@ -80,103 +122,75 @@ export default function Navbar() {
 
               {/* Desktop Nav links (Visible on md and above) */}
               {user && (
-                <div className="hidden md:flex items-center gap-1">
-                  {user.role === 'surveyor' && (
-                    <>
+                <div className={`hidden items-center gap-1 ${splitNavLinks(user.role).more.length > 0 ? 'xl:flex' : 'md:flex'}`}>
+                  {splitNavLinks(user.role).primary.map((l) => {
+                    const Icon = ICONS[l.icon];
+                    const active = isLinkActive(l, pathname);
+                    return (
                       <Link
-                        href="/surveyor/sessions"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/surveyor/sessions') && pathname !== '/surveyor/new'
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        key={l.href}
+                        href={l.href}
+                        className={`flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-md text-[13px] transition-colors ${
+                          active
+                            ? 'bg-zinc-100 text-zinc-900 font-semibold'
+                            : 'text-zinc-500 font-medium hover:bg-zinc-50 hover:text-zinc-900'
                         }`}
                       >
-                        <ClipboardList className="w-4 h-4" />
-                        Sesi Survei
+                        <Icon className={`w-4 h-4 ${active ? 'text-brand-green' : ''}`} />
+                        {l.label}
                       </Link>
-                      <Link
-                        href="/surveyor/new"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname === '/surveyor/new'
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <PlusCircle className="w-4 h-4" />
-                        Buat Sesi Baru
-                      </Link>
-                    </>
-                  )}
+                    );
+                  })}
 
-                  {user.role === 'admin' && (
-                    <>
-                      <Link
-                        href="/admin/dashboard"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname === '/admin/dashboard'
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  {/* More Menu (dropdown) */}
+                  {splitNavLinks(user.role).more.length > 0 && (
+                    <div ref={moreRef} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setMoreOpen((o) => !o)}
+                        aria-haspopup="menu"
+                        aria-expanded={moreOpen}
+                        className={`flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-md text-[13px] transition-colors cursor-pointer ${
+                          moreOpen || splitNavLinks(user.role).more.some((l) => isLinkActive(l, pathname))
+                            ? 'bg-zinc-100 text-zinc-900 font-semibold'
+                            : 'text-zinc-500 font-medium hover:bg-zinc-50 hover:text-zinc-900'
                         }`}
                       >
-                        <BarChart3 className="w-4 h-4" />
-                        Dashboard
-                      </Link>
-                      <Link
-                        href="/admin/reviews"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/admin/reviews')
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <CheckSquare className="w-4 h-4" />
-                        Antrean Review
-                      </Link>
-                      <Link
-                        href="/admin/classes"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/admin/classes')
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <Layers className="w-4 h-4" />
-                        Kelas Custom
-                      </Link>
-                      <Link
-                        href="/admin/models"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/admin/models')
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <Cpu className="w-4 h-4" />
-                        Model AI
-                      </Link>
-                      <Link
-                        href="/admin/media-settings"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/admin/media-settings')
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <SlidersHorizontal className="w-4 h-4" />
-                        Batas Media
-                      </Link>
-                      <Link
-                        href="/admin/users"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          pathname.startsWith('/admin/users')
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        <Users className="w-4 h-4" />
-                        User
-                      </Link>
-                    </>
+                        <MoreHorizontal
+                          className={`w-4 h-4 ${splitNavLinks(user.role).more.some((l) => isLinkActive(l, pathname)) ? 'text-brand-green' : ''}`}
+                        />
+                        More Menu
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {moreOpen && (
+                        <div
+                          role="menu"
+                          className="absolute left-0 top-full mt-2 w-52 bg-white border border-zinc-200 rounded-xl shadow-lg p-1.5 z-50"
+                        >
+                          {splitNavLinks(user.role).more.map((l) => {
+                            const Icon = ICONS[l.icon];
+                            const active = isLinkActive(l, pathname);
+                            return (
+                              <Link
+                                key={l.href}
+                                href={l.href}
+                                role="menuitem"
+                                onClick={() => setMoreOpen(false)}
+                                className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] transition-colors ${
+                                  active
+                                    ? 'bg-zinc-100 text-zinc-900 font-semibold'
+                                    : 'text-zinc-500 font-medium hover:bg-zinc-50 hover:text-zinc-900'
+                                }`}
+                              >
+                                <Icon className={`w-4 h-4 ${active ? 'text-brand-green' : ''}`} />
+                                {l.label}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -185,23 +199,23 @@ export default function Navbar() {
             {/* User Profile & Actions */}
             <div className="flex items-center gap-2 sm:gap-3">
               {loading ? (
-                <div className="w-16 sm:w-24 h-8 bg-slate-100 rounded-lg animate-pulse" />
+                <div className="w-16 sm:w-24 h-8 bg-zinc-100 rounded-md animate-pulse" />
               ) : user ? (
-                <div className="flex items-center gap-1.5 sm:gap-2.5">
+                <div className="flex items-center gap-2 sm:gap-3">
                   {/* User badge */}
-                  <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-slate-50 border border-slate-200">
-                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
+                  <div className="flex items-center gap-2 sm:gap-2.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md bg-white border border-zinc-200">
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center font-semibold text-xs shrink-0">
                       {user.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="hidden sm:block text-left">
-                      <span className="block text-xs font-semibold text-slate-800 leading-tight truncate max-w-[120px]">
+                      <span className="block text-xs font-semibold text-zinc-900 leading-tight truncate max-w-[120px]">
                         {user.name}
                       </span>
-                      <span className="flex items-center gap-1 text-[10px] text-slate-500 capitalize">
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-500 capitalize">
                         {user.role === 'admin' ? (
-                          <Shield className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
+                          <Shield className="w-2.5 h-2.5 text-brand-green shrink-0" />
                         ) : (
-                          <UserIcon className="w-2.5 h-2.5 text-blue-500 shrink-0" />
+                          <UserIcon className="w-2.5 h-2.5 text-brand-green shrink-0" />
                         )}
                         {user.role}
                       </span>
@@ -212,7 +226,7 @@ export default function Navbar() {
                   <button
                     onClick={handleLogout}
                     title="Keluar / Logout"
-                    className="p-1.5 sm:p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition-colors cursor-pointer"
+                    className="p-1.5 sm:p-2 rounded-md text-zinc-500 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition-colors cursor-pointer"
                   >
                     <LogOut className="w-4 h-4" />
                   </button>
@@ -220,7 +234,7 @@ export default function Navbar() {
               ) : (
                 <Link
                   href="/login"
-                  className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs sm:text-sm transition-colors shadow-xs"
+                  className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-md bg-brand-green hover:bg-brand-green/90 text-white font-medium text-xs sm:text-sm transition-colors shadow-xs"
                 >
                   Masuk
                 </Link>
@@ -231,105 +245,25 @@ export default function Navbar() {
 
         {/* ALWAYS-VISIBLE Mobile Horizontal Scrolling Navigation Bar (Screens < md) */}
         {user && (
-          <div className="md:hidden border-t border-slate-200 bg-slate-50 px-2 py-2 overflow-x-auto no-scrollbar shadow-inner">
-            <div className="flex items-center gap-1.5 min-w-max px-1">
-              {user.role === 'surveyor' && (
-                <>
+          <div className={`${splitNavLinks(user.role).more.length > 0 ? 'xl:hidden' : 'md:hidden'} border-t border-zinc-200 bg-white px-3 py-2.5 overflow-x-auto no-scrollbar`}>
+            <div className="flex items-center gap-2 min-w-max">
+              {navLinksFor(user.role).map((l) => {
+                const Icon = ICONS[l.icon];
+                return (
                   <Link
-                    href="/surveyor/sessions"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/surveyor/sessions') && pathname !== '/surveyor/new'
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                    key={l.href}
+                    href={l.href}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs whitespace-nowrap transition-all active:scale-95 ${
+                      isLinkActive(l, pathname)
+                        ? 'bg-brand-green text-white font-semibold'
+                        : 'bg-white text-zinc-500 font-medium border border-zinc-200 hover:bg-zinc-50 hover:text-zinc-900'
                     }`}
                   >
-                    <ClipboardList className="w-3.5 h-3.5 shrink-0" />
-                    Sesi Survei
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
+                    {l.label}
                   </Link>
-                  <Link
-                    href="/surveyor/new"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname === '/surveyor/new'
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <PlusCircle className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
-                    Buat Sesi Baru
-                  </Link>
-                </>
-              )}
-
-              {user.role === 'admin' && (
-                <>
-                  <Link
-                    href="/admin/dashboard"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname === '/admin/dashboard'
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <BarChart3 className="w-3.5 h-3.5 shrink-0" />
-                    Dashboard
-                  </Link>
-                  <Link
-                    href="/admin/reviews"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/admin/reviews')
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <CheckSquare className="w-3.5 h-3.5 shrink-0" />
-                    Antrean Review
-                  </Link>
-                  <Link
-                    href="/admin/classes"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/admin/classes')
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Layers className="w-3.5 h-3.5 shrink-0" />
-                    Kelas Custom
-                  </Link>
-                  <Link
-                    href="/admin/models"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/admin/models')
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Cpu className="w-3.5 h-3.5 shrink-0" />
-                    Model AI
-                  </Link>
-                  <Link
-                    href="/admin/media-settings"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/admin/media-settings')
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
-                    Batas Media
-                  </Link>
-                  <Link
-                    href="/admin/users"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                      pathname.startsWith('/admin/users')
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Users className="w-3.5 h-3.5 shrink-0" />
-                    User
-                  </Link>
-                </>
-              )}
+                );
+              })}
             </div>
           </div>
         )}
@@ -337,93 +271,22 @@ export default function Navbar() {
 
       {/* FIXED MOBILE BOTTOM APP BAR (Screens < md) for 1-Tap Navigation */}
       {user && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg px-2 py-1.5 flex justify-around items-center">
-          {user.role === 'surveyor' && (
-            <>
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-zinc-200 px-2 py-2 flex justify-around items-center">
+          {navLinksFor(user.role).filter((l) => l.short).map((l) => {
+            const Icon = ICONS[l.icon];
+            return (
               <Link
-                href="/surveyor/sessions"
-                className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname.startsWith('/surveyor/sessions') && pathname !== '/surveyor/new'
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
+                key={l.href}
+                href={l.href}
+                className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-md text-[10px] transition-all ${
+                  isLinkActive(l, pathname) ? 'text-brand-green font-semibold' : 'text-zinc-500 font-medium hover:text-zinc-900'
                 }`}
               >
-                <ClipboardList className="w-5 h-5" />
-                <span>Sesi Survei</span>
+                <Icon className="w-5 h-5" />
+                <span>{l.short}</span>
               </Link>
-              <Link
-                href="/surveyor/new"
-                className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname === '/surveyor/new'
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <PlusCircle className="w-5 h-5 text-emerald-600" />
-                <span>Sesi Baru</span>
-              </Link>
-            </>
-          )}
-
-          {user.role === 'admin' && (
-            <>
-              <Link
-                href="/admin/dashboard"
-                className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname === '/admin/dashboard'
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <BarChart3 className="w-5 h-5" />
-                <span>Dashboard</span>
-              </Link>
-              <Link
-                href="/admin/reviews"
-                className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname.startsWith('/admin/reviews')
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <CheckSquare className="w-5 h-5" />
-                <span>Review</span>
-              </Link>
-              <Link
-                href="/admin/classes"
-                className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname.startsWith('/admin/classes')
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <Layers className="w-5 h-5" />
-                <span>Kelas</span>
-              </Link>
-              <Link
-                href="/admin/models"
-                className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname.startsWith('/admin/models')
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <Cpu className="w-5 h-5" />
-                <span>Model AI</span>
-              </Link>
-              <Link
-                href="/admin/users"
-                className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl text-[10px] font-semibold transition-all ${
-                  pathname.startsWith('/admin/users')
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <Users className="w-5 h-5" />
-                <span>User</span>
-              </Link>
-            </>
-          )}
+            );
+          })}
         </div>
       )}
     </>

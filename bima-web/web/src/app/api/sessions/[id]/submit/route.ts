@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
+    const user = await requireAuth(['surveyor', 'admin']);
     const { id } = await params;
 
     const session = await prisma.surveySession.findUnique({
@@ -145,7 +145,7 @@ export async function POST(
             sessionId: session.id,
             sessionName: session.name,
             versionNumber: nextVersionNumber,
-            actionDescription: `Surveyor mengajukan hasil survei (Versi Snapshot: ${nextVersionNumber}) untuk direview Admin.`,
+            actionDescription: `Surveyor mengajukan hasil survei (Versi Snapshot: ${nextVersionNumber}) untuk direview Supervisor.`,
             totalMedia: session.mediaAssets.length,
             totalDetections: session.detections.length,
           }),
@@ -155,11 +155,14 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: 'Hasil survei berhasil disubmit dan menunggu review admin.',
+      message: 'Hasil survei berhasil disubmit dan menunggu disetujui/direview oleh supervisor.',
       submissionVersion,
       session: updatedSession,
     });
   } catch (error: any) {
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+    }
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { decryptSecret, encryptSecret } from '@/lib/security';
 import { runSam3Job } from '@/lib/sam3-runner';
+import { runYoloJob } from '@/lib/yolo-runner';
 import { requireEnv, requireEnvNumber } from '@/lib/env';
 import { parseVegetationCriteria } from '@/lib/vegetation-criteria';
 
@@ -11,7 +12,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
+    const user = await requireAuth(['surveyor', 'admin']);
     const { id } = await params;
     const FASTAPI_SERVICE_URL = requireEnv('FASTAPI_SERVICE_URL');
     const INTERNAL_API_SECRET = requireEnv('INTERNAL_API_SECRET');
@@ -71,6 +72,12 @@ export async function POST(
         },
         { status: 400 }
       );
+    }
+
+    // Local YOLO provider (6 model kategori): frame sampel tersimpan -> deteksi -> skor risiko. Berjalan di latar belakang.
+    if (modelConfig.provider.toLowerCase() === 'yolo') {
+      void runYoloJob({ mediaAssetId: id, modelName: modelConfig.modelName, modelConfigId: modelConfig.id });
+      return NextResponse.json({ success: true, mediaAssetId: id, status: 'processing' }, { status: 202 });
     }
 
     // Local SAM3 provider: text prompts come from ClassDefinition.samPrompt, no API key needed.
@@ -302,6 +309,9 @@ export async function POST(
       detections: refreshedDetections,
     });
   } catch (error: any) {
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+    }
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
+import { riskUpdateForClassChange } from '@/lib/risk-persist';
 import prisma from '@/lib/prisma';
 
 export async function GET(
@@ -30,6 +31,9 @@ export async function GET(
 
     return NextResponse.json({ success: true, detection });
   } catch (error: any) {
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+    }
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -43,7 +47,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
+    const user = await requireAuth(['surveyor', 'admin']);
     const { id } = await params;
     const body = await request.json();
 
@@ -93,6 +97,8 @@ export async function PATCH(
       updateData.classId = cls.id;
       updateData.className = cls.name;
       updateData.classVersionId = cls.versions[0]?.id || null;
+      // Kelas berubah -> skor risiko ikut dihitung ulang (Severity kembali ke bawaan kelas baru).
+      Object.assign(updateData, await riskUpdateForClassChange(detection.sessionId, cls));
       isClassChanged = true;
     }
 
@@ -223,6 +229,9 @@ export async function PATCH(
       detection: updated,
     });
   } catch (error: any) {
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+    }
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -236,7 +245,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
+    const user = await requireAuth(['surveyor', 'admin']);
     const { id } = await params;
 
     const detection = await prisma.detection.findUnique({
@@ -289,6 +298,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: 'Deteksi berhasil dihapus.' });
   } catch (error: any) {
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+    }
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

@@ -1,0 +1,297 @@
+'use client';
+
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { formatTimestamp, parseBBox, reviewLabel, visibleBoxes, type DetectionView, type FrameView, type GalleryMode } from '@/lib/media-view';
+import { BAND_LABEL, CONDITION_MODEL_LABEL, GROUP_LABEL } from '@/lib/risk';
+import { classColor, readableTextColor } from '@/lib/class-colors';
+import { BAND_STYLE, ComplianceBadge, ConditionBadge, RiskBadge } from './RiskBadge';
+
+export type BulkKind = 'dikonfirmasi' | 'keliru';
+
+interface FrameGalleryProps {
+  frames: FrameView[];
+  detections: DetectionView[];
+  /** Ambang confidence awal untuk tampilan (tidak mengubah hasil tersimpan). */
+  initialMinConfidence?: number;
+  /**
+   * pratinjau (hanya baca): kotak default = temuan yang sudah dikonfirmasi benar.
+   * koreksi: kotak default = semua kecuali keliru. Pada keduanya, memilih temuan di panel hanya menampilkan kotak terpilih.
+   */
+  mode?: GalleryMode;
+  /** Pilihan temuan (boleh banyak). Bila tidak diberikan, galeri mengelola pilihan sendiri. */
+  selectedIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
+  /** Bila diberikan, panel menampilkan kotak centang dan aksi massal (konfirmasi benar / tandai keliru). Mengembalikan true bila berhasil. */
+  onBulk?: (ids: string[], kind: BulkKind, reason: string) => Promise<boolean>;
+  bulkBusy?: boolean;
+  /** Sembunyikan panel "Temuan pada frame ini" (induk menampilkan daftar temuannya sendiri). */
+  hidePanel?: boolean;
+  /** Indeks frame (urutan dalam daftar frame) yang dikendalikan induk. */
+  activeIndex?: number;
+  onActiveIndexChange?: (index: number) => void;
+}
+
+type GroupFilter = 'semua' | 'keselamatan_infrastruktur' | 'monitoring_kepatuhan';
+
+/** Gaya garis kotak: warna mengikuti kelas objek; putus-putus untuk temuan keliru dan rambu normal. */
+function boxClass(d: DetectionView): string {
+  if (d.reviewStatus === 'keliru') return 'border-dashed opacity-60';
+  if (d.conditionLabel === 'normal') return 'border-dashed';
+  return '';
+}
+
+/**
+ * Galeri frame kunci (Opsi A): satu frame besar dengan kotak pembatas + strip miniatur. Kotak digambar di
+ * klien dari data tersimpan, sehingga ambang confidence dan filter dapat diubah tanpa memproses ulang.
+ */
+export default function FrameGallery({ frames, detections, initialMinConfidence = 0, mode = 'pratinjau', selectedIds: controlled, onSelectionChange, onBulk, bulkBusy = false, hidePanel = false, activeIndex, onActiveIndexChange }: FrameGalleryProps) {
+  const [innerIndex, setInnerIndex] = useState(0);
+  // Indeks frame bisa dikendalikan induk (mis. modal pratinjau melompat ke frame temuan yang diklik).
+  const index = activeIndex ?? innerIndex;
+  const setIndex = useCallback(
+    (v: number | ((i: number) => number)) => {
+      const next = typeof v === 'function' ? v(index) : v;
+      if (activeIndex === undefined) setInnerIndex(next);
+      onActiveIndexChange?.(next);
+    },
+    [index, activeIndex, onActiveIndexChange]
+  );
+  const [showBoxes, setShowBoxes] = useState(true);
+  const [minConf, setMinConf] = useState(initialMinConfidence);
+  // Setelah slider confidence digeser, semua kotak yang lolos filter ditampilkan (bukan hanya default per status tinjau).
+  const [sliderTouched, setSliderTouched] = useState(false);
+  const [group, setGroup] = useState<GroupFilter>('semua');
+  const [innerSelected, setInnerSelected] = useState<string[]>([]);
+  const [bulkReason, setBulkReason] = useState('');
+  const selectedIds = controlled ?? innerSelected;
+  const setSelected = (ids: string[]) => {
+    if (controlled === undefined) setInnerSelected(ids);
+    onSelectionChange?.(ids);
+  };
+  /** Klik baris/kotak: pilih hanya temuan itu; klik lagi untuk kembali ke tampilan default. */
+  const pickOnly = (id: string) => setSelected(selectedIds.length === 1 && selectedIds[0] === id ? [] : [id]);
+  const toggle = (id: string) => setSelected(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]);
+
+  const visible = useMemo(
+    () =>
+      detections.filter(
+        (d) => (d.confidence ?? 1) >= minConf && (group === 'semua' || d.classDefinition?.categoryGroup === group)
+      ),
+    [detections, minConf, group]
+  );
+
+  const byFrame = useMemo(() => {
+    const m = new Map<number, DetectionView[]>();
+    for (const d of visible) {
+      if (d.frameIndex === null) continue;
+      m.set(d.frameIndex, [...(m.get(d.frameIndex) ?? []), d]);
+    }
+    return m;
+  }, [visible]);
+
+  const frame = frames[Math.min(index, Math.max(0, frames.length - 1))];
+  const current = frame ? byFrame.get(frame.frameIndex) ?? [] : [];
+  const mediaHasReview = useMemo(() => detections.some((d) => d.reviewStatus !== 'belum_ditinjau'), [detections]);
+  const legendClasses = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const d of detections) if (!m.has(d.className)) m.set(d.className, d.classDefinition?.displayName ?? d.className);
+    return Array.from(m, ([name, label]) => ({ name, label }));
+  }, [detections]);
+  const drawn = visibleBoxes(current, { mode, selectedIds, mediaHasReview, showAll: sliderTouched });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
+      if (e.key === 'ArrowRight') setIndex((i) => Math.min(frames.length - 1, i + 1));
+      if (e.key === 'ArrowLeft') setIndex((i) => Math.max(0, i - 1));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [frames.length, setIndex]);
+
+  if (frames.length === 0) {
+    return <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Belum ada frame untuk media ini.</div>;
+  }
+
+  const worstBand = (fi: number) => {
+    const rank = { rendah: 1, sedang: 2, tinggi: 3, kritikal: 4 } as const;
+    let best: DetectionView | null = null;
+    for (const d of byFrame.get(fi) ?? []) {
+      if (d.priorityBand && (!best || rank[d.priorityBand] > rank[best.priorityBand!])) best = d;
+    }
+    return best?.priorityBand ?? null;
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg bg-slate-50 p-2.5 text-xs">
+        <label className="flex items-center gap-2 font-semibold text-slate-700">
+          Confidence ≥ <span className="w-10 font-mono">{minConf.toFixed(2)}</span>
+          <input
+            type="range" min={0} max={0.95} step={0.05} value={minConf}
+            onChange={(e) => { setMinConf(parseFloat(e.target.value)); setSliderTouched(true); }}
+            aria-label="Ambang confidence tampilan" className="w-32 accent-blue-600"
+          />
+        </label>
+        <select
+          value={group} onChange={(e) => setGroup(e.target.value as GroupFilter)}
+          aria-label="Filter kelompok" className="rounded-md border border-slate-300 bg-white px-2 py-1 font-semibold text-slate-700"
+        >
+          <option value="semua">Semua kelompok</option>
+          <option value="keselamatan_infrastruktur">{GROUP_LABEL.keselamatan_infrastruktur}</option>
+          <option value="monitoring_kepatuhan">{GROUP_LABEL.monitoring_kepatuhan}</option>
+        </select>
+        {sliderTouched && (
+          <button
+            type="button" onClick={() => { setMinConf(initialMinConfidence); setSliderTouched(false); }}
+            className="rounded-md border border-slate-300 bg-white px-2 py-1 font-semibold text-slate-700 hover:bg-slate-100"
+          >
+            Tampilan awal
+          </button>
+        )}
+        <button
+          type="button" onClick={() => setShowBoxes((v) => !v)}
+          className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 font-semibold text-slate-700 hover:bg-slate-100"
+        >
+          {showBoxes ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          {showBoxes ? 'Sembunyikan kotak' : 'Tampilkan kotak'}
+        </button>
+        <span className="ml-auto text-slate-500">
+          {drawn.length} kotak digambar pada frame ini · {visible.length} dari {detections.length} lolos filter · {frames.length} frame
+        </span>
+      </div>
+
+      <div className={hidePanel ? '' : 'grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px]'}>
+      <div className="min-w-0 space-y-3">
+      <div className="relative overflow-hidden rounded-xl bg-slate-900">
+        <img src={frame.imageUrl} alt={`Frame ${frame.frameIndex + 1} pada ${formatTimestamp(frame.timestampSeconds)}`} className="block h-auto w-full" />
+        {showBoxes &&
+          drawn.map((d) => {
+            const b = parseBBox(d.bbox);
+            if (!b) return null;
+            const selected = selectedIds.includes(d.id);
+            return (
+              <button
+                key={d.id} type="button" onClick={() => pickOnly(d.id)}
+                aria-label={`${d.classDefinition?.displayName ?? d.className}, confidence ${d.confidence?.toFixed(2) ?? '-'}`}
+                className={`absolute border-2 ${boxClass(d)} ${selected ? 'ring-2 ring-white' : ''}`}
+                style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.width * 100}%`, height: `${b.height * 100}%`, borderColor: classColor(d.className), backgroundColor: `${classColor(d.className)}1f` }}
+              >
+                <span className="absolute -top-5 left-0 whitespace-nowrap rounded px-1 text-[10px] font-semibold" style={{ backgroundColor: classColor(d.className), color: readableTextColor(classColor(d.className)) }}>
+                  {d.classDefinition?.displayName ?? d.className} {d.confidence !== null ? d.confidence.toFixed(2) : ''}
+                </span>
+              </button>
+            );
+          })}
+        <button type="button" aria-label="Frame sebelumnya" disabled={index === 0} onClick={() => setIndex((i) => Math.max(0, i - 1))}
+          className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white disabled:opacity-30"><ChevronLeft className="h-5 w-5" /></button>
+        <button type="button" aria-label="Frame berikutnya" disabled={index >= frames.length - 1} onClick={() => setIndex((i) => Math.min(frames.length - 1, i + 1))}
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white disabled:opacity-30"><ChevronRight className="h-5 w-5" /></button>
+        <div className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 font-mono text-[11px] text-white">
+          Frame {frame.frameIndex + 1}/{frames.length} · {formatTimestamp(frame.timestampSeconds)}
+        </div>
+      </div>
+
+      <ul className="flex gap-2 overflow-x-auto pb-1" aria-label="Miniatur frame">
+        {frames.map((f, i) => {
+          const n = (byFrame.get(f.frameIndex) ?? []).length;
+          const band = worstBand(f.frameIndex);
+          return (
+            <li key={f.id} className="shrink-0">
+              <button type="button" onClick={() => setIndex(i)} aria-label={`Frame ${f.frameIndex + 1}, ${n} kotak`}
+                className={`relative block overflow-hidden rounded-md border-2 ${i === index ? 'border-blue-600' : 'border-transparent'}`}>
+                <img src={f.imageUrl} alt="" loading="lazy" className="h-14 w-24 object-cover" />
+                {n > 0 && (
+                  <span className={`absolute right-0.5 top-0.5 rounded px-1 text-[9px] font-bold text-white ${band ? BAND_STYLE[band].dot : 'bg-slate-600'}`}>{n}</span>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600" aria-label="Warna kotak per kelas">
+        {legendClasses.map((c) => (
+          <li key={c.name} className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: classColor(c.name) }} />
+            {c.label}
+          </li>
+        ))}
+      </ul>
+
+      </div>
+
+      {!hidePanel && <section className="flex min-w-0 flex-col rounded-lg border border-slate-200 bg-white lg:max-h-[34rem]" aria-label="Temuan pada frame ini">
+        <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2 text-xs font-bold text-slate-700">
+          <span className="mr-auto min-w-0">Temuan pada frame ini ({current.length})</span>
+          {onBulk && current.length > 0 && (
+            <label className="flex shrink-0 items-center gap-1 whitespace-nowrap font-semibold text-slate-600">
+              <input
+                type="checkbox"
+                checked={current.every((d) => selectedIds.includes(d.id))}
+                onChange={(e) => setSelected(e.target.checked ? Array.from(new Set([...selectedIds, ...current.map((d) => d.id)])) : selectedIds.filter((id) => !current.some((d) => d.id === id)))}
+              />
+              Pilih semua
+            </label>
+          )}
+        </div>
+        {current.length === 0 ? (
+          <p className="px-3 py-3 text-xs text-slate-500">Tidak ada kotak pada frame ini dengan pengaturan saat ini.</p>
+        ) : (
+          <ul className="min-h-0 flex-1 divide-y divide-slate-100 overflow-y-auto">
+            {current.map((d) => {
+              const rv = reviewLabel(d.reviewStatus);
+              const chosen = selectedIds.includes(d.id);
+              return (
+                <li key={d.id} className={`flex items-start gap-2 px-3 py-2 text-xs ${chosen ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
+                  {onBulk && (
+                    <input type="checkbox" className="mt-0.5" checked={chosen} onChange={() => toggle(d.id)} aria-label={`Pilih ${d.classDefinition?.displayName ?? d.className}`} />
+                  )}
+                  <button type="button" onClick={() => pickOnly(d.id)} className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-left">
+                    <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: classColor(d.className) }} aria-hidden />
+                    <span className="font-semibold text-slate-900">{d.classDefinition?.displayName ?? d.className}</span>
+                    <span className="font-mono text-slate-500">conf {d.confidence?.toFixed(2) ?? '-'}</span>
+                    {d.classDefinition?.categoryGroup === 'monitoring_kepatuhan' ? (
+                      <ComplianceBadge />
+                    ) : d.conditionLabel === 'normal' ? null : (
+                      <RiskBadge score={d.riskScore} band={d.priorityBand} severity={d.severity} exposure={d.exposure} source={d.severitySource} />
+                    )}
+                    {d.classDefinition?.hasConditionStage && <ConditionBadge label={d.conditionLabel} tag={d.conditionTag} />}
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${rv.tone === 'benar' ? 'bg-emerald-100 text-emerald-800' : rv.tone === 'keliru' ? 'bg-slate-200 text-slate-700' : 'bg-amber-100 text-amber-800'}`}>{rv.text}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {onBulk && (
+          <div className="space-y-2 border-t border-slate-100 p-3 text-xs">
+            <div className="font-semibold text-slate-700">{selectedIds.length} temuan dipilih</div>
+            <input
+              value={bulkReason} onChange={(e) => setBulkReason(e.target.value)} placeholder="Alasan (opsional)" aria-label="Alasan koreksi (opsional)"
+              className="w-full rounded-lg border border-slate-300 p-1.5"
+            />
+            <div className="flex flex-wrap gap-2">
+              <button type="button" disabled={bulkBusy || selectedIds.length === 0}
+                onClick={async () => { if (await onBulk(selectedIds, 'dikonfirmasi', bulkReason)) { setSelected([]); setBulkReason(''); } }}
+                className="rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Konfirmasi benar</button>
+              <button type="button" disabled={bulkBusy || selectedIds.length === 0}
+                onClick={async () => { if (await onBulk(selectedIds, 'keliru', bulkReason)) { setSelected([]); setBulkReason(''); } }}
+                className="rounded-lg bg-rose-600 px-3 py-1.5 font-semibold text-white hover:bg-rose-700 disabled:opacity-50">Tandai keliru</button>
+            </div>
+            <p className="text-[11px] text-slate-500">Pilih satu temuan untuk koreksi rinci (kelas, kondisi, severity) di panel koreksi.</p>
+          </div>
+        )}
+      </section>}
+      </div>
+
+      <p className="text-[11px] text-slate-500">
+        Warna kotak menunjukkan kelas objek; tingkat risiko ({Object.values(BAND_LABEL).join(' · ')}) tampil pada lencana. {mode === 'pratinjau' ? 'Kotak awal: temuan yang sudah dikonfirmasi benar; menggeser slider confidence menampilkan semua kotak. ' : 'Menggeser slider confidence menampilkan semua kotak. '}Pilih temuan untuk menampilkan kotaknya saja. Garis putus-putus = temuan keliru atau rambu normal (tanpa skor).
+      </p>
+      {detections.some((d) => d.classDefinition?.hasConditionStage && d.conditionLabel) && (
+        <p className="text-[11px] text-slate-500">Kondisi rambu (normal/rusak): {CONDITION_MODEL_LABEL}. Subtipe kerusakan ditetapkan supervisor.</p>
+      )}
+    </div>
+  );
+}

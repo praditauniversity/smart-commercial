@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { invalidateClassCache } from '@/lib/classCache';
 import { normalizeVegetationCriteria } from '@/lib/vegetation-criteria';
+import { validateClassRisk } from '@/lib/master-validation';
 
 export async function PATCH(
   request: Request,
@@ -60,6 +61,21 @@ export async function PATCH(
     }
     if (body.conflictIouThreshold !== undefined) {
       updateData.conflictIouThreshold = parseFloat(body.conflictIouThreshold);
+    }
+    if (body.categoryGroup !== undefined || body.defaultSeverity !== undefined || body.category !== undefined) {
+      const next = {
+        categoryGroup: body.categoryGroup !== undefined ? body.categoryGroup || null : currentClass.categoryGroup,
+        defaultSeverity: body.defaultSeverity !== undefined ? (body.defaultSeverity === null || body.defaultSeverity === '' ? null : Number(body.defaultSeverity)) : currentClass.defaultSeverity,
+        category: body.category !== undefined ? (body.category === null ? null : String(body.category)) : currentClass.category,
+      };
+      const errors = validateClassRisk(next);
+      if (errors.length) return NextResponse.json({ error: errors.join(' ') }, { status: 400 });
+      updateData.categoryGroup = next.categoryGroup;
+      updateData.defaultSeverity = next.defaultSeverity;
+      updateData.category = next.category;
+    }
+    if (body.hasConditionStage !== undefined) {
+      updateData.hasConditionStage = Boolean(body.hasConditionStage);
     }
     if (body.isActive !== undefined) {
       updateData.isActive = Boolean(body.isActive);

@@ -13,13 +13,14 @@ model User {
   email               String              @unique
   name                String
   passwordHash        String
-  role                String              @default("surveyor") // "surveyor" | "admin"
+  role                String              @default("surveyor") // "surveyor" | "supervisor" | "admin"
   isActive            Boolean             @default(true)
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
   surveySessions      SurveySession[]
   reviewedSubmissions SubmissionVersion[]
   auditLogs           AuditLog[]
+  corrections         OfficerCorrection[]
 }
 
 model ClassDefinition {
@@ -35,6 +36,13 @@ model ClassDefinition {
   conflictIouThreshold  Float                    @default(0.5)
   samPrompt             String? // Short English noun phrase used by the local SAM3 provider (text prompt)
   samColor              String? // Overlay color for SAM3 results, "#RRGGBB"
+  // --- Penilaian risiko (RQ4) ---
+  modelClass            String?                  @unique // Nama kelas keluaran model YOLO, mis. "pavedroad_pothole"
+  category              String? // Kategori manusiawi: Jalan | Vegetasi | Rambu | Spanduk/Banner | Notis jual/sewa
+  categoryGroup         String? // "keselamatan_infrastruktur" | "monitoring_kepatuhan" (null = belum dikelompokkan)
+  defaultSeverity       Int? // 1-3; null untuk monitoring_kepatuhan (tidak dapat skor risiko)
+  hasConditionStage     Boolean                  @default(false) // Tahap 2: kondisi (normal/damaged) diklasifikasi per crop; hanya rambu (sign)
+  conditionTags         ConditionTag[]
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
   versions              ClassDefinitionVersion[]
@@ -42,13 +50,13 @@ model ClassDefinition {
 }
 
 model ClassDefinitionVersion {
-  id                String          @id @default(uuid())
-  classId           String
-  versionNumber     Int
-  snapshotData      String // JSON snapshot of class fields
-  createdAt         DateTime        @default(now())
-  classDefinition   ClassDefinition @relation(fields: [classId], references: [id], onDelete: Cascade)
-  detections        Detection[]
+  id              String          @id @default(uuid())
+  classId         String
+  versionNumber   Int
+  snapshotData    String // JSON snapshot of class fields
+  createdAt       DateTime        @default(now())
+  classDefinition ClassDefinition @relation(fields: [classId], references: [id], onDelete: Cascade)
+  detections      Detection[]
 }
 
 model ModelConfig {
@@ -83,30 +91,40 @@ model SurveySession {
   finishedAt      DateTime?
   status          String              @default("berlangsung") // "berlangsung" | "selesai_menunggu_submit" | "menunggu_review" | "disetujui" | "ditolak" | "perlu_perbaikan"
   surveyorId      String
+  zoneId          String? // Zona kawasan -> Tingkat Paparan (Exposure)
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
   surveyor        User                @relation(fields: [surveyorId], references: [id])
+  zone            Zone?               @relation(fields: [zoneId], references: [id], onDelete: SetNull)
   mediaAssets     MediaAsset[]
   submissions     SubmissionVersion[]
   detections      Detection[]
+  missedFindings  OfficerCorrection[]
 }
 
 model MediaAsset {
-  id              String         @id @default(uuid())
-  sessionId       String
-  fileName        String
-  fileType        String // "image" | "video"
-  fileUrl         String
-  storagePath     String
-  durationSeconds Float?
-  status          String         @default("queued") // "queued" | "uploading" | "uploaded" | "processing" | "completed" | "failed" | "deleted"
-  errorMessage    String?
-  idempotencyKey  String?        @unique
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  session         SurveySession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  segments        MediaSegment[]
-  detections      Detection[]
+  id                String              @id @default(uuid())
+  sessionId         String
+  fileName          String
+  fileType          String // "image" | "video"
+  fileUrl           String
+  storagePath       String
+  durationSeconds   Float?
+  status            String              @default("queued") // "queued" | "uploading" | "uploaded" | "processing" | "completed" | "failed" | "deleted"
+  errorMessage      String?
+  idempotencyKey    String?             @unique
+  evaluatedClipId   String? // Terisi bila nama berkas (dan durasi) cocok dengan salah satu dari 35 klip RQ3
+  clipMatchNote     String? // Alasan bila nama cocok tetapi tidak dianggap klip terevaluasi (mis. durasi berbeda)
+  processingMetrics String? // JSON: latensi per tahap (ekstraksi frame, unduh, inferensi per model, simpan) dalam ms
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  session           SurveySession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  evaluatedClip     EvaluatedClip?      @relation(fields: [evaluatedClipId], references: [id], onDelete: SetNull)
+  segments          MediaSegment[]
+  frames            MediaFrame[]
+  detections        Detection[]
+  corrections       OfficerCorrection[]
+  playback          MediaPlayback?
 }
 
 model MediaSegment {
@@ -140,6 +158,17 @@ model Detection {
   modelConfigId    String?
   modelName        String?
   promptVersion    String?
+  confidence       Float?
+  // --- Penilaian risiko (RQ4); semua null untuk kelompok monitoring_kepatuhan ---
+  severity         Int? // 1-3
+  severitySource   String                  @default("bawaan") // "bawaan" (kelas) | "sementara" (rambu rusak, subtipe belum ditentukan) | "tag" (dari tag subtipe) | "petugas" (diubah manual)
+  conditionLabel   String? // Tahap 2 (kelas dengan hasConditionStage): "normal" | "damaged"; null = belum diklasifikasi
+  conditionModel   String? // Model Tahap 2 yang menghasilkan label (mis. "sign_classifier_fold0")
+  conditionTagId   String? // Tag subtipe kerusakan yang ditetapkan supervisor (rambu rusak)
+  exposure         Int? // 1-3, disalin dari zona sesi saat temuan dibuat
+  riskScore        Int? // severity x exposure: 1,2,3,4,6,9
+  priorityBand     String? // "rendah" | "sedang" | "tinggi" | "kritikal"
+  reviewStatus     String                  @default("belum_ditinjau") // "belum_ditinjau" | "dikonfirmasi" | "dikoreksi" | "keliru"
   hasConflict      Boolean                 @default(false)
   conflictResolved Boolean                 @default(false)
   conflictDetails  String?                 @default("{}") // JSON string describing conflicting detection IDs & classes
@@ -151,6 +180,8 @@ model Detection {
   classDefinition  ClassDefinition         @relation(fields: [classId], references: [id])
   classVersion     ClassDefinitionVersion? @relation(fields: [classVersionId], references: [id], onDelete: SetNull)
   modelConfig      ModelConfig?            @relation(fields: [modelConfigId], references: [id], onDelete: SetNull)
+  conditionTag     ConditionTag?           @relation(fields: [conditionTagId], references: [id], onDelete: SetNull)
+  corrections      OfficerCorrection[]
 }
 
 model SubmissionVersion {
@@ -178,4 +209,119 @@ model AuditLog {
   changes    String // JSON string describing previous and new values
   createdAt  DateTime @default(now())
   actor      User?    @relation(fields: [actorId], references: [id])
+}
+
+// Zona kawasan. Untuk purwarupa, nilai Exposure adalah DATA CONTOH (isSimulated = true), bukan data riil.
+model Zone {
+  id          String          @id @default(uuid())
+  code        String          @unique
+  name        String
+  zoneType    String // "jalan_utama" | "hunian" | "area_minim_aktivitas"
+  exposure    Int // 1-3 (Rendah | Sedang | Tinggi)
+  description String?
+  isSimulated Boolean         @default(true)
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  sessions    SurveySession[]
+}
+
+// 35 klip uji RQ3 (data riil dari Tracker Evaluasi). Dicocokkan lewat nama berkas.
+model EvaluatedClip {
+  id                     String       @id @default(uuid())
+  clipId                 String       @unique
+  fileName               String       @unique
+  categories             String       @default("[]") // JSON array kategori ground truth
+  hasFinding             Boolean
+  durationSeconds        Float
+  referenceCaption       String
+  validationStatus       String?
+  modelCaption           String // teks naratif hasil Qwen2.5-VL-7B-Instruct (zero-shot)
+  bleu                   Float?
+  llmOverall             Float? // skor keseluruhan LLM-based (0-100)
+  completeness           Float? // kelengkapan deteksi (0-1)
+  locationAccuracy       Float? // 1-5
+  severityAccuracy       Float? // 1-5
+  categoriesDetected     String       @default("[]")
+  categoriesMissed       String       @default("[]")
+  categoriesHallucinated String       @default("[]")
+  judgeReason            String?
+  generatorModel         String?
+  generatorFrames        Int?
+  createdAt              DateTime     @default(now())
+  mediaAssets            MediaAsset[]
+}
+
+// Koreksi petugas (supervisor/admin): menandai temuan keliru, terlewat, atau mengubah kelas/severity.
+// Satu baris = satu aksi; riwayat tidak ditimpa. `kind = "terlewat"` tidak punya detectionId.
+model OfficerCorrection {
+  id               String        @id @default(uuid())
+  kind             String // "dikonfirmasi" | "keliru" | "kelas_diubah" | "severity_diubah" | "kondisi_diubah" | "terlewat"
+  detectionId      String?
+  sessionId        String
+  mediaAssetId     String?
+  classId          String? // kelas yang benar (untuk kelas_diubah / terlewat)
+  severity         Int? // severity yang benar (untuk severity_diubah)
+  conditionLabel   String? // kondisi yang benar (untuk kondisi_diubah): normal | damaged
+  conditionTagId   String? // tag subtipe yang ditetapkan (untuk kondisi_diubah)
+  bbox             String? // JSON bbox ternormalisasi, untuk "terlewat"
+  timestampSeconds Float?
+  reason           String?
+  actorId          String
+  createdAt        DateTime      @default(now())
+  detection        Detection?    @relation(fields: [detectionId], references: [id], onDelete: SetNull)
+  session          SurveySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  mediaAsset       MediaAsset?   @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
+  actor            User          @relation(fields: [actorId], references: [id])
+
+  @@index([sessionId])
+  @@index([detectionId])
+}
+
+// Frame sampel video (Opsi A: galeri frame, 0,5 fps maks 24) atau satu-satunya frame gambar.
+// Frame diekstrak dari berkas ASLI saat unggah; video 720p hanya untuk diputar.
+model MediaFrame {
+  id               String     @id @default(uuid())
+  mediaAssetId     String
+  frameIndex       Int
+  timestampSeconds Float
+  imageUrl         String
+  width            Int?
+  height           Int?
+  createdAt        DateTime   @default(now())
+  mediaAsset       MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaAssetId, frameIndex])
+}
+
+// Lintasan kotak rapat untuk pemutar video 720p (bukan temuan resmi). Dibuat dari deteksi ~5 fps pada video 720p,
+// lalu tiap lintasan ditautkan ke temuan resmi (detectionIds) agar status koreksi supervisor ikut berlaku saat diputar.
+model MediaPlayback {
+  id           String     @id @default(uuid())
+  mediaAssetId String     @unique
+  status       String // "processing" | "ready" | "failed" | "skipped"
+  note         String? // alasan bila gagal/dilewati
+  data         String? // JSON PlaybackData (lihat src/lib/playback-tracks.ts); null sampai status "ready"
+  metrics      String? // JSON: frame, lintasan, waktu proses
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  mediaAsset   MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+}
+
+// Master tag subtipe kerusakan untuk kelas dengan Tahap 2 (rambu). Severity per tag dapat diubah admin.
+// Perubahan berlaku untuk penetapan berikutnya; temuan yang sudah memakai tag menyimpan severity-nya sendiri.
+model ConditionTag {
+  id              String          @id @default(uuid())
+  classId         String
+  code            String
+  label           String
+  severity        Int // 1-3
+  sortOrder       Int             @default(0)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  classDefinition ClassDefinition @relation(fields: [classId], references: [id], onDelete: Cascade)
+  detections      Detection[]
+
+  @@unique([classId, code])
 }

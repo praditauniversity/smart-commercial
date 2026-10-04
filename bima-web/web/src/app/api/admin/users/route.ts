@@ -1,3 +1,4 @@
+import { normalizeRole } from '@/lib/access';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
         email: cleanEmail,
         name: name.trim(),
         passwordHash,
-        role: role === 'admin' ? 'admin' : 'surveyor',
+        role: normalizeRole(role),
         isActive: true,
       },
       select: { id: true, email: true, name: true, role: true, isActive: true },

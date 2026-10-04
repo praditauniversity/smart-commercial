@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
+/* Token merek Summarecon. Tailwind 4 membaca tema dari @theme (bukan tailwind.config.js);
+   tiap --color-* otomatis jadi utilitas: bg-brand-green, text-brand-orange, border-brand-yellow, bg-dashboard-bg, dst. */
+@theme {
+  --color-brand-green: #006b3f;
+  --color-brand-orange: #f26f21;
+  --color-brand-yellow: #ffd600;
+  --color-dashboard-bg: #f8fafc;
+}
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;

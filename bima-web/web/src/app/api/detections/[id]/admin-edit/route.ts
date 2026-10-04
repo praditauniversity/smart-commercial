@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { riskUpdateForClassChange } from '@/lib/risk-persist';
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const admin = await requireAuth(['admin']);
+    const admin = await requireAuth(['supervisor', 'admin']);
     const { id } = await params;
     const { classId, condition, feasibility, notes } = await request.json();
 
@@ -38,6 +39,8 @@ export async function PATCH(
         updateData.classId = cls.id;
         updateData.className = cls.name;
         updateData.classVersionId = cls.versions[0]?.id || null;
+        // Kelas berubah -> skor risiko harus ikut dihitung ulang agar tidak basi.
+        Object.assign(updateData, await riskUpdateForClassChange(detection.sessionId, cls));
       }
     }
 

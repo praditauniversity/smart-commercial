@@ -20,6 +20,8 @@ class DetectionItem(BaseModel):
     frame_index: Optional[int] = None
     has_conflict: bool = False
     conflict_details: Optional[Dict[str, Any]] = None
+    condition_state: Optional[str] = None  # Tahap 2: "normal" | "damaged"; None = tidak diklasifikasi
+    condition_model: Optional[str] = None  # model Tahap 2 yang menghasilkan condition_state
 
 class DetectionSchema(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
@@ -37,10 +39,12 @@ class ClassDef(BaseModel):
     conflict_iou_threshold: Optional[float] = 0.5
     sam_prompt: Optional[str] = None  # text prompt for the local SAM3 provider
     sam_color: Optional[str] = None   # "#RRGGBB" overlay color for SAM3 results
+    model_class: Optional[str] = None  # YOLO output class name (e.g. "pavedroad_pothole"); falls back to `name`
+    has_condition_stage: bool = False  # Tahap 2: kondisi (normal/damaged) diklasifikasi per crop (hanya rambu)
 
 class ModelConfigPayload(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
-    provider: str = "OpenRouter" # OpenRouter | onpremise | sam3 | mock
+    provider: str = "OpenRouter" # OpenRouter | onpremise | sam3 | yolo | mock
     model_name: str  # always sent by the web app from the ModelConfig row
     endpoint_url: Optional[str] = None
     api_key: Optional[str] = None
@@ -84,3 +88,65 @@ class TestConnectionResponse(BaseModel):
     success: bool
     message: str
     latency_ms: Optional[float] = None
+
+
+class FrameInput(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    frame_index: int
+    timestamp_seconds: float
+    url: str  # http(s) URL, data: URL, or local path of an already-extracted frame (JPEG/PNG)
+
+class YoloDetectRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    session_id: str
+    media_asset_id: str
+    frames: List[FrameInput] = Field(..., min_length=1, max_length=64)
+    active_classes: List[ClassDef]
+    conflict_threshold: float
+
+class YoloDetectMetrics(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    frames: int
+    download_ms: float
+    inference_ms: float
+    total_ms: float
+    per_model_ms: Dict[str, float] = Field(default_factory=dict)  # total ms per category model
+    detections_by_class: Dict[str, int] = Field(default_factory=dict)
+    stage2_ms: float = 0.0  # total waktu klasifikasi kondisi (Tahap 2)
+    stage2_crops: int = 0  # jumlah crop yang diklasifikasi
+    stage2_model: Optional[str] = None  # None bila Tahap 2 tidak aktif
+    missing_models: List[str] = Field(default_factory=list)
+    device: Optional[str] = None
+    conf: float
+
+class YoloDetectResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    success: bool
+    media_asset_id: str
+    detections: List[DetectionItem] = Field(default_factory=list)
+    metrics: Optional[YoloDetectMetrics] = None
+    error_message: Optional[str] = None
+
+
+class PlaybackRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    media_asset_id: str
+    video_url: str  # path lokal atau http(s) URL video 720p yang tersimpan
+    fps: float = Field(..., gt=0)  # laju deteksi rapat
+    sample_timestamps: List[float] = Field(default_factory=list)  # waktu frame sampel; ikut dideteksi agar bisa ditautkan ke temuan resmi
+    iou_min: float = Field(..., gt=0, le=1)  # ambang IoU pencocokan antar-frame
+    max_missed: int = Field(..., ge=0)  # frame berturut-turut tanpa pasangan sebelum lintasan ditutup
+
+class PlaybackTrackOut(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    track_id: int
+    model_class: str
+    points: List[List[float]]  # [waktu_detik, x, y, width, height, confidence]
+
+class PlaybackResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    success: bool
+    media_asset_id: str
+    tracks: List[PlaybackTrackOut] = Field(default_factory=list)
+    metrics: Dict[str, object] = Field(default_factory=dict)
+    error_message: Optional[str] = None

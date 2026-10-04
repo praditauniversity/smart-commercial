@@ -1,0 +1,1005 @@
+[
+ {
+  "clipId": "20260920_080304-002-00.00.17.012-00.01.17.012-seg1",
+  "fileName": "20260920_080304-002-00.00.17.012-00.01.17.012-seg1.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "rambu"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 61.0,
+  "referenceCaption": "Terpantau dua rambu lalu lintas pada lokasi ini dalam kondisi rusak, panel rambu penyok; direkomendasikan perbaikan panel. Tampak vegetasi berupa dahan pohon yang menutupi rambu di dekatnya, berpotensi mengganggu pandangan pengendara, perlu dilakukan perapihan dan pemangkasan. Ditemukan retak permukaan jalan dengan tingkat keparahan sedang, disarankan dijadwalkan perbaikan jalan.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah lingkungan perumahan yang tenang dengan jalan sempit yang dipenuhi oleh rumah-rumah berwarna cerah. Pohon-pohon hijau dan tanaman tropis yang rimbun menambah kesan alami di sepanjang jalan. Beberapa mobil parkir di pinggir jalan, termasuk sebuah mobil merah di sisi kiri dan beberapa mobil lainnya di sisi kanan. Tiang listrik dan kabel-kabelnya terlihat melintasi jalan, namun tidak ada indikasi kerusakan yang signifikan. Rambu-rambu jalan tampak jelas dan tidak ada yang terlihat rusak atau miring. Vegetasi di sepanjang jalan tampak sehat dan tidak ada yang menghalangi rambu atau tiang listrik. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan yang signifikan.",
+  "bleu": 0.0062,
+  "llmOverall": 80.0,
+  "completeness": 0.667,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 1.0,
+  "categoriesDetected": [
+   "jalan",
+   "vegetasi"
+  ],
+  "categoriesMissed": [
+   "rambu"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan dan vegetasi terdeteksi dengan lokasi sesuai, namun rambu tidak disebutkan sama sekali.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_080304-002-00.01.17.012-00.02.17.012-seg2",
+  "fileName": "20260920_080304-002-00.01.17.012-00.02.17.012-seg2.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "rambu",
+   "notis_jual_sewa"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Terdapat rambu berkarat di bagian belakang; tidak perlu perbaikan. Terpantau juga satu rambu lalu lintas pada lokasi ini dalam kondisi rusak, panel rambu penyok; direkomendasikan perbaikan panel. Tampak vegetasi berupa gulma atau rumput liar pada beberapa ruas jalan, perlu dilakukan perapihan dan pencabutan. Terpantau adanya vegetasi mati pada dahan pohon palm, perlu dilakukan pemangkasan sebelum dahan jatuh ke jalan dan menggangu pengendara. Ditemukan retak permukaan jalan dengan tingkat keparahan rendah, disarankan dijadwalkan perbaikan jalan. Terpasang notis properti bertuliskan tanda dijual pada beberapa pagar rumah di lokasi ini, kondisi papan notis dapat dibaca.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah sebuah kawasan perumahan dengan jalan yang rata dan bersih. Pohon-pohon hijau dan tanaman berbunga merah menambah keindahan lingkungan. Beberapa mobil parkir di pinggir jalan, termasuk satu mobil yang tertutup dengan kain putih. Rumah-rumah di kedua sisi jalan memiliki pagar dan pagar depan yang rapi. Di sisi kiri jalan, terdapat spanduk yang tampaknya berisi informasi tentang properti, namun kondisinya tidak jelas. Jalan tampak dalam kondisi baik, tanpa adanya lubang besar atau retakan yang signifikan. Vegetasi di sepanjang jalan tampak sehat dan tidak ada yang menghalangi rambu atau tiang listrik. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan.",
+  "bleu": 0.0146,
+  "llmOverall": 70.0,
+  "completeness": 0.5,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 1.0,
+  "categoriesDetected": [
+   "jalan",
+   "vegetasi"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa",
+   "rambu"
+  ],
+  "categoriesHallucinated": [
+   "spanduk"
+  ],
+  "judgeReason": "Jalan dan vegetasi terdeteksi dengan lokasi sesuai, namun rambu dan notis jual/sewa tidak disebutkan sama sekali.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_080304-002-00.02.17.012-00.03.17.012-seg3",
+  "fileName": "20260920_080304-002-00.02.17.012-00.03.17.012-seg3.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "rambu",
+   "notis_jual_sewa"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Terpantau satu rambu lalu lintas pada lokasi ini dalam kondisi rusak, panel rambu terkelupas dan pudar dengan tulisan hampir tidak terbaca; direkomendasikan perbaikan panel. Tampak vegetasi berupa gulma atau rumput liar pada beberapa ruas jalan, perlu dilakukan perapihan dan pencabutan. Terpantau adanya vegetasi mati pada dahan pohon palm, perlu dilakukan pemangkasan. Ditemukan retak permukaan jalan dengan tingkat keparahan tinggi, disarankan dijadwalkan perbaikan jalan. Terpasang notis properti bertuliskan tanda dijual pada pagar rumah di lokasi ini, kondisi papan notis dapat dibaca.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah sebuah jalan lingkungan yang dipenuhi oleh rumah-rumah berwarna putih dan hijau, dengan beberapa pohon dan tanaman yang tumbuh di sepanjang jalan. Jalan tersebut tampak dalam kondisi baik, meskipun ada beberapa daun kering yang terpantul di permukaannya. Di sisi kiri jalan, terdapat pagar berwarna biru dan kuning yang membatasi area rumah-rumah tersebut. Beberapa mobil parkir di pinggir jalan, termasuk satu mobil hitam yang sedang melintas. Di sisi kanan jalan, terdapat pohon-pohon yang tumbuh di pot dan pagar berwarna hitam. Terlihat juga seorang pedagang ambulan berjalan di pinggir jalan, membawa barang dagangannya. Secara keseluruhan, kondisi area terlihat normal dan tidak ditemukan indikasi kerusakan atau gangguan.",
+  "bleu": 0.0112,
+  "llmOverall": 75.0,
+  "completeness": 0.25,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 1.0,
+  "categoriesDetected": [
+   "jalan"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa",
+   "rambu",
+   "vegetasi"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan terdeteksi dengan lokasi sesuai, namun vegetasi, rambu, dan notis jual/sewa tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_080304-002-00.03.17.012-00.04.12.284-seg4",
+  "fileName": "20260920_080304-002-00.03.17.012-00.04.12.284-seg4.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "notis_jual_sewa"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 55.0,
+  "referenceCaption": "Tampak vegetasi berupa gulma atau rumput liar pada beberapa ruas jalan, perlu dilakukan perapihan dan pencabutan. Tampak vegetasi berupa dahan pohon yang menutupi rambu di dekatnya, rambu sudah sangat terhalang, perlu dilakukan perapihan dan pemangkasan. Ditemukan retak permukaan jalan dan jalan berlubang dengan tingkat keparahan sedang, disarankan dijadwalkan perbaikan jalan. Terpasang notis properti bertuliskan tanda dijual pada pagar rumah di lokasi ini, kondisi papan notis dapat dibaca.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah lingkungan perumahan yang tenang dengan beberapa kendaraan parkir di pinggir jalan. Jalan berlubang ringan, terutama di bagian tengah, yang memerlukan perbaikan. Di sebelah kanan, ada vegetasi liar yang tumbuh di area halaman, namun belum mengganggu rambu atau objek lainnya. Pohon dan tanaman di sepanjang jalan tampak sehat dan tidak ada yang mati. Terlihat juga beberapa rumah dengan pagar dan pagar besi yang tampak baik. Tidak ada papan rambu yang rusak atau hilang, serta tidak ada spanduk atau banner yang terlihat. Kondisi umum jalan dan lingkungan tampak normal, tanpa adanya indikasi kerusakan atau gangguan yang signifikan.",
+  "bleu": 0.0158,
+  "llmOverall": 70.0,
+  "completeness": 0.333,
+  "locationAccuracy": 4.0,
+  "severityAccuracy": 3.0,
+  "categoriesDetected": [
+   "jalan"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa",
+   "vegetasi"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan terdeteksi dengan lokasi sesuai, namun vegetasi dan notis jual/sewa tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_081036-001-00.00.25.437-00.01.25.437-seg1",
+  "fileName": "20260920_081036-001-00.00.25.437-00.01.25.437-seg1.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "notis_jual_sewa"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Terpantau rambu lalu lintas pada lokasi ini dalam kondisi baik. Tampak vegetasi berupa dahan pohon yang menutupi rambu di dekatnya, perlu dilakukan perapihan dan pemangkasan. Tampak vegetasi berupa gulma atau rumput liar pada beberapa ruas jalan, perlu dilakukan perapihan dan pencabutan. Ditemukan retak permukaan jalan dengan tingkat keparahan tinggi, disarankan dijadwalkan perbaikan jalan. Terpasang notis properti bertuliskan tanda dijual pada pagar rumah di lokasi ini, notis dapat dibaca.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah sebuah kawasan perumahan dengan beberapa rumah yang sedang dalam proses pembangunan. Di sisi kiri jalan, terdapat bangunan yang masih dalam tahap konstruksi dengan tiang konstruksi dan pekerja sedang bekerja di atasnya. Pohon-pohon di sepanjang jalan tampak hijau dan rimbun, namun ada beberapa pohon yang tampak mati dan mungkin memerlukan penanganan. Jalan tampak dalam kondisi baik, tanpa adanya lubang besar atau retakan yang signifikan. Di sisi kanan jalan, terdapat rumah-rumah yang tampak beraturan dengan pagar dan taman kecil di depannya. Beberapa kendaraan parkir di pinggir jalan, termasuk mobil dan motor. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan yang signifikan.",
+  "bleu": 0.0212,
+  "llmOverall": 80.0,
+  "completeness": 0.333,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 3.0,
+  "categoriesDetected": [
+   "jalan"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa",
+   "vegetasi"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan terdeteksi dengan lokasi sesuai, namun vegetasi dan notis jual/sewa tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_081036-001-00.01.25.437-00.02.25.437-seg2",
+  "fileName": "20260920_081036-001-00.01.25.437-00.02.25.437-seg2.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "notis_jual_sewa"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Tampak vegetasi berupa dahan pohon yang menutupi rambu dan lampu jalan di dekatnya, perlu dilakukan perapihan dan pemangkasan. Tampak vegetasi berupa gulma atau rumput liar pada beberapa ruas jalan, perlu dilakukan perapihan dan pencabutan. Terpantau adanya vegetasi mati pada dahan pohon palm, perlu dilakukan pemangkasan.  Ditemukan retak permukaan jalan dengan tingkat keparahan sedang, disarankan dijadwalkan perbaikan jalan. Terpasang notis properti bertuliskan tanda dijual pada pagar rumah di lokasi ini, notis dapat dibaca.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah sebuah jalan lingkungan yang dipenuhi dengan rumah-rumah berdinding putih dan pagar besi. Jalan tersebut dihiasi oleh berbagai jenis pohon dan tanaman hijau yang tumbuh subur, namun ada beberapa pohon yang tampaknya sedang mati atau kehilangan daun. Beberapa mobil parkir di pinggir jalan, termasuk satu mobil berwarna merah tua yang tampaknya sedang dalam kondisi baik. Di sisi kiri jalan, terdapat spanduk yang menunjukkan informasi tentang jual atau sewa properti, namun kondisinya masih jelas dan terbaca. Jalan sendiri tampak dalam kondisi baik, meskipun ada beberapa bekas retak kecil yang terlihat. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan yang signifikan.",
+  "bleu": 0.0118,
+  "llmOverall": 40.0,
+  "completeness": 0.333,
+  "locationAccuracy": 1.0,
+  "severityAccuracy": 1.0,
+  "categoriesDetected": [
+   "vegetasi"
+  ],
+  "categoriesMissed": [
+   "jalan",
+   "notis_jual_sewa"
+  ],
+  "categoriesHallucinated": [
+   "spanduk"
+  ],
+  "judgeReason": "Vegetasi terdeteksi, namun jalan dan notis jual/sewa tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_081036-001-00.02.25.437-00.03.25.437-seg3",
+  "fileName": "20260920_081036-001-00.02.25.437-00.03.25.437-seg3.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "rambu",
+   "notis_jual_sewa"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Terpantau rambu lalu lintas pada lokasi ini dalam kondisi rusak, panel rambu penyok; direkomendasikan perbaikan panel. Tampak vegetasi berupa gulma atau rumput liar pada beberapa ruas jalan, perlu dilakukan perapihan dan pencabutan. Ditemukan retak permukaan jalan dengan tingkat keparahan tinggi, disarankan dijadwalkan perbaikan jalan. Terpasang notis properti bertuliskan tanda dijual pada pagar rumah di lokasi ini, notis dapat dibaca.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah sebuah jalan lingkungan yang dipenuhi rumah-rumah berdinding putih dan pagar besi. Jalan tersebut tampak rapi dengan penataan tanaman yang rapi di sisi kiri dan kanannya. Beberapa mobil dan motor parkir di pinggir jalan, termasuk sebuah mobil hitam dan sebuah truk yang sedang melintas. Di sisi kanan, terlihat seorang pria memegang sesuatu di atas kepalanya, mungkin sedang beristirahat atau beristirahat. Jalan tampak dalam kondisi baik, meskipun ada beberapa lubang kecil yang terlihat ringan. Vegetasi di sepanjang jalan tampak sehat dan tidak ada yang menghalangi rambu atau tiang listrik. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan.",
+  "bleu": 0.0111,
+  "llmOverall": 70.0,
+  "completeness": 0.25,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 3.0,
+  "categoriesDetected": [
+   "jalan"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa",
+   "rambu",
+   "vegetasi"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan terdeteksi dengan lokasi sesuai, namun vegetasi, rambu, dan notis jual/sewa tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_081036-001-00.03.25.437-00.04.25.437-seg4",
+  "fileName": "20260920_081036-001-00.03.25.437-00.04.25.437-seg4.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "rambu",
+   "notis_jual_sewa"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Terpantau rambu lalu lintas pada lokasi ini dalam kondisi baik dan ada juga kondisi rusak, panel rambu penyok; direkomendasikan perbaikan panel. Tampak vegetasi berupa gulma atau rumput liar pada beberapa ruas jalan, perlu dilakukan perapihan dan pencabutan. Ditemukan retak permukaan jalan dengan tingkat keparahan rendah, disarankan dijadwalkan perbaikan jalan. Terpasang notis properti bertuliskan tanda dijual pada pagar rumah di lokasi ini, notis dapat dibaca.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah sebuah kawasan perumahan dengan jalanan yang rata dan dikelilingi oleh rumah-rumah berdinding putih. Pohon-pohon hijau dan tanaman yang rimbun menambah kesan alami di sepanjang jalan. Beberapa mobil parkir di pinggir jalan, termasuk satu mobil hitam dan satu mobil putih. Di sisi kiri jalan, terdapat pagar besi putih yang menjaga keamanan lingkungan. Beberapa pohon di sepanjang jalan tampak sehat dan hijau, namun ada beberapa batang pohon yang tampak kurang sehat dan mungkin memerlukan perawatan. Secara keseluruhan, kondisi area terlihat normal dan tidak ditemukan indikasi kerusakan atau gangguan.",
+  "bleu": 0.0074,
+  "llmOverall": 30.0,
+  "completeness": 0.25,
+  "locationAccuracy": 1.0,
+  "severityAccuracy": 3.0,
+  "categoriesDetected": [
+   "vegetasi"
+  ],
+  "categoriesMissed": [
+   "jalan",
+   "notis_jual_sewa",
+   "rambu"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Hanya vegetasi yang terdeteksi, namun lokasi tidak sesuai dan kategori lainnya tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_081036-001-00.04.25.437-00.05.25.437-seg5",
+  "fileName": "20260920_081036-001-00.04.25.437-00.05.25.437-seg5.mp4",
+  "categories": [
+   "vegetasi",
+   "notis_jual_sewa",
+   "spanduk"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Terpantau rambu lalu lintas pada lokasi ini dalam kondisi baik. Terpantau adanya vegetasi mati pada dahan pohon, perlu dilakukan pemangkasan. Terpasang notis properti bertuliskan tanda dijual pada pagar rumah di lokasi ini, notis sedikit terbaca. Terpasang dua spanduk pada dinding di pinggir jalan.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak area perumahan dengan jalanan yang rata dan dikelilingi oleh pohon-pohon hijau. Di sisi kiri jalan, terdapat pagar berwarna biru dan kuning yang tampak rapi. Papan nama \"JL. PULU MAS UTARA\" terpasang di atas pintu gerbang masuk perumahan. Di depan pintu gerbang, ada seorang pengendara motor yang berdiri di depan gerbang, mungkin sebagai pengawas atau petugas. Area tampak bersih dan terawat, tanpa adanya tanda-tanda kerusakan atau gangguan. Rambu-rambu jalan tampak jelas dan tidak ada yang terlihat rusak atau miring. Vegetasi di sepanjang jalan tampak sehat dan tidak ada yang menghalangi rambu atau tiang listrik. Spanduk di depan pintu gerbang tampak terbaca dengan jelas, menyebutkan \"KOSA KECIL\". Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan.",
+  "bleu": 0.0055,
+  "llmOverall": 85.0,
+  "completeness": 0.667,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 3.0,
+  "categoriesDetected": [
+   "spanduk",
+   "vegetasi"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa"
+  ],
+  "categoriesHallucinated": [
+   "jalan"
+  ],
+  "judgeReason": "Jalan, vegetasi, dan spanduk terdeteksi dengan lokasi dan kondisi sesuai, namun rambu dan notis jual/sewa tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_081036-001-00.05.25.437-00.06.10.243-seg6",
+  "fileName": "20260920_081036-001-00.05.25.437-00.06.10.243-seg6.mp4",
+  "categories": [
+   "tidak_ada_temuan"
+  ],
+  "hasFinding": false,
+  "durationSeconds": 45.0,
+  "referenceCaption": "Kondisi jalan, vegetasi dan rambu pada ruas ini terpantau baik dan tidak ditemukan kerusakan atau gangguan yang perlu ditindaklanjuti.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak jalanan yang rapi dengan beberapa kendaraan bergerak di sepanjangnya. Papan reklame di sebelah kiri jalan tampak baik, namun ada beberapa pohon di pinggir jalan yang tampak sedikit kering dan mati, yang bisa menjadi potensi gangguan. Di sisi kanan jalan, terdapat beberapa pohon yang tampak sehat dan hijau. Beberapa orang berjalan di tepi jalan, dan sepeda motor melintas di depan kamera. Tidak ada temuan spanduk atau banner yang mencolok atau rusak. Jalan tampak dalam kondisi baik, tanpa adanya lubang besar atau retakan yang signifikan.",
+  "bleu": 0.0068,
+  "llmOverall": 50.0,
+  "completeness": null,
+  "locationAccuracy": null,
+  "severityAccuracy": null,
+  "categoriesDetected": [],
+  "categoriesMissed": [],
+  "categoriesHallucinated": [
+   "vegetasi"
+  ],
+  "judgeReason": "Model mengarang kerusakan pada vegetasi, namun vegetasi yang tersebut tidak ada di ground truth.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 23
+ },
+ {
+  "clipId": "20260920_082736-008-00.00.14.763-00.01.14.763-seg1",
+  "fileName": "20260920_082736-008-00.00.14.763-00.01.14.763-seg1.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Terpantau rambu lalu lintas pada lokasi ini dalam kondisi baik. Terpantau adanya vegetasi mati pada dahan pohon, perlu dilakukan pemangkasan. Tampak vegetasi berupa dahan pohon yang menutupi rambu di dekatnya, perlu dilakukan perapihan dan pemangkasan. Ditemukan retak permukaan jalan dengan tingkat keparahan rendah, disarankan dijadwalkan perbaikan jalan.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak jalan raya yang dihiasi oleh pohon-pohon hijau yang rindang, memberikan suasana yang tenang dan alami. Jalan memiliki dua jalur lalu lintas dengan pembatas putih dan hitam yang rapi. Di sebelah kiri jalan, terdapat beberapa pohon yang tumbuh di pot, namun tidak ada yang terlihat mengganggu rambu atau tiang listrik. Papan informasi yang ditempel di pohon juga tampak baik dan mudah dibaca. Vegetasi di sekitar jalan tampak sehat dan tidak ada yang mati atau mengganggu rambu. Secara keseluruhan, kondisi area terlihat normal dan tidak ditemukan indikasi kerusakan atau gangguan.",
+  "bleu": 0.0156,
+  "llmOverall": 80.0,
+  "completeness": 1.0,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 3.0,
+  "categoriesDetected": [
+   "jalan",
+   "vegetasi"
+  ],
+  "categoriesMissed": [],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan dan vegetasi terdeteksi dengan lokasi sesuai, namun rambu tidak disebutkan sama sekali.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_082736-008-00.01.14.763-00.02.14.763-seg2",
+  "fileName": "20260920_082736-008-00.01.14.763-00.02.14.763-seg2.mp4",
+  "categories": [
+   "vegetasi"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Tampak adanya vegetasi mati pada dahan pohon palm di bagian kanan atas, dan batang mati di sebelah kiri, perlu dilakukan pemangkasan.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan. Jalan memiliki pembatas batu cor yang rapi dan dikelilingi oleh pohon-pohon hijau yang memberikan penutupan alami. Beberapa pengendara motor dan sepeda melintas di jalan, serta beberapa kendaraan mobil bergerak dengan lancar. Di sisi kiri jalan, terdapat gerobak pedagang dengan berbagai jenis makanan yang ditampilkan di atasnya. Papan arah dan rambu-rambu jalan tampak jelas dan tidak ada yang terlihat rusak atau miring. Vegetasi di sepanjang jalan tampak sehat dan tidak ada yang menghalangi rambu atau tiang listrik.",
+  "bleu": 0.0061,
+  "llmOverall": 90.0,
+  "completeness": 1.0,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 1.0,
+  "categoriesDetected": [
+   "vegetasi"
+  ],
+  "categoriesMissed": [],
+  "categoriesHallucinated": [],
+  "judgeReason": "Vegetasi hanya terdeteksi di caption model, namun lokasi yang disebutkan sesuai dengan caption acuan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_082736-008-00.02.14.763-00.03.14.763-seg3",
+  "fileName": "20260920_082736-008-00.02.14.763-00.03.14.763-seg3.mp4",
+  "categories": [
+   "rambu"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Terpantau terdapat rambu lalu lintas pada lokasi ini dalam kondisi tiang penyangga tampak miring, direkomendasikan perbaikan tiang.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan. Jalan memiliki permukaan yang rata dan tidak ada retakan yang signifikan. Rambu-rambu jalan tampak lurus dan tidak ada yang miring atau rusak. Vegetasi di sepanjang jalan tampak sehat dan tidak ada yang menghalangi rambu atau tiang listrik. Spanduk atau banner tidak terlihat di area ini. Tiang listrik tampak kokoh dan tidak ada yang terlihat rusak. Area tampak bersih dan terawat dengan baik.",
+  "bleu": 0.0071,
+  "llmOverall": 90.0,
+  "completeness": 1.0,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 1.0,
+  "categoriesDetected": [
+   "rambu"
+  ],
+  "categoriesMissed": [],
+  "categoriesHallucinated": [],
+  "judgeReason": "Rambu terdeteksi dengan lokasi sesuai dan tidak ada kategori lain yang disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_082736-008-00.03.14.763-00.04.14.763-seg4",
+  "fileName": "20260920_082736-008-00.03.14.763-00.04.14.763-seg4.mp4",
+  "categories": [
+   "jalan"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 61.0,
+  "referenceCaption": "Ditemukan retak permukaan jalan dengan tingkat keparahan sedang, retak memanjang dari tengah sampai ke sisi kiri jalan; disarankan dijadwalkan perbaikan.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak jalan raya yang luas dan rapi, dilengkapi dengan penanda arah dan batas jalan yang jelas. Pohon-pohon hijau di kedua sisi jalan memberikan suasana yang sejuk dan alami. Beberapa kendaraan, termasuk mobil dan truk, melintas dengan lancar. Di sisi kiri jalan, terdapat beberapa truk angkutan umum berwarna biru yang parkir rapi. Salah satu truk tersebut tampak sedikit kusut, namun tidak ada indikasi kerusakan serius. Vegetasi di sekitar jalan tampak sehat dan tidak ada yang menghalangi rambu atau tiang listrik. Secara keseluruhan, kondisi area terlihat normal dan tidak ditemukan indikasi kerusakan atau gangguan.",
+  "bleu": 0.0162,
+  "llmOverall": 70.0,
+  "completeness": 1.0,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 3.0,
+  "categoriesDetected": [
+   "jalan"
+  ],
+  "categoriesMissed": [],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan terdeteksi dengan lokasi sesuai, namun vegetasi dan rambu tidak disebutkan sama sekali.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_082736-008-00.04.14.763-00.05.14.763-seg5",
+  "fileName": "20260920_082736-008-00.04.14.763-00.05.14.763-seg5.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "spanduk"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Ditemukan retak permukaan jalan dengan tingkat keparahan rendah, retak memanjang di area tengah jalan; disarankan dijadwalkan perbaikan. Tampak vegetasi berupa dahan pohon yang menutupi rambu di dekatnya di sebelah kiri jalan, perlu dilakukan perapihan dan pemangkasan. Tampak dua spanduk pada dinding di sebelah kiri jalan.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam rangkaian frame ini, tampak jalan raya yang luas dan rapi, dilengkapi dengan penanda arah dan batas jalan yang jelas. Pohon-pohon hijau di kedua sisi jalan memberikan suasana yang sejuk dan alami. Beberapa kendaraan melintas, termasuk mobil dan sepeda motor, menunjukkan aktivitas normal di kawasan ini. Di sisi kiri jalan, terdapat bangunan dengan spanduk yang menampilkan informasi tentang pendidikan, namun kondisinya masih baik dan terbaca dengan jelas. Tidak ada indikasi kerusakan atau gangguan pada jalan, rambu, atau vegetasi. Kondisi area terlihat normal dan tidak ditemukan indikasi kerusakan atau gangguan.",
+  "bleu": 0.0133,
+  "llmOverall": 70.0,
+  "completeness": 0.667,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 1.0,
+  "categoriesDetected": [
+   "jalan",
+   "vegetasi"
+  ],
+  "categoriesMissed": [
+   "spanduk"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan dan vegetasi terdeteksi dengan lokasi sesuai, namun rambu dan spanduk tidak disebutkan sama sekali.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_082736-008-00.05.14.763-00.06.14.763-seg6",
+  "fileName": "20260920_082736-008-00.05.14.763-00.06.14.763-seg6.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "rambu"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 61.0,
+  "referenceCaption": "Ditemukan retak permukaan jalan dengan tingkat keparahan rendah; disarankan dijadwalkan perbaikan. Terpantau terdapat rambu nama jalan di sebelah kiri jalan dengan kondisi rusak, panel rambu penyok; direkomendasikan perbaikan panel. Tampak vegetasi berupa dahan pohon yang menghalangi objek seperti tiang dan kabel listrik, perlu dilakukan perapihan dan pemangkasan.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak jalanan yang padat dengan penggunaan motor dan mobil. Pohon-pohon di pinggir jalan tampak hijau dan rimbun, memberikan suasana yang sejuk. Beberapa kendaraan melintas dengan lancar, termasuk sepeda motor yang membawa penumpang. Di sisi kiri jalan, terdapat beberapa tiang listrik dan pagar yang tampak rapi. Rambu-rambu jalan tampak jelas dan tidak ada yang terlihat rusak atau miring. Vegetasi di sepanjang jalan tampak sehat dan tidak ada yang menghalangi rambu atau tiang listrik. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan.",
+  "bleu": 0.0162,
+  "llmOverall": 60.0,
+  "completeness": 0.667,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 1.0,
+  "categoriesDetected": [
+   "jalan",
+   "vegetasi"
+  ],
+  "categoriesMissed": [
+   "rambu"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan dan vegetasi terdeteksi dengan lokasi sesuai, namun rambu tidak disebutkan sama sekali.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_082736-008-00.06.14.763-00.07.14.763-seg7",
+  "fileName": "20260920_082736-008-00.06.14.763-00.07.14.763-seg7.mp4",
+  "categories": [
+   "jalan",
+   "rambu",
+   "spanduk"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Ditemukan retak permukaan jalan dengan tingkat keparahan rendah; disarankan dijadwalkan perbaikan. Terpantau terdapat rambu lalu lintas pada lokasi ini dalam kondisi tiang penyangga tampak miring, direkomendasikan perbaikan tiang. Tampak spanduk yang terpasang di pertigaan jalan.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak jalan raya yang luas dan rapi, dipenuhi oleh beberapa kendaraan seperti mobil dan sepeda motor. Pohon-pohon hijau yang melingkari jalan memberikan suasana alami yang tenang. Di sisi kiri jalan, terdapat gerobak penjual makanan dengan warna cerah, namun tidak ada tanda-tanda kerusakan atau gangguan pada gerobak itu sendiri. Di dekat awal rekaman, terlihat sebuah truk yang sedang bergerak, serta beberapa papan reklame yang terpasang di pinggir jalan. Salah satu papan reklame terlihat sedikit miring, namun masih bisa dibaca dengan jelas. Vegetasi di sepanjang jalan tampak sehat dan tidak ada yang mengganggu rambu atau tiang listrik. Secara keseluruhan, kondisi area terlihat normal dan tidak ditemukan indikasi kerusakan atau gangguan.",
+  "bleu": 0.018,
+  "llmOverall": 80.0,
+  "completeness": 0.667,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 1.0,
+  "categoriesDetected": [
+   "jalan",
+   "spanduk"
+  ],
+  "categoriesMissed": [
+   "rambu"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan dan spanduk terdeteksi dengan lokasi sesuai, namun rambu tidak disebutkan sama sekali.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_084839-004-00.00.49.542-00.01.49.542-seg01",
+  "fileName": "20260920_084839-004-00.00.49.542-00.01.49.542-seg01.mp4",
+  "categories": [
+   "vegetasi",
+   "notis_jual_sewa"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Tampak vegetasi berupa dahan pohon yang menutupi rambu di dekatnya di sebelah kiri jalan, perlu dilakukan perapihan dan pemangkasan. Terpasang notis properti bertuliskan tanda sewa pada pagar rumah di sisi sebelah kiri jalan, notis sedikit terbaca.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak area kawasan perumahan dengan jalanan yang rata dan dikelilingi oleh pohon-pohon hijau yang tumbuh rimbun. Jalan memiliki batas pengatur arus lalu lintas yang terlihat baik, namun ada beberapa kendaraan yang melintas. Di sebelah kiri jalan, terdapat bangunan dengan penandaan \"KELAYANG GAMES\" dan \"FLORIDA\", serta spanduk yang menunjukkan informasi kontak. Papan rambu berwarna kuning dan putih ditempatkan di pinggir jalan, namun tidak tampak ada masalah dengan kondisi rambu tersebut. Vegetasi di sepanjang jalan tampak sehat dan tidak menghalangi rambu atau tiang listrik. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan yang signifikan.",
+  "bleu": 0.0299,
+  "llmOverall": 70.0,
+  "completeness": 0.5,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 3.0,
+  "categoriesDetected": [
+   "vegetasi"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa"
+  ],
+  "categoriesHallucinated": [
+   "rambu"
+  ],
+  "judgeReason": "Vegetasi terdeteksi dengan lokasi sesuai, namun rambu yang disebutkan dalam caption model tidak ada di caption acuan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_084839-004-00.01.49.542-00.02.49.542-seg02",
+  "fileName": "20260920_084839-004-00.01.49.542-00.02.49.542-seg02.mp4",
+  "categories": [
+   "rambu",
+   "notis_jual_sewa",
+   "spanduk"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Terpantau terdapat rambu lalu lintas pada lokasi ini dalam kondisi tiang penyangga tampak miring berada di bagian sebelah kanan jalan, direkomendasikan perbaikan tiang. Terpasang notis properti bertuliskan tanda dijual pada pagar rumah berada di posisi sebelah kiri jalan, notis cukup terbaca. Terpasang spanduk pada tiang berada di sebelah kiri di pinggir jalan.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah sebuah jalan yang dikelilingi oleh pohon-pohon hijau yang rindang. Jalan tersebut tampak dalam kondisi baik, tanpa adanya kerusakan permukaan yang signifikan. Di sebelah kiri jalan, terdapat beberapa bangunan dengan gerbang dan pagar, serta beberapa pohon kecil yang tampak sehat. Di sepanjang jalan, terdapat beberapa kendaraan parkir, termasuk sepeda motor dan mobil. Papan nama toko \"Intermedia\" dan \"Canon\" terlihat jelas di sisi kiri jalan. Di dekat awal rekaman, terdapat spanduk \"Alfamidi\" yang terpasang di tiang listrik, namun kondisinya masih baik dan terbaca dengan jelas. Vegetasi di sepanjang jalan tampak rimbun dan tidak ada yang menghalangi rambu atau tiang listrik. Secara keseluruhan, kondisi area terlihat normal dan tidak ditemukan indikasi kerusakan atau gangguan.",
+  "bleu": 0.0264,
+  "llmOverall": 85.0,
+  "completeness": 0.667,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 3.0,
+  "categoriesDetected": [
+   "rambu",
+   "spanduk"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Rambu dan spanduk terdeteksi dengan lokasi sesuai, namun jalan dan notis jual/sewa tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_084839-004-00.02.49.542-00.03.49.542-seg03",
+  "fileName": "20260920_084839-004-00.02.49.542-00.03.49.542-seg03.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "notis_jual_sewa",
+   "spanduk"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 61.0,
+  "referenceCaption": "Ditemukan retak permukaan jalan dengan tingkat keparahan rendah, retak memanjang ditengah jalan, disarankan dijadwalkan perbaikan. Tampak adanya vegetasi mati pada dahan pohon di bagian sisi kiri jalan, perlu dilakukan pemangkasan. Terpasang notis properti bertuliskan tanda dijual pada pagar rumah berada di posisi sebelah kiri jalan, notis cukup terbaca. Terpasang spanduk yang diikat pada pohon berada di sebelah kanan di pinggir jalan.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah sebuah jalan lingkungan yang dipenuhi oleh berbagai aktivitas sehari-hari. Jalan tersebut memiliki beberapa kendaraan yang melintas, termasuk mobil dan motor, serta pedagang yang menjual buah di pinggir jalan. Papan nama toko dan spanduk iklan terlihat di sepanjang jalan, dengan beberapa yang masih terbaca jelas. Beberapa pohon dan vegetasi tumbuh di tepi jalan, namun tidak ada yang menghalangi rambu atau tiang listrik. Jalan sendiri tampak dalam kondisi baik, meskipun ada beberapa retak kecil. Rambu lalu lintas tampak jelas dan tidak ada yang rusak atau miring. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan yang signifikan.",
+  "bleu": 0.0215,
+  "llmOverall": 75.0,
+  "completeness": 0.25,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 3.0,
+  "categoriesDetected": [
+   "jalan"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa",
+   "spanduk",
+   "vegetasi"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan terdeteksi dengan lokasi sesuai, namun vegetasi, notis jual/sewa, dan spanduk tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_084839-004-00.03.49.542-00.04.49.542-seg04",
+  "fileName": "20260920_084839-004-00.03.49.542-00.04.49.542-seg04.mp4",
+  "categories": [
+   "vegetasi",
+   "notis_jual_sewa"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Tampak adanya vegetasi mati pada dahan pohon di bagian sisi kanan jalan, perlu dilakukan pemangkasan. Terpasang notis properti bertuliskan tanda dijual pada pagar rumah berada di posisi sebelah kiri jalan, notis cukup terbaca.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah jalanan yang dipenuhi oleh berbagai jenis kendaraan, termasuk truk, mobil, dan sepeda motor. Jalan tersebut tampak mulus dengan sedikit lubang-lubang kecil, namun tidak berpengaruh signifikan bagi mobilitas. Di sebelah kanan, terdapat beberapa pohon yang tampak sehat dan rimbun, memberikan pencahayaan alami yang baik. Papan arah dan rambu-rambu jalan tampak jelas dan tidak ada yang rusak atau hilang. Spanduk dan banner di sepanjang jalan tampak terpasang dengan rapi, meskipun tidak semua teksnya dapat dibaca dengan jelas. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan yang signifikan.",
+  "bleu": 0.0061,
+  "llmOverall": 80.0,
+  "completeness": 0.5,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 1.0,
+  "categoriesDetected": [
+   "vegetasi"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Vegetasi terdeteksi dengan lokasi sesuai, namun notis jual sewa tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_084839-004-00.04.49.542-00.05.49.542-seg05",
+  "fileName": "20260920_084839-004-00.04.49.542-00.05.49.542-seg05.mp4",
+  "categories": [
+   "tidak_ada_temuan"
+  ],
+  "hasFinding": false,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Kondisi jalan, vegetasi dan rambu pada ruas ini terpantau baik dan tidak ditemukan kerusakan atau gangguan yang perlu ditindaklanjuti.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak area kawasan perumahan dengan beberapa kendaraan bergerak melintas, termasuk mobil Toyota dan motor ojek. Jalan di sepanjang kawasan tampak rata, namun ada beberapa titik yang tampak sedikit rosak, seperti retakan di permukaan jalan. Vegetasi di sekitar jalan tampak sehat dan tidak menghalangi rambu atau tiang listrik. Papan rambu dan spanduk di pinggir jalan tampak utuh dan terbaca dengan jelas. Beberapa orang berjalan di tepi jalan, dan sepeda motor parkir di pinggir jalan. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan yang signifikan.",
+  "bleu": 0.037,
+  "llmOverall": 90.0,
+  "completeness": null,
+  "locationAccuracy": null,
+  "severityAccuracy": null,
+  "categoriesDetected": [],
+  "categoriesMissed": [],
+  "categoriesHallucinated": [],
+  "judgeReason": "Model menyatakan kondisi normal, tetapi mengarang tentang kendaraan dan vegetasi yang tidak relevan sebagai halusinasi.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_084839-004-00.05.49.542-00.06.49.542-seg06",
+  "fileName": "20260920_084839-004-00.05.49.542-00.06.49.542-seg06.mp4",
+  "categories": [
+   "vegetasi"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Tampak adanya vegetasi mati pada dahan pohon di bagian sisi kanan jalan, perlu dilakukan pemangkasan. Tampak vegetasi berupa dahan pohon yang menutupi rambu dan kaca cembung di dekatnya di sebelah kanan jalan, perlu dilakukan perapihan dan pemangkasan.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah jalanan yang dipenuhi oleh berbagai jenis kendaraan, termasuk mobil dan motor, yang melintas dengan lancar. Jalan ditutupi oleh aspal yang tampaknya dalam kondisi baik, meskipun ada beberapa bekas goresan yang mungkin ringan. Pohon-pohon di sepanjang jalan memberikan pencahayaan yang cukup, namun tidak ada tanda-tanda vegetasi yang mengganggu atau mati. Di sisi kiri jalan, terdapat pagar yang tampak rapi dan berbaris dengan tanaman hias yang terawat. Di sisi kanan, terdapat gerobak penjual makanan dengan tenda warna-warni, serta beberapa pohon yang juga tampak sehat. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan yang signifikan.",
+  "bleu": 0.0147,
+  "llmOverall": 30.0,
+  "completeness": 1.0,
+  "locationAccuracy": 1.0,
+  "severityAccuracy": 1.0,
+  "categoriesDetected": [
+   "vegetasi"
+  ],
+  "categoriesMissed": [],
+  "categoriesHallucinated": [],
+  "judgeReason": "Vegetasi terdeteksi, namun lokasi tidak sesuai dan keparahan tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_084839-004-00.06.49.542-00.07.49.542-seg07",
+  "fileName": "20260920_084839-004-00.06.49.542-00.07.49.542-seg07.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "spanduk"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 61.0,
+  "referenceCaption": "Ditemukan retak permukaan jalan dengan tingkat keparahan sedang, retak cukup panjang di bagian tengah jalan, disarankan dijadwalkan perbaikan. Tampak vegetasi berupa gulma atau rumput liar pada beberapa ruas jalan di bagian sebelah kanan jalan, perlu dilakukan perapihan dan pencabutan. Terpasang spanduk yang diikat pada pagar berada di sebelah kanan jalan.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak area kawasan perumahan dengan berbagai aktivitas sehari-hari. Jalan yang dilewati memiliki beberapa kendaraan, termasuk mobil dan motor, yang bergerak dengan lancar. Di sebelah kiri, terdapat gerai makanan dengan penjual yang sedang berinteraksi dengan pelanggan. Beberapa pohon dan tanaman hijau juga terlihat di sepanjang jalan, memberikan suasana yang alami. Di sisi kanan, ada beberapa mobil yang parkir di pinggir jalan, serta sepeda motor yang ditarik ke belakang. Rambu-rambu jalan tampak baik, meskipun ada sedikit kerusakan pada permukaan jalan yang terlihat ringan. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan yang signifikan.",
+  "bleu": 0.0143,
+  "llmOverall": 60.0,
+  "completeness": 0.667,
+  "locationAccuracy": 3.0,
+  "severityAccuracy": 2.0,
+  "categoriesDetected": [
+   "jalan",
+   "vegetasi"
+  ],
+  "categoriesMissed": [
+   "spanduk"
+  ],
+  "categoriesHallucinated": [
+   "rambu"
+  ],
+  "judgeReason": "Jalan dan vegetasi terdeteksi dengan lokasi sesuai, namun rambu dan spanduk tidak disebutkan sama sekali.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_084839-004-00.07.49.542-00.08.49.542-seg08",
+  "fileName": "20260920_084839-004-00.07.49.542-00.08.49.542-seg08.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "notis_jual_sewa"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Ditemukan retak permukaan jalan dengan tingkat keparahan rendah, disarankan dijadwalkan perbaikan. Tampak vegetasi berupa gulma atau rumput liar pada beberapa ruas jalan di bagian sebelah kiri, perlu dilakukan perapihan dan pencabutan. Tampak adanya vegetasi mati pada dahan pohon di bagian sisi kanan jalan dan sebagian berada di sisi kiri jalan, perlu dilakukan pemangkasan. Terpasang notis properti bertuliskan tanda dijual pada pagar rumah berada di posisi sebelah kiri jalan, notis cukup terbaca dan yang satu lagu tidak terbaca.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah sebuah kawasan perumahan dengan jalanan yang luas dan rapi. Pagar rumah-rumah di sepanjang jalan memiliki desain yang unik, dengan kombinasi batu alam dan besi. Beberapa rumah memiliki taman kecil di halaman depannya, namun tidak ada tanda-tanda gangguan seperti spanduk atau banner yang terlihat. Jalan tampak dalam kondisi baik, meskipun ada beberapa bekas retak kecil yang bisa dilihat. Vegetasi di sepanjang jalan tampak sehat dan tidak ada yang menghalangi rambu atau tiang listrik. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan yang signifikan.",
+  "bleu": 0.0132,
+  "llmOverall": 80.0,
+  "completeness": 0.333,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 2.0,
+  "categoriesDetected": [
+   "jalan"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa",
+   "vegetasi"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan terdeteksi dengan lokasi sesuai, namun vegetasi dan notis jual sewa tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_084839-004-00.08.49.542-00.09.49.542-seg09",
+  "fileName": "20260920_084839-004-00.08.49.542-00.09.49.542-seg09.mp4",
+  "categories": [
+   "notis_jual_sewa",
+   "spanduk"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Terpasang notis properti bertuliskan tanda dijual atau disewa pada pagar rumah berada di posisi sebelah kanan jalan, notis cukup terbaca. Terpasang spanduk yang diikat pada pagar berada di sebelah kanan jalan.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah sebuah kawasan perumahan dengan jalanan yang luas dan rapi. Pintu pagar rumah-rumah di sepanjang jalan tampak utuh, namun ada beberapa tanda peringatan seperti spanduk \"PERHATIAN!\" yang terpasang di salah satu pintu pagar. Spanduk tersebut tampak jelas dan terbaca dengan baik. Jalanan tampak dalam kondisi baik, meskipun ada beberapa potongan pohon yang terlihat di pinggir jalan, namun belum mengganggu rambu atau tiang listrik. Secara keseluruhan, kondisi area terlihat normal dan tidak ditemukan indikasi kerusakan atau gangguan.",
+  "bleu": 0.0135,
+  "llmOverall": 80.0,
+  "completeness": 0.5,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": null,
+  "categoriesDetected": [
+   "spanduk"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Spanduk terdeteksi dengan lokasi sesuai, namun notis jual/sewa tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_090241-006-00.00.22.775-00.01.22.775-seg01",
+  "fileName": "20260920_090241-006-00.00.22.775-00.01.22.775-seg01.mp4",
+  "categories": [
+   "vegetasi",
+   "notis_jual_sewa"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Tampak adanya vegetasi mati pada dahan dan batang pohon di bagian sisi kanan jalan dan sebagian berada di sisi kiri jalan, perlu dilakukan pemangkasan. Terpasang notis properti bertuliskan tanda dijual atau disewa pada pagar rumah berada di posisi sebelah kiri jalan, notis cukup terbaca.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak area kawasan perumahan dengan jalanan yang rata dan dikelilingi oleh bangunan beragam ukuran dan jenis. Pohon-pohon hijau yang tumbuh di pinggir jalan memberikan pencahayaan alami yang cukup. Beberapa kendaraan seperti mobil dan motor melintas di jalan, sementara beberapa pedagang menjual barang-barang mereka di pinggir jalan. Di sisi kiri jalan, terdapat toko-toko kecil dengan spanduk dan banner yang menarik perhatian, namun kondisinya tampak baik dan tidak ada tanda-tanda rusak. Rambu-rambu jalan tampak jelas dan tidak ada yang terlihat rusak atau miring. Vegetasi di sepanjang jalan tampak sehat dan tidak ada yang menghalangi rambu atau tiang listrik. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan.",
+  "bleu": 0.0271,
+  "llmOverall": 80.0,
+  "completeness": 0.5,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 1.0,
+  "categoriesDetected": [
+   "vegetasi"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Vegetasi terdeteksi dengan lokasi sesuai, namun notis jual/sewa tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_090241-006-00.01.22.775-00.02.22.775-seg02",
+  "fileName": "20260920_090241-006-00.01.22.775-00.02.22.775-seg02.mp4",
+  "categories": [
+   "jalan",
+   "notis_jual_sewa",
+   "spanduk"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 61.0,
+  "referenceCaption": "Ditemukan retak permukaan jalan dengan tingkat keparahan tinggi, retak cukup panjang di bagian tengah jalan, disarankan dijadwalkan perbaikan. Terpasang notis properti bertuliskan tanda dijual, notis cukup terbaca. Terpasang spanduk yang diikat pada pagar atau tiang listrik.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak jalanan yang luas dan rata, dipenuhi oleh berbagai kendaraan seperti mobil dan motor. Pohon-pohon hijau yang tumbuh di pinggir jalan memberikan suasana yang segar. Di sebelah kiri jalan, terdapat bangunan dengan pagar besi dan beberapa gerbang masuk. Salah satu gerbang masuk memiliki papan \"STOP\" yang terpasang di atasnya. Jalan ini tampak dalam kondisi baik, tanpa adanya lubang besar atau retakan yang signifikan. Vegetasi di sekitar jalan tampak sehat dan tidak ada yang menghalangi rambu atau tiang listrik. Secara keseluruhan, kondisi area terlihat normal dan tidak ditemukan indikasi kerusakan atau gangguan.",
+  "bleu": 0.019,
+  "llmOverall": 70.0,
+  "completeness": 0.333,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 1.0,
+  "categoriesDetected": [
+   "jalan"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa",
+   "spanduk"
+  ],
+  "categoriesHallucinated": [
+   "vegetasi"
+  ],
+  "judgeReason": "Jalan terdeteksi dengan lokasi sesuai, namun vegetasi yang tidak ada di daftar resmi dan notis jual/sewa dan spanduk tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_090241-006-00.02.22.775-00.03.22.775-seg03",
+  "fileName": "20260920_090241-006-00.02.22.775-00.03.22.775-seg03.mp4",
+  "categories": [
+   "jalan",
+   "notis_jual_sewa",
+   "spanduk"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Ditemukan retak permukaan jalan dengan tingkat keparahan sedang, retak cukup panjang di bagian tengah jalan, disarankan dijadwalkan perbaikan. Terpasang notis properti bertuliskan tanda dijual, notis cukup terbaca. Terpasang spanduk yang diikat pada pagar atau tiang listrik.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak area perumahan dengan jalanan yang luas dan rapi. Jalan ditutupi aspal dengan beberapa retakan ringan. Di sebelah kiri, terdapat pagar berwarna merah dengan spanduk \"DIJUAL\" yang terbaca jelas. Pohon-pohon hijau dan tanaman di sepanjang jalan tampak sehat dan tidak ada yang menghalangi rambu atau tiang listrik. Di sisi kanan, terdapat beberapa toko kecil dengan papan nama yang jelas. Rambu-rambu jalan tampak baik dan tidak ada yang rusak atau miring. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan.",
+  "bleu": 0.0209,
+  "llmOverall": 85.0,
+  "completeness": 0.667,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 3.0,
+  "categoriesDetected": [
+   "jalan",
+   "spanduk"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan dan spanduk terdeteksi dengan lokasi dan kondisi sesuai, namun notis jual sewa tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_090241-006-00.03.22.775-00.04.22.775-seg04",
+  "fileName": "20260920_090241-006-00.03.22.775-00.04.22.775-seg04.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "notis_jual_sewa",
+   "spanduk"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 61.0,
+  "referenceCaption": "Ditemukan jalan berlubang dengan tingkat keparahan sedang, disarankan dijadwalkan perbaikan. Tampak adanya vegetasi mati pada dahan pohon palm, perlu dilakukan pemangkasan. Terpasang notis properti bertuliskan tanda dijual, notis cukup terbaca. Terpasang spanduk yang diikat pada pagar.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah sebuah jalan lingkungan yang dipenuhi oleh berbagai jenis kendaraan, termasuk mobil dan sepeda motor. Jalan tersebut memiliki beberapa kendala, seperti adanya lubang-lubang kecil di permukaannya yang dapat dikategorikan sebagai tingkat keparahan ringan. Di sebelah kiri jalan, terdapat pagar besi yang tampak berdiri tegak, namun tidak ada indikasi kerusakan atau gangguan pada pagar tersebut. Vegetasi di sepanjang jalan tampak sehat dan tidak menghalangi rambu atau tiang listrik. Papan nama toko \"Mangga Baru\" terlihat jelas di salah satu bangunan di sebelah kanan jalan. Secara keseluruhan, kondisi area terlihat normal dan tidak ditemukan indikasi kerusakan atau gangguan.",
+  "bleu": 0.0124,
+  "llmOverall": 80.0,
+  "completeness": 0.25,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 3.0,
+  "categoriesDetected": [
+   "jalan"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa",
+   "spanduk",
+   "vegetasi"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan terdeteksi dengan lokasi sesuai, namun vegetasi, notis jual/sewa, dan spanduk tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_090241-006-00.04.22.775-00.05.22.775-seg05",
+  "fileName": "20260920_090241-006-00.04.22.775-00.05.22.775-seg05.mp4",
+  "categories": [
+   "jalan",
+   "vegetasi",
+   "notis_jual_sewa"
+  ],
+  "hasFinding": true,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Ditemukan jalan berlubang dengan tingkat keparahan tinggi, disarankan dijadwalkan perbaikan. Tampak adanya vegetasi berupa gulma atau rumput liar pada beberapa ruas jalan di bagian sebelah kiri jalan, perlu dilakukan perapihan dan pencabutan. Terpasang notis properti bertuliskan tanda dijual di pagar rumah bagian sebelah kanan jalan, notis cukup terbaca.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampaklah sebuah jalan lingkungan yang dipenuhi dengan berbagai kendaraan, termasuk mobil dan sepeda motor. Jalan tersebut tampaknya dalam kondisi baik, meskipun ada beberapa bekas retak yang terlihat. Di sebelah kiri jalan, terdapat rumah-rumah dengan pagar dan taman kecil, serta beberapa pohon yang tampak sehat. Di sisi kanan, terdapat toko-toko kecil dan bangunan yang tampaknya sedang dalam proses renovasi. Beberapa spanduk dan banner terpasang di dinding bangunan, namun kondisinya masih jelas dan terbaca. Tidak ada indikasi kerusakan atau gangguan yang signifikan dalam infrastruktur jalan, rambu, atau vegetasi. Secara keseluruhan, kondisi area terlihat normal dan tidak ada masalah yang terdeteksi.",
+  "bleu": 0.0202,
+  "llmOverall": 75.0,
+  "completeness": 0.333,
+  "locationAccuracy": 5.0,
+  "severityAccuracy": 1.0,
+  "categoriesDetected": [
+   "jalan"
+  ],
+  "categoriesMissed": [
+   "notis_jual_sewa",
+   "vegetasi"
+  ],
+  "categoriesHallucinated": [],
+  "judgeReason": "Jalan terdeteksi dengan lokasi sesuai, namun vegetasi dan notis jual sewa tidak disebutkan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_090241-006-00.08.22.775-00.09.22.775-seg09",
+  "fileName": "20260920_090241-006-00.08.22.775-00.09.22.775-seg09.mp4",
+  "categories": [
+   "tidak_ada_temuan"
+  ],
+  "hasFinding": false,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Kondisi jalan, vegetasi dan rambu pada ruas ini terpantau baik dan tidak ditemukan kerusakan atau gangguan yang perlu ditindaklanjuti.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak area jalan yang luas dan rapi, dengan beberapa kendaraan bergerak di sepanjangnya. Jalan ditandai dengan batas perbatasan yang jelas dan ada papan arah yang terlihat baik. Beberapa pohon di sepanjang jalan tampak hijau dan sehat, tanpa ada tanda-tanda gangguan seperti mati atau tumbuh liar. Rambu-rambu jalan tampak utuh dan tidak ada yang rusak atau miring. Di sisi jalan, terdapat beberapa kendaraan berjalan dengan lancar, termasuk mobil dan motor. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan yang signifikan.",
+  "bleu": 0.0358,
+  "llmOverall": 95.0,
+  "completeness": null,
+  "locationAccuracy": null,
+  "severityAccuracy": null,
+  "categoriesDetected": [],
+  "categoriesMissed": [],
+  "categoriesHallucinated": [],
+  "judgeReason": "Model benar menyatakan kondisi normal tanpa mengarang temuan yang tidak ada.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_090241-006-00.09.22.775-00.10.22.775-seg10",
+  "fileName": "20260920_090241-006-00.09.22.775-00.10.22.775-seg10.mp4",
+  "categories": [
+   "tidak_ada_temuan"
+  ],
+  "hasFinding": false,
+  "durationSeconds": 62.0,
+  "referenceCaption": "Kondisi jalan, vegetasi dan rambu pada ruas ini terpantau baik dan tidak ditemukan kerusakan atau gangguan yang perlu ditindaklanjuti.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak jalanan yang rata dan bersih, tanpa adanya kerusakan permukaan jalan yang signifikan. Rambu-rambu jalan tampak jelas dan tidak ada yang terlihat rusak atau miring. Vegetasi di sepanjang jalan tampak rapi dan tidak ada yang menghalangi rambu atau tiang listrik. Spanduk atau banner juga tidak terlihat di area ini. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan yang perlu dicatat.",
+  "bleu": 0.0658,
+  "llmOverall": 95.0,
+  "completeness": null,
+  "locationAccuracy": null,
+  "severityAccuracy": null,
+  "categoriesDetected": [],
+  "categoriesMissed": [],
+  "categoriesHallucinated": [],
+  "judgeReason": "Model benar menyatakan kondisi normal tanpa mengarang temuan yang tidak ada.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_090241-006-00.10.22.775-00.11.22.775-seg11",
+  "fileName": "20260920_090241-006-00.10.22.775-00.11.22.775-seg11.mp4",
+  "categories": [
+   "tidak_ada_temuan"
+  ],
+  "hasFinding": false,
+  "durationSeconds": 60.0,
+  "referenceCaption": "Kondisi jalan, vegetasi dan rambu pada ruas ini terpantau baik dan tidak ditemukan kerusakan atau gangguan yang perlu ditindaklanjuti.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak lalu lintas padat di kawasan perumahan dengan kendaraan berbagai jenis, termasuk truk angkutan umum dan mobil pribadi. Jalan memiliki dua jalur arah, dengan beberapa pohon dan pagar di sisi kiri. Rambu lalu lintas tampak jelas dan berfungsi dengan baik. Vegetasi di sepanjang jalan tampak rapi, tanpa ada tanda-tanda gangguan seperti mati atau menghalangi rambu. Tidak ada temuan spanduk atau banner yang terlihat. Kondisi jalan tampak normal, tanpa adanya kerusakan yang signifikan. Semua elemen infrastruktur tampak berfungsi dengan baik, dan tidak ada indikasi gangguan atau kerusakan yang memerlukan perhatian lebih lanjut.",
+  "bleu": 0.022,
+  "llmOverall": 95.0,
+  "completeness": null,
+  "locationAccuracy": null,
+  "severityAccuracy": null,
+  "categoriesDetected": [],
+  "categoriesMissed": [],
+  "categoriesHallucinated": [],
+  "judgeReason": "Model benar menyatakan kondisi normal tanpa mengarang temuan.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ },
+ {
+  "clipId": "20260920_091843-003-00.02.11.384-00.03.11.384-seg3",
+  "fileName": "20260920_091843-003-00.02.11.384-00.03.11.384-seg3.mp4",
+  "categories": [
+   "tidak_ada_temuan"
+  ],
+  "hasFinding": false,
+  "durationSeconds": 59.0,
+  "referenceCaption": "Kondisi jalan, vegetasi dan rambu pada ruas ini terpantau baik dan tidak ditemukan kerusakan atau gangguan yang perlu ditindaklanjuti.",
+  "validationStatus": "Sudah",
+  "modelCaption": "Dalam video ini, tampak jalanan yang rapi dengan beberapa kendaraan bergerak dengan lancar. Jembatan tol yang melintang di atas jalan memberikan akses yang baik. Pemandangan sekitar menunjukkan gedung-gedung tinggi di latar belakang, menandakan area perkotaan. Beberapa pohon hijau terlihat di pinggir jalan, namun tidak ada yang menghalangi rambu atau tiang listrik. Rambu-rambu jalan tampak jelas dan tidak ada yang rusak atau miring. Spanduk atau banner tidak terlihat di area ini. Secara keseluruhan, kondisi area terlihat normal dan tidak ada indikasi kerusakan atau gangguan.",
+  "bleu": 0.024,
+  "llmOverall": 95.0,
+  "completeness": null,
+  "locationAccuracy": null,
+  "severityAccuracy": null,
+  "categoriesDetected": [],
+  "categoriesMissed": [],
+  "categoriesHallucinated": [],
+  "judgeReason": "Model benar menyatakan kondisi normal tanpa mengarang temuan yang tidak ada.",
+  "generatorModel": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "generatorFrames": 24
+ }
+]

@@ -45,7 +45,7 @@ Panduan ini mencakup dua mode: **development** (laptop) dan **server tetap** (sa
 | `NEXT_PUBLIC_OPENROUTER_ENDPOINT_URL`, `NEXT_PUBLIC_ONPREMISE_ENDPOINT_URL` | Isi awal endpoint pada form Model AI |
 | `NEXT_PUBLIC_DEFAULT_MODEL_NAME`, `NEXT_PUBLIC_DEFAULT_SAM3_MODEL_NAME` | Isi awal nama model pada form Model AI (dan seed) |
 | `OPEN_ROUTER_API_KEY` | Opsional: bootstrap API key OpenRouter bila model belum punya |
-| `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_SURVEYOR_EMAIL`, `SEED_SURVEYOR_PASSWORD`, `SEED_ONPREMISE_MODEL_NAME` | Hanya untuk `npm run seed` dan skrip `prisma/test_*.ts`. Tentukan kredensial sendiri, tidak ada nilai bawaan |
+| `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_SURVEYOR_EMAIL`, `SEED_SURVEYOR_PASSWORD`, `SEED_SUPERVISOR_EMAIL`, `SEED_SUPERVISOR_PASSWORD`, `SEED_ONPREMISE_MODEL_NAME` | Hanya untuk `npm run seed` dan skrip `prisma/test_*.ts`. Tentukan kredensial sendiri, tidak ada nilai bawaan |
 | `NEXT_PUBLIC_API_URL` | Tersisa di `.env.example`; tidak dipakai kode `src/` saat ini |
 
 > **Nilai rahasia yang pernah tertulis di kode atau riwayat git harus dianggap bocor** (termasuk nilai bawaan lama `JWT_SECRET`, `ENCRYPTION_SECRET_KEY`, `INTERNAL_API_SECRET`). Siapa pun yang mengetahuinya dapat menerbitkan cookie sesi admin palsu atau memanggil ai-service. Ganti dengan nilai acak baru, lalu restart. Mengganti `JWT_SECRET` membuat semua pengguna login ulang; mengganti `ENCRYPTION_SECRET_KEY` membuat API key model yang tersimpan tidak terbaca lagi dan harus diisi ulang di menu Model AI.

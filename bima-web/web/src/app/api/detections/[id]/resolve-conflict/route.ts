@@ -7,7 +7,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
+    const user = await requireAuth(['surveyor', 'admin']);
     const { id } = await params;
     const { chosenClassId, chosenClassName } = await request.json();
 
@@ -85,6 +85,9 @@ export async function POST(
       detection: updated,
     });
   } catch (error: any) {
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+    }
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

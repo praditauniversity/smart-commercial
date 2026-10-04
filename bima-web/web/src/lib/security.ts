@@ -1,3 +1,4 @@
+import type { Role } from './access';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { requireEnv, requireEnvNumber } from './env';
@@ -49,7 +50,7 @@ export function maskSecret(secret: string | null | undefined): string {
 export interface UserJwtPayload {
   userId: string;
   email: string;
-  role: 'surveyor' | 'admin';
+  role: Role;
   name: string;
 }
 

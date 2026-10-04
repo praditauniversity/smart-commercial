@@ -1,5 +1,6 @@
 
 import os
+import asyncio
 import time
 import base64
 import secrets
@@ -18,6 +19,12 @@ load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 from config import require_env, require_env_int
 from schemas import (
+    YoloDetectMetrics,
+    YoloDetectRequest,
+    YoloDetectResponse,
+    PlaybackRequest,
+    PlaybackResponse,
+    PlaybackTrackOut,
     ProcessMediaRequest,
     ProcessMediaResponse,
     TestConnectionRequest,
@@ -29,10 +36,13 @@ from providers.base import BaseVisionProvider
 from providers.openrouter import OpenRouterProvider
 from providers.onpremise import OnPremiseProvider
 from providers.mock import MockVisionProvider
+from providers.yolo import YoloProvider, decode_image, to_detection_items, wants_condition_stage
+from services.sign_condition import STAGE2_MODEL_ID, classifier as sign_classifier, classify_signs
 from services.deduplication import deduplicate_temporal_detections
 from services.conflict_detector import detect_class_conflicts
 from services.video_splitter import plan_video_segments
 from services.sam3_service import run_sam3_job
+from services.playback import run_playback
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ai_service")
@@ -90,6 +100,8 @@ def get_provider(config_payload) -> BaseVisionProvider:
         return OpenRouterProvider(config_payload)
     elif provider_type == "onpremise":
         return OnPremiseProvider(config_payload)
+    elif provider_type == "yolo":
+        return YoloProvider(config_payload)
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -141,6 +153,156 @@ def get_sam3_job(job_id: str, _: bool = Depends(verify_internal_secret)):
         return dict(job)
 
 
+
+async def _fetch_frame_bytes(client: httpx.AsyncClient, url: str) -> bytes:
+    """Mengambil satu frame: data URL, http(s), atau path lokal."""
+    if url.startswith("data:"):
+        return base64.b64decode(url.split(",", 1)[1])
+    if url.startswith("http://") or url.startswith("https://"):
+        resp = await client.get(url)
+        if resp.status_code != 200:
+            raise ValueError(f"Gagal mengunduh frame ({resp.status_code}): {url}")
+        return resp.content
+    if os.path.isfile(url):
+        with open(url, "rb") as f:
+            return f.read()
+    raise ValueError(f"Frame tidak ditemukan: {url}")
+
+
+@app.post("/api/v1/yolo/detect", response_model=YoloDetectResponse)
+async def yolo_detect(req: YoloDetectRequest, _: bool = Depends(verify_internal_secret)):
+    """
+    Deteksi YOLO pada frame yang sudah diekstrak (gambar tunggal = satu frame; video = frame sampel).
+    Mengembalikan deteksi per frame beserta metrik latensi per tahap (unduh, inferensi per model).
+    """
+    from services.yolo_engine import engine as yolo_engine
+
+    t_start = time.perf_counter()
+    try:
+        conf = yolo_engine.conf
+        detections: List[DetectionItem] = []
+        per_model: Dict[str, float] = {}
+        by_class: Dict[str, int] = {}
+        download_ms = 0.0
+        inference_ms = 0.0
+        stage2_ms = 0.0
+        stage2_crops = 0
+        use_stage2 = wants_condition_stage(req.active_classes)
+
+        # Muat model lebih dulu agar waktu muat tidak tercampur ke metrik unduh/inferensi.
+        await asyncio.to_thread(yolo_engine.load)
+        if use_stage2:
+            await asyncio.to_thread(sign_classifier.load)  # galat konfigurasi muncul di sini, bukan di tengah proses
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for fr in req.frames:
+                t0 = time.perf_counter()
+                data = await _fetch_frame_bytes(client, fr.url)
+                img = decode_image(base64.b64encode(data).decode("ascii"))
+                download_ms += (time.perf_counter() - t0) * 1000.0
+
+                t1 = time.perf_counter()
+                raw, timings = await asyncio.to_thread(yolo_engine.detect, img)
+                inference_ms += (time.perf_counter() - t1) * 1000.0
+                for k, v in timings.per_model_ms.items():
+                    per_model[k] = per_model.get(k, 0.0) + v
+
+                conditions = None
+                if use_stage2:
+                    t2 = time.perf_counter()
+                    conditions = await asyncio.to_thread(classify_signs, img, raw)
+                    stage2_ms += (time.perf_counter() - t2) * 1000.0
+                    stage2_crops += len(conditions)
+
+                items = to_detection_items(raw, req.active_classes, fr.timestamp_seconds, fr.frame_index, conditions)
+                for it in items:
+                    by_class[it.class_name] = by_class.get(it.class_name, 0) + 1
+                detections.extend(items)
+
+        detections = detect_class_conflicts(detections, req.active_classes, default_iou_threshold=req.conflict_threshold)
+        total_ms = (time.perf_counter() - t_start) * 1000.0
+        logger.info(f"YOLO media {req.media_asset_id}: {len(req.frames)} frame, {len(detections)} deteksi, {total_ms:.0f} ms")
+        return YoloDetectResponse(
+            success=True,
+            media_asset_id=req.media_asset_id,
+            detections=detections,
+            metrics=YoloDetectMetrics(
+                frames=len(req.frames),
+                download_ms=round(download_ms, 1),
+                inference_ms=round(inference_ms, 1),
+                total_ms=round(total_ms, 1),
+                per_model_ms={k: round(v, 1) for k, v in per_model.items()},
+                stage2_ms=round(stage2_ms, 1),
+                stage2_crops=stage2_crops,
+                stage2_model=STAGE2_MODEL_ID if use_stage2 else None,
+                detections_by_class=by_class,
+                missing_models=yolo_engine.missing_categories,
+                device=yolo_engine.device,
+                conf=conf,
+            ),
+        )
+    except Exception as e:
+        logger.error(f"YOLO gagal untuk media {req.media_asset_id}: {e}", exc_info=True)
+        return YoloDetectResponse(success=False, media_asset_id=req.media_asset_id, error_message=str(e))
+
+# --- Playback (kotak halus pemutar video) -----------------------------------------
+# Deteksi rapat bisa memakan beberapa menit, jadi web memulai job lalu memantaunya (bukan satu permintaan HTTP panjang
+# yang bisa diputus oleh batas waktu header klien). Satu thread menjaga model YOLO dipakai satu pekerjaan pada satu waktu.
+_playback_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="playback-job")
+_playback_jobs: Dict[str, dict] = {}
+_playback_jobs_lock = threading.Lock()
+
+
+def _run_playback_job_bg(job_id: str, req: PlaybackRequest):
+    from services.yolo_engine import engine as yolo_engine
+
+    def set_state(**kw):
+        with _playback_jobs_lock:
+            _playback_jobs[job_id].update(kw)
+
+    set_state(status="running")
+    try:
+        yolo_engine.load()
+        result = run_playback(
+            req.video_url, req.fps, req.sample_timestamps, req.iou_min, req.max_missed,
+            on_progress=lambda p: set_state(progress=round(p, 3)),
+        )
+        payload = PlaybackResponse(
+            success=True,
+            media_asset_id=req.media_asset_id,
+            tracks=[
+                PlaybackTrackOut(track_id=t.track_id, model_class=t.model_class, points=[[float(v) for v in p] for p in t.points])
+                for t in result.tracks
+            ],
+            metrics=result.metrics,
+        )
+        set_state(status="completed", progress=1.0, result=payload.model_dump())
+    except Exception as e:
+        logger.error(f"Playback job {job_id} gagal (media {req.media_asset_id}): {e}", exc_info=True)
+        set_state(status="failed", error=str(e))
+
+
+@app.post("/api/v1/yolo/playback/jobs", status_code=status.HTTP_202_ACCEPTED)
+def create_playback_job(req: PlaybackRequest, _: bool = Depends(verify_internal_secret)):
+    """Deteksi rapat + pelacakan pada video 720p, hanya untuk menggambar kotak pada pemutar (bukan temuan resmi)."""
+    job_id = str(uuid.uuid4())
+    with _playback_jobs_lock:
+        _playback_jobs[job_id] = {"status": "queued", "progress": 0.0, "result": None, "error": None}
+        while len(_playback_jobs) > _MAX_KEPT_JOBS:
+            _playback_jobs.pop(next(iter(_playback_jobs)))
+    _playback_executor.submit(_run_playback_job_bg, job_id, req)
+    return {"job_id": job_id}
+
+
+@app.get("/api/v1/yolo/playback/jobs/{job_id}")
+def get_playback_job(job_id: str, _: bool = Depends(verify_internal_secret)):
+    with _playback_jobs_lock:
+        job = _playback_jobs.get(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job tidak ditemukan (service mungkin di-restart).")
+        return dict(job)
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": "ai-service", "timestamp": time.time()}
@@ -165,6 +327,23 @@ async def test_connection(
             message="SAM3 lokal siap dipakai." if ok else f"Bobot SAM3 tidak ditemukan: {sam3_engine.checkpoint}",
             latency_ms=round((time.time() - start_time) * 1000, 2),
         )
+    if (req.ai_model_config.provider or "").lower() == "yolo":
+        from services.yolo_engine import engine as yolo_engine
+        try:
+            st = yolo_engine.status()
+        except RuntimeError as e:
+            return TestConnectionResponse(success=False, message=str(e),
+                                          latency_ms=round((time.time() - start_time) * 1000, 2))
+        s2 = sign_classifier.status()
+        if not st["present"]:
+            msg = f"Tidak ada bobot YOLO di {st['weights_dir']}."
+        elif st["missing"]:
+            msg = f"Bobot YOLO belum lengkap, hilang: {', '.join(st['missing'])}."
+        else:
+            msg = f"YOLO siap: {len(st['present'])} model ({', '.join(st['present'])})."
+        msg += (" Tahap 2 rambu: siap." if s2["enabled"] and s2["present"] else " Tahap 2 rambu: bobot tidak ditemukan." if s2["enabled"] else " Tahap 2 rambu: nonaktif.")
+        return TestConnectionResponse(success=bool(st["present"]), message=msg,
+                                      latency_ms=round((time.time() - start_time) * 1000, 2))
     try:
         provider = get_provider(req.ai_model_config)
         success = await provider.test_connection()

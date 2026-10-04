@@ -33,6 +33,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, sessions });
   } catch (error: any) {
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+    }
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -46,14 +49,23 @@ export async function POST(request: Request) {
     const user = await requireAuth(['surveyor', 'admin']);
     const body = await request.json();
 
-    const { name, locationType, locationGeojson, locationAddress, surveyDate } = body;
+    const { name, locationType, locationGeojson, locationAddress, surveyDate, zoneId } = body;
 
     if (!name || name.trim() === '') {
       return NextResponse.json({ error: 'Nama survei wajib diisi.' }, { status: 400 });
     }
 
+    // Zona menentukan Tingkat Paparan (Exposure). Opsional; tanpa zona, temuan tidak mendapat skor risiko.
+    if (zoneId) {
+      const zone = await prisma.zone.findUnique({ where: { id: String(zoneId) } });
+      if (!zone || !zone.isActive) {
+        return NextResponse.json({ error: 'Zona tidak valid atau nonaktif.' }, { status: 400 });
+      }
+    }
+
     const session = await prisma.surveySession.create({
       data: {
+        zoneId: zoneId ? String(zoneId) : null,
         name: name.trim(),
         locationType: locationType || 'point',
         locationGeojson: typeof locationGeojson === 'string' ? locationGeojson : JSON.stringify(locationGeojson || {}),
@@ -70,6 +82,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, session }, { status: 201 });
   } catch (error: any) {
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+    }
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

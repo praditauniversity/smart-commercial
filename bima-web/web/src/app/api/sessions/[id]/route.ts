@@ -15,11 +15,14 @@ export async function GET(
         where: { id },
         include: {
           surveyor: { select: { id: true, name: true, email: true } },
+          zone: true,
           mediaAssets: {
             where: { status: { not: 'deleted' } },
             orderBy: { createdAt: 'desc' },
             include: {
               segments: true,
+              frames: { orderBy: { frameIndex: 'asc' } },
+              evaluatedClip: true,
               _count: { select: { detections: { where: { isDeleted: false } } } },
             },
           },
@@ -31,6 +34,7 @@ export async function GET(
             where: { isDeleted: false },
             include: {
               classDefinition: true,
+              conditionTag: { select: { id: true, code: true, label: true, severity: true } },
               mediaAsset: { select: { id: true, fileName: true, fileType: true, fileUrl: true } },
             },
             orderBy: { createdAt: 'desc' },
@@ -49,6 +53,9 @@ export async function GET(
 
     return NextResponse.json({ success: true, session });
   } catch (error: any) {
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+    }
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -62,7 +69,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
+    const user = await requireAuth(['surveyor', 'admin']);
     const { id } = await params;
     const body = await request.json();
 
@@ -96,6 +103,17 @@ export async function PATCH(
           : JSON.stringify(body.locationGeojson);
     }
     if (body.locationAddress !== undefined) updateData.locationAddress = body.locationAddress;
+    if (body.zoneId !== undefined) {
+      if (body.zoneId === null || body.zoneId === '') {
+        updateData.zoneId = null;
+      } else {
+        const zone = await prisma.zone.findUnique({ where: { id: String(body.zoneId) } });
+        if (!zone || !zone.isActive) {
+          return NextResponse.json({ error: 'Zona tidak valid atau nonaktif.' }, { status: 400 });
+        }
+        updateData.zoneId = zone.id;
+      }
+    }
     if (body.surveyDate !== undefined) updateData.surveyDate = new Date(body.surveyDate);
 
     const updated = await prisma.surveySession.update({
@@ -126,6 +144,9 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, session: updated });
   } catch (error: any) {
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+    }
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -139,7 +160,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
+    const user = await requireAuth(['surveyor', 'admin']);
     const { id } = await params;
 
     const session = await prisma.surveySession.findUnique({
@@ -169,6 +190,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: 'Sesi survei berhasil dihapus permanen.' });
   } catch (error: any) {
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+    }
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

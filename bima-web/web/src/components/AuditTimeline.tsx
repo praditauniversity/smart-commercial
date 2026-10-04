@@ -1,6 +1,8 @@
 'use client';
 
+import { ROLE_LABEL, normalizeRole } from '@/lib/access';
 import React, { useMemo, useState } from 'react';
+import { feasibilityText } from '@/lib/feasibility';
 import {
   ArrowRight,
   CheckCircle2,
@@ -89,8 +91,8 @@ function Diffs({ changes }: { changes: any }) {
   if (upd.feasibility && prev?.feasibility && upd.feasibility !== prev.feasibility) {
     rows.push({
       label: 'Kelayakan',
-      from: prev.feasibility.replace('_', ' '),
-      to: upd.feasibility.replace('_', ' '),
+      from: feasibilityText(prev.feasibility),
+      to: feasibilityText(upd.feasibility),
     });
   }
   if (upd.locationCoordinates && JSON.stringify(upd.locationCoordinates) !== JSON.stringify(prev?.locationCoordinates)) {
@@ -106,11 +108,11 @@ function Diffs({ changes }: { changes: any }) {
     <dl className="mt-2 space-y-1.5">
       {rows.map((r) => (
         <div key={r.label} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[11px]">
-          <dt className="w-16 shrink-0 font-semibold text-slate-400">{r.label}</dt>
+          <dt className="w-16 shrink-0 font-semibold text-zinc-400">{r.label}</dt>
           <dd className="flex flex-wrap items-center gap-1.5 min-w-0">
-            <span className="text-slate-400 line-through break-words">{r.from}</span>
-            <ArrowRight className="w-3 h-3 text-slate-300 shrink-0" />
-            <span className="font-semibold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded break-words">{r.to}</span>
+            <span className="text-zinc-400 line-through break-words">{r.from}</span>
+            <ArrowRight className="w-3 h-3 text-zinc-300 shrink-0" />
+            <span className="font-semibold text-zinc-800 bg-zinc-100 px-1.5 py-0.5 rounded break-words">{r.to}</span>
           </dd>
         </div>
       ))}
@@ -123,7 +125,7 @@ function EntryBody({ log }: { log: AuditLog }) {
   const changes = parseChanges(log.changes);
   if (!changes) return null;
   return (
-    <div className="text-xs text-slate-600 leading-relaxed">
+    <div className="text-xs text-zinc-600 leading-relaxed">
       {changes.actionDescription && <p>{changes.actionDescription}</p>}
 
       {changes.rejectReason && (
@@ -133,8 +135,8 @@ function EntryBody({ log }: { log: AuditLog }) {
         </div>
       )}
       {changes.notes && !changes.rejectReason && (
-        <p className="mt-1 text-slate-500">
-          <span className="font-semibold text-slate-600">Catatan:</span> {changes.notes}
+        <p className="mt-1 text-zinc-500">
+          <span className="font-semibold text-zinc-600">Catatan:</span> {changes.notes}
         </p>
       )}
       <Diffs changes={changes} />
@@ -189,29 +191,29 @@ export default function AuditTimeline({ logs }: { logs: AuditLog[] }) {
   const showDayAt = shown.map((g, i) => i === 0 || dayOf(g[0].createdAt) !== dayOf(shown[i - 1][0].createdAt));
 
   return (
-    <section className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
-      <header className="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-slate-100">
+    <section className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden">
+      <header className="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-zinc-100">
         <div className="min-w-0">
-          <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-            <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+          <h3 className="font-semibold text-zinc-900 text-sm flex items-center gap-2">
+            <FileText className="w-4 h-4 text-zinc-400 shrink-0" />
             Riwayat Aktivitas
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-zinc-500 mt-0.5">
             Jejak perubahan data, penolakan, revisi, dan pengajuan pada sesi ini (terbaru di atas).
           </p>
         </div>
-        <span className="shrink-0 px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full text-[11px] font-semibold">
+        <span className="shrink-0 px-2.5 py-1 bg-zinc-100 text-zinc-700 border border-zinc-200 rounded-md text-[11px] font-medium">
           {logs.length} catatan
         </span>
       </header>
 
       {logs.length === 0 ? (
-        <div className="px-6 py-10 text-center text-slate-400">
-          <FileText className="w-8 h-8 mx-auto text-slate-300 mb-1" />
-          <p className="text-xs font-medium text-slate-600">Belum ada riwayat aktivitas yang tercatat pada sesi ini.</p>
+        <div className="px-6 py-10 text-center text-zinc-400">
+          <FileText className="w-8 h-8 mx-auto text-zinc-300 mb-1" />
+          <p className="text-xs font-medium text-zinc-600">Belum ada riwayat aktivitas yang tercatat pada sesi ini.</p>
         </div>
       ) : (
-        <div className="px-5 sm:px-6 py-5">
+        <div className="max-h-[32rem] overflow-y-auto px-5 py-5 sm:px-6">
           <ol className="relative">
             {shown.map((group, gi) => {
               const head = group[0];
@@ -227,12 +229,12 @@ export default function AuditTimeline({ logs }: { logs: AuditLog[] }) {
               return (
                 <React.Fragment key={head.id}>
                   {showDay && (
-                    <li className="pl-10 pb-3 pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 list-none">
+                    <li className="pl-10 pb-3 pt-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500 list-none">
                       {day}
                     </li>
                   )}
                   <li className="relative pl-10 pb-5 list-none">
-                    {!isLast && <span className="absolute left-[15px] top-8 bottom-0 w-px bg-slate-200" aria-hidden />}
+                    {!isLast && <span className="absolute left-[15px] top-8 bottom-0 w-px bg-zinc-200" aria-hidden />}
                     <span
                       className={`absolute left-0 top-0 w-8 h-8 rounded-full flex items-center justify-center ring-4 ring-white ${tone.soft} ring-1`}
                     >
@@ -241,18 +243,18 @@ export default function AuditTimeline({ logs }: { logs: AuditLog[] }) {
 
                     <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
                       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
-                        <span className={`text-sm font-bold ${tone.text}`}>{meta.label}</span>
+                        <span className={`text-sm font-semibold ${tone.text}`}>{meta.label}</span>
                         {isGroup && (
-                          <span className="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold">
+                          <span className="px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-700 border border-zinc-200 text-[10px] font-medium">
                             ×{group.length}
                           </span>
                         )}
-                        <span className="text-xs text-slate-500">
-                          oleh <span className="font-semibold text-slate-700">{actor?.name || 'Sistem'}</span>
-                          {actor?.role && <span className="text-slate-400"> · {actor.role === 'admin' ? 'Admin' : 'Surveyor'}</span>}
+                        <span className="text-xs text-zinc-500">
+                          oleh <span className="font-semibold text-zinc-700">{actor?.name || 'Sistem'}</span>
+                          {actor?.role && <span className="text-zinc-500"> · {ROLE_LABEL[normalizeRole(actor.role)]}</span>}
                         </span>
                       </div>
-                      <time className="text-[11px] text-slate-400 tabular-nums" dateTime={head.createdAt}>
+                      <time className="text-[11px] text-zinc-500 tabular-nums" dateTime={head.createdAt}>
                         {timeOf(head.createdAt)}
                         {isGroup && ` – ${timeOf(group[group.length - 1].createdAt)}`}
                       </time>
@@ -265,16 +267,16 @@ export default function AuditTimeline({ logs }: { logs: AuditLog[] }) {
                             type="button"
                             onClick={() => toggle(head.id)}
                             aria-expanded={expanded}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-zinc-900 hover:text-brand-green cursor-pointer"
                           >
                             {expanded ? 'Sembunyikan rincian' : `Lihat ${group.length} rincian`}
                             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
                           </button>
                           {expanded && (
-                            <ul className="mt-2 space-y-2 border-l-2 border-slate-100 pl-3">
+                            <ul className="mt-2 space-y-2 border-l-2 border-zinc-100 pl-3">
                               {group.map((entry) => (
                                 <li key={entry.id} className="space-y-0.5">
-                                  <span className="text-[10px] text-slate-400 tabular-nums">{timeOf(entry.createdAt)}</span>
+                                  <span className="text-[10px] text-zinc-500 tabular-nums">{timeOf(entry.createdAt)}</span>
                                   <EntryBody log={entry} />
                                 </li>
                               ))}
@@ -295,7 +297,7 @@ export default function AuditTimeline({ logs }: { logs: AuditLog[] }) {
             <button
               type="button"
               onClick={() => setShowAll((v) => !v)}
-              className="ml-10 mt-1 inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+              className="ml-10 mt-1 inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-zinc-200 bg-white hover:bg-zinc-50 shadow-sm text-xs font-medium text-zinc-900 transition-colors cursor-pointer"
             >
               {showAll ? 'Tampilkan lebih sedikit' : `Tampilkan ${groups.length - INITIAL_GROUPS} aktivitas lainnya`}
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAll ? 'rotate-180' : ''}`} />

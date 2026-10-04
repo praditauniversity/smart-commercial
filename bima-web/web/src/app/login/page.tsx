@@ -1,8 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import { homePathForRole, normalizeRole } from '@/lib/access';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Lock, Mail, ArrowRight, Shield, User, Loader2, AlertCircle } from 'lucide-react';
+import { MapPin, Lock, Mail, ArrowRight, Shield, User, Loader2, AlertCircle, ClipboardCheck } from 'lucide-react';
+import type { DemoAccount } from '@/lib/demo-login';
+
+// Kelas Tailwind harus tertulis utuh agar terdeteksi saat build.
+const DEMO_STYLE = {
+  admin: { box: 'hover:border-indigo-500 hover:bg-indigo-50/50', text: 'group-hover:text-indigo-600', icon: 'text-indigo-500' },
+  supervisor: { box: 'hover:border-amber-500 hover:bg-amber-50/50', text: 'group-hover:text-amber-600', icon: 'text-amber-500' },
+  surveyor: { box: 'hover:border-blue-500 hover:bg-blue-50/50', text: 'group-hover:text-blue-600', icon: 'text-blue-500' },
+} as const;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,6 +19,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Akun demo dari env server (hanya bila DEMO_LOGIN_ENABLED=true); kosong = bagian akses cepat disembunyikan.
+  const [demoAccounts, setDemoAccounts] = useState<DemoAccount[]>([]);
+
+  useEffect(() => {
+    fetch('/api/auth/demo-accounts')
+      .then((r) => r.json())
+      .then((j) => setDemoAccounts(Array.isArray(j.accounts) ? j.accounts : []))
+      .catch(() => setDemoAccounts([]));
+  }, []);
 
   const handleLogin = async (e?: React.FormEvent, customEmail?: string, customPass?: string) => {
     if (e) e.preventDefault();
@@ -36,11 +54,7 @@ export default function LoginPage() {
         throw new Error(data.error || 'Gagal login.');
       }
 
-      if (data.user.role === 'admin') {
-        router.push('/admin/dashboard');
-      } else {
-        router.push('/surveyor/sessions');
-      }
+      router.push(homePathForRole(normalizeRole(data.user.role)));
     } catch (err: any) {
       console.error(err);
       setError(err.message);
@@ -49,16 +63,10 @@ export default function LoginPage() {
     }
   };
 
-  const quickLoginAdmin = () => {
-    setEmail('admin@bima.id');
-    setPassword('admin123');
-    handleLogin(undefined, 'admin@bima.id', 'admin123');
-  };
-
-  const quickLoginSurveyor = () => {
-    setEmail('surveyor@bima.id');
-    setPassword('surveyor123');
-    handleLogin(undefined, 'surveyor@bima.id', 'surveyor123');
+  const quickLogin = (acc: DemoAccount) => {
+    setEmail(acc.email);
+    setPassword(acc.password);
+    handleLogin(undefined, acc.email, acc.password);
   };
 
   return (
@@ -103,7 +111,7 @@ export default function LoginPage() {
                 <input
                   type="email"
                   required
-                  placeholder="admin@bima.id atau surveyor@bima.id"
+                  placeholder="email@contoh.id"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
@@ -145,37 +153,36 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Quick Demo Logins */}
-          <div className="pt-4 border-t border-slate-100 space-y-2">
-            <span className="block text-center text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Akses Cepat (Demo Akun)
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={quickLoginSurveyor}
-                className="p-2.5 rounded-xl border border-slate-200 hover:border-blue-500 active:scale-95 bg-slate-50 hover:bg-blue-50/50 text-left transition-all group cursor-pointer"
-              >
-                <div className="flex items-center gap-1.5 font-bold text-slate-800 group-hover:text-blue-600 text-xs truncate">
-                  <User className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                  Surveyor
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5 truncate">surveyor@bima.id</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={quickLoginAdmin}
-                className="p-2.5 rounded-xl border border-slate-200 hover:border-indigo-500 active:scale-95 bg-slate-50 hover:bg-indigo-50/50 text-left transition-all group cursor-pointer"
-              >
-                <div className="flex items-center gap-1.5 font-bold text-slate-800 group-hover:text-indigo-600 text-xs truncate">
-                  <Shield className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                  Admin
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5 truncate">admin@bima.id</div>
-              </button>
+          {/* Akses cepat: akun dari env SEED_* (hanya bila DEMO_LOGIN_ENABLED=true) */}
+          {demoAccounts.length > 0 && (
+            <div className="pt-4 border-t border-slate-100 space-y-2">
+              <span className="block text-center text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Akses Cepat (Demo Akun)
+              </span>
+              <div className={`grid gap-2 ${demoAccounts.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                {demoAccounts.map((acc) => {
+                  const Icon = acc.role === 'admin' ? Shield : acc.role === 'supervisor' ? ClipboardCheck : User;
+                  const st = DEMO_STYLE[acc.role];
+                  return (
+                    <button
+                      key={acc.role}
+                      type="button"
+                      onClick={() => quickLogin(acc)}
+                      disabled={loading}
+                      aria-label={`Masuk sebagai ${acc.label} (${acc.email})`}
+                      className={`p-2.5 rounded-xl border border-slate-200 active:scale-95 bg-slate-50 text-left transition-all group cursor-pointer disabled:opacity-60 ${st.box}`}
+                    >
+                      <div className={`flex items-center gap-1.5 font-bold text-slate-800 text-xs truncate ${st.text}`}>
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${st.icon}`} />
+                        {acc.label}
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 truncate">{acc.email}</div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

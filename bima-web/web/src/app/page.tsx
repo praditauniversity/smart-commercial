@@ -1,5 +1,6 @@
 'use client';
 
+import { homePathForRole, normalizeRole } from '@/lib/access';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -21,11 +22,7 @@ export default function HomePage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.authenticated && data.user) {
-          if (data.user.role === 'admin') {
-            router.push('/admin/dashboard');
-          } else {
-            router.push('/surveyor/sessions');
-          }
+          router.push(homePathForRole(normalizeRole(data.user.role)));
         } else {
           setChecking(false);
         }

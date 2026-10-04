@@ -50,3 +50,11 @@ Thumbs.db
 
 # Model Weights
 *.pt
+
+# ===== Data uji video (sengaja dilacak; lihat sample-data/README.md) =====
+!sample-data/video/*.mp4
+
+# ===== Bobot YOLO: tetap di luar git (bima-web/ai-service/models/yolo11n_seed0/*.pt) =====
+
+# ===== Demo lokal (bima-web/scripts/local-demo.mjs): kata sandi, venv, penyimpanan, log =====
+bima-web/.demo/

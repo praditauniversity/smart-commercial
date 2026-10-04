@@ -21,6 +21,10 @@ smart-commercial/
 
 ## Fitur utama
 
+> **Coba cepat:** dari `bima-web/`, `node scripts/local-demo.mjs --docker-db` (atau `--database-url ...`), lihat bagian 3a dokumen di bawah.
+>
+> Purwarupa tesis (penilaian risiko Severity × Exposure, deteksi YOLO, galeri frame video, koreksi supervisor, tiga peran): lihat [`bima-web/docs/rq4-prototype.md`](bima-web/docs/rq4-prototype.md).
+
 - Upload dan pemrosesan gambar atau video survei.
 - Deteksi objek melalui provider Vision AI (OpenRouter atau on-premise).
 - Pembagian video menjadi segmen, deduplikasi temporal, dan deteksi konflik kelas.

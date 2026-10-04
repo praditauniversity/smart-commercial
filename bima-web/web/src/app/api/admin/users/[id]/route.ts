@@ -1,3 +1,4 @@
+import { normalizeRole } from '@/lib/access';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
@@ -19,7 +20,7 @@ export async function PATCH(
 
     const updateData: any = {};
     if (body.name !== undefined) updateData.name = body.name.trim();
-    if (body.role !== undefined) updateData.role = body.role === 'admin' ? 'admin' : 'surveyor';
+    if (body.role !== undefined) updateData.role = normalizeRole(body.role);
     if (body.isActive !== undefined) updateData.isActive = Boolean(body.isActive);
     if (body.password && body.password.trim() !== '') {
       updateData.passwordHash = await bcrypt.hash(body.password.trim(), 10);
