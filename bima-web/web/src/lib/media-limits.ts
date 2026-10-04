@@ -1,3 +1,6 @@
+export const DEFAULT_MAX_VIDEO_DURATION_SECONDS = 120;
+export const MAX_VIDEO_DURATION_SECONDS = 120;
+
 export function formatDuration(seconds: number): string {
   const total = Math.round(seconds);
   const m = Math.floor(total / 60);

@@ -146,7 +146,7 @@ docker compose --profile tools run --rm migrate
 | `FASTAPI_SERVICE_URL` | URL internal AI Service. Gunakan loopback `http://127.0.0.1:8000` (server-ke-server, bukan IP jaringan). |
 | `JWT_SECRET` | Penandatangan sesi login. **Wajib diisi** (tanpa nilai bawaan; aplikasi menolak login bila kosong) dengan nilai acak yang panjang, mis. `openssl rand -base64 48`. |
 | `ENCRYPTION_SECRET_KEY` | Kunci enkripsi API key model. **Wajib diisi.** |
-| `Admin → Batas Media` | Batas awal 2 menit; admin dapat mengatur batas durasi video surveyor dari 1 detik sampai 20 menit. Server mengukur dan menolak video yang melewati batas. |
+| `Admin → Batas Media` | Batas awal 2 menit; admin dapat mengatur batas durasi video surveyor dari 1 detik sampai 2 menit. Server mengukur dan menolak video yang melewati batas. |
 | `FFMPEG_PATH`, `FFPROBE_PATH` | Path ffmpeg dan ffprobe (butuh libx264 dan libwebp). |
 | `SUPABASE_SERVICE_ROLE_KEY` | Hanya server: upload/hapus media di Supabase Storage (bucket `img`, `vids`). Pada local stack, salin `SERVICE_ROLE_KEY` dari `supabase/.env`. **Rahasia.** |
 | `SAM3_CHECKPOINT`, `FFMPEG_PATH` | (ai-service) Bobot SAM 3.1 dan ffmpeg dengan libx264, untuk provider `sam3`. |

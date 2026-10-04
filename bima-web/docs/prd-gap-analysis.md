@@ -10,7 +10,7 @@ Legenda: ✅ sesuai · 🟡 sebagian · 🔄 berbeda dari PRD · ❌ belum ada �
 |---|---|
 | Domain dan state machine sesi | ✅ Sesuai. Ada perluasan kecil: `perlu_perbaikan` juga boleh upload/edit/hapus media |
 | Lifecycle media | 🟡 `queued`/`uploading`/`deleted` tidak dipakai alur aktual; hapus media adalah hard delete |
-| Pipeline AI | 🟡 Gambar ✅. Video VLM masih placeholder. SAM3 ➕ menangani video dengan benar dan kini mendeteksi konflik, tetapi tanpa segmen ≤10 detik. Video dibatasi 20 menit |
+| Pipeline AI | 🟡 Gambar ✅. Video VLM masih placeholder. SAM3 ➕ menangani video dengan benar dan kini mendeteksi konflik, tetapi tanpa segmen ≤10 detik. Video dibatasi 2 menit |
 | Review dan approval | ✅ Lengkap (alasan reject tetap 6 opsi, hak edit admin: kelas, kondisi, kelayakan) |
 | Dashboard | 🟡 Berjalan; belum multi-kelas, dan membaca `Detection` hidup, bukan snapshot. Temuan sudah dipaginasi |
 | Manajemen kelas dan model | 🟡 Berjalan; UI kelas saling eksklusif dan preview deteksi belum ada |
@@ -38,8 +38,8 @@ Legenda: ✅ sesuai · 🟡 sebagian · 🔄 berbeda dari PRD · ❌ belum ada �
 | 8 | Filter multi-kelas di dashboard | `classId` menjadi daftar; ubah UI |
 | 9 | UI `mutuallyExclusiveWith` dan `conflictIouThreshold` di menu Kelas | Tambah kontrol di `admin/classes/page.tsx` |
 | 10 | Preview/test deteksi kelas sebelum dipakai surveyor | Endpoint uji satu gambar terhadap satu kelas |
-| 11 | 🟡 **Sebagian (K2).** Batas durasi video default 2 menit dan dapat diatur admin sampai 20 menit (ffprobe di server + cek browser). Belum: batas ukuran byte dan jumlah media | Tetapkan batas byte dan jumlah media; tolak lebih awal di `upload` |
-| 12 | Segmentasi video ≤10 detik (FR-8) | Prioritas turun karena video dibatasi 20 menit. Putuskan (Open Question 7): pecah nyata, atau ubah PRD agar video SAM3 tetap satu segmen |
+| 11 | 🟡 **Sebagian (K2).** Batas durasi video default 2 menit dan dapat diatur admin sampai 2 menit (ffprobe di server + cek browser). Belum: batas ukuran byte dan jumlah media | Tetapkan batas byte dan jumlah media; tolak lebih awal di `upload` |
+| 12 | Segmentasi video ≤10 detik (FR-8) | Prioritas turun karena video dibatasi 2 menit. Putuskan (Open Question 7): pecah nyata, atau ubah PRD agar video SAM3 tetap satu segmen |
 | 13 | Dialog konfirmasi `Akhiri Survei` dan tombol hapus sesi di UI | Tambah konfirmasi dan tombol (API sudah ada) |
 | 14 | Pesan alasan submit tidak aktif yang lengkap di UI | Tampilkan alasan dari guard secara proaktif |
 | 17 | Penyimpanan raw AI response (FR-18) | Tabel/kolom audit dengan masa simpan (Open Question 5) |

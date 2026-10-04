@@ -148,7 +148,7 @@ export default function AdminClassesPage() {
     setAlertMsg(null);
 
     const payload: any = isYolo
-      ? { displayName: formDisplayName }
+      ? { displayName: formDisplayName, vegetationCriteria: formVegetationCriteria }
       : isSam
       ? {
           name: formName,

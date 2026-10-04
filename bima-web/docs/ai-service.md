@@ -53,7 +53,7 @@ Kontrak provider (`providers/base.py`): `detect(image_base64, active_classes, ti
 
 ### 2.3 Jalur SAM3 ➕
 
-Alur satu job (`services/sam3_service.py`). Video dibatasi 20 menit di sisi web (upload):
+Alur satu job (`services/sam3_service.py`). Video dibatasi 2 menit di sisi web (upload):
 
 1. `build_class_prompts`: hanya kelas dengan `sam_prompt` yang dipakai. Warna dari `sam_color` (atau palet bawaan).
 2. Materialisasi input ke file lokal (unduh dengan streaming, timeout 300 dtk).
@@ -79,7 +79,7 @@ Mode video (`ModelConfig.samMode`):
 Batasan SAM3 saat ini:
 
 - Tidak ada dedup temporal: hanya frame puncak per kelas.
-- Satu segmen per video (tidak dipecah ≤10 detik). Durasi video dibatasi 20 menit oleh web sebelum sampai ke sini.
+- Satu segmen per video (tidak dipecah ≤10 detik). Durasi video dibatasi 2 menit oleh web sebelum sampai ke sini.
 
 ### 2.4 Deteksi konflik ➕
 

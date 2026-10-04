@@ -95,7 +95,7 @@ Lihat diagram state machine di PRD bagian 4. Logika di `web/src/lib/state-machin
 Surveyor            Next.js                          Supabase           FastAPI
    │ POST /media/upload (multipart)                       │                │
    ├────────────────▶ validasi sesi + status              │                │
-   │                 video: ffprobe, tolak bila > 20 menit │                │
+   │                 video: ffprobe, tolak bila > 2 menit │                │
    │                 ffmpeg kompres (WebP / H.264)        │                │
    │                 upload ke bucket ───────────────────▶│                │
    │                 INSERT MediaAsset(status=uploaded)   │                │
@@ -134,7 +134,7 @@ Perilaku penting:
 - Path objek: `sessions/{sessionId}/{uuid}.{ext}`; hasil anotasi SAM3: `sessions/{sessionId}/sam3-{uuid}.mp4`.
 - Kompresi: gambar sisi terpanjang ≤1280 px (hanya diperkecil), WebP kualitas 65; video tinggi ≤720 px, H.264 CRF 30, tanpa audio, `faststart`.
 - **File asli tidak disimpan** (keputusan produk K7). Hanya versi terkompresi.
-- **Durasi video maksimal 20 menit** (default 120 detik; dapat diatur admin di menu Batas Media). Diukur `ffprobe` di server sebelum kompresi (HTTP 400 bila melebihi atau tidak terbaca) dan dicek di browser sebelum upload.
+- **Durasi video maksimal 2 menit** (default 120 detik; dapat diatur admin di menu Batas Media). Diukur `ffprobe` di server sebelum kompresi (HTTP 400 bila melebihi atau tidak terbaca) dan dicek di browser sebelum upload.
 - Penghapusan media menghapus objek di bucket (`removeStoredFile`); URL non-Supabase (data lama `/uploads/...`) diabaikan.
 
 ## 6. Konfigurasi

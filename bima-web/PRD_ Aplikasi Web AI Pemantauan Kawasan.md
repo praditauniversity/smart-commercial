@@ -31,7 +31,7 @@ Diputuskan oleh tim dan sudah tercermin di seluruh dokumen ini:
 | # | Keputusan | Dampak |
 |---|---|---|
 | K1 | **Autentikasi memakai JWT + bcrypt buatan sendiri**, bukan Supabase Auth. Supabase hanya untuk PostgreSQL dan Storage | US-010, FR-58, FR-68 menjadi ✅ (bukan lagi penyimpangan) |
-| K2 | **Video dibatasi maksimal 20 menit** (default 2 menit; admin dapat mengatur 1 detik sampai 20 menit di menu Batas Media) | FR-87/88 sebagian terpenuhi. Divalidasi di server (ffprobe) dan di browser |
+| K2 | **Video dibatasi maksimal 2 menit** (default 2 menit; admin dapat mengatur 1 detik sampai 2 menit di menu Batas Media) | FR-87/88 sebagian terpenuhi. Divalidasi di server (ffprobe) dan di browser |
 | K3 | **Konflik kelas harus bekerja juga pada hasil SAM3** | Diimplementasikan (FR-25) |
 | K4 | **Hasil per kelas memakai pagination** | Diimplementasikan (US-002, US-007) |
 | K5 | **Halaman `/admin/*` dan `/surveyor/*` dijaga proxy (middleware)** | Diimplementasikan (FR-A11) |
@@ -42,9 +42,9 @@ Diputuskan oleh tim dan sudah tercermin di seluruh dokumen ini:
 
 1. ➕ **Provider AI ketiga: `sam3`** (SAM 3 / 3.1 lokal berbasis text prompt) berjalan di `ai-service` sebagai job asinkron dengan polling. Provider `OpenRouter` (VLM) dan `onpremise` tetap ada.
 2. ✅ **Autentikasi bukan Supabase Auth (keputusan K1).** Sistem memakai tabel `User` sendiri, password bcrypt, dan sesi JWT di cookie `bima_session` (umur dari `SESSION_MAX_AGE_SECONDS`). Supabase dipakai untuk **PostgreSQL** dan **Storage** saja.
-3. 🔄 **Upload media melewati server Next.js.** File dikompres dengan `ffmpeg` (gambar → WebP maks 1280px, video → H.264 maks 720p tanpa audio) lalu diunggah ke bucket Supabase `img` / `vids`. **File asli tidak disimpan (keputusan K7).** Video dibatasi 20 menit (K2).
+3. 🔄 **Upload media melewati server Next.js.** File dikompres dengan `ffmpeg` (gambar → WebP maks 1280px, video → H.264 maks 720p tanpa audio) lalu diunggah ke bucket Supabase `img` / `vids`. **File asli tidak disimpan (keputusan K7).** Video dibatasi 2 menit (K2).
 4. 🔄 **FastAPI tidak menulis ke database.** Hasil deteksi dikembalikan ke Next.js, yang menyimpan `MediaSegment` dan `Detection` dalam satu transaksi.
-5. 🟡 **Pemrosesan video pada jalur VLM masih placeholder**: durasi diasumsikan 15 detik dan bytes video dikirim sebagai satu gambar. Jalur SAM3 memproses video sungguhan, tetapi menghasilkan satu `MediaSegment` per video (bukan potongan 10 detik). Karena video dibatasi 20 menit, pemecahan segmen bukan lagi prioritas.
+5. 🟡 **Pemrosesan video pada jalur VLM masih placeholder**: durasi diasumsikan 15 detik dan bytes video dikirim sebagai satu gambar. Jalur SAM3 memproses video sungguhan, tetapi menghasilkan satu `MediaSegment` per video (bukan potongan 10 detik). Karena video dibatasi 2 menit, pemecahan segmen bukan lagi prioritas.
 6. ➕ Kelayakan pada jalur SAM3 ditentukan **heuristik luas area** (bukan penilaian model), lalu dapat dikoreksi admin.
 7. ➕ Ada `AuditLog` menyeluruh (aksi surveyor dan admin) dan komponen `AuditTimeline`.
 8. ✅ Sejak v2.1: konflik kelas pada SAM3, pagination temuan, proteksi halaman (proxy), batas durasi video, dan `JWT_SECRET` wajib dari env sudah diimplementasikan.
@@ -104,7 +104,7 @@ Catatan implementasi:
 - Alur upload langsung menetapkan `uploaded`. Status `queued` dan `uploading` ada di state machine tetapi **tidak dipakai** oleh alur saat ini (upload dilakukan satu request ke server, bukan resumable).
 - Penghapusan media adalah **hard delete** (baris `MediaAsset`, `MediaSegment`, `Detection`, dan file di bucket dihapus). Status `deleted` disediakan tetapi tidak ditulis oleh route hapus.
 - Kegagalan satu media tidak mengubah status sesi ✅.
-- **Batas durasi video** (K2): default 120 detik. Admin mengatur batas 1–1200 detik di menu Batas Media. Server membaca durasi asli dengan `ffprobe` dan menolak dengan HTTP 400 bila lebih panjang atau tidak terbaca; pemeriksaan browser hanya memberi peringatan lebih awal.
+- **Batas durasi video** (K2): default 120 detik. Admin mengatur batas 1–120 detik di menu Batas Media. Server membaca durasi asli dengan `ffprobe` dan menolak dengan HTTP 400 bila lebih panjang atau tidak terbaca; pemeriksaan browser hanya memberi peringatan lebih awal.
 
 ### 3.3 MediaSegment
 
@@ -114,7 +114,7 @@ Unit hasil pemrosesan per media.
 - Video jalur **SAM3**: satu segmen yang mencakup seluruh durasi (`startTime=0`, `endTime=durasi`). `mediaUrl` menunjuk ke **video hasil anotasi** (overlay) dan `extractionMetadata` memuat ringkasan (fps, puncak per kelas, prompt, dsb.) ➕.
 - Video jalur **VLM**: `plan_video_segments` merencanakan segmen ≤10 detik, tetapi durasi diasumsikan 15 detik dan tidak ada ekstraksi frame nyata 🟡. Lihat 12.2.
 
-Aturan PRD "video > 10 detik dibagi menjadi segmen ≤10 detik" ❌ belum terpenuhi secara nyata. Durasi video dibatasi maksimal **20 menit** (K2), sehingga satu segmen SAM3 paling banyak mencakup 20 menit.
+Aturan PRD "video > 10 detik dibagi menjadi segmen ≤10 detik" ❌ belum terpenuhi secara nyata. Durasi video dibatasi maksimal **2 menit** (K2), sehingga satu segmen SAM3 paling banyak mencakup 2 menit.
 
 ### 3.4 Detection
 
@@ -259,10 +259,10 @@ Kriteria "Typecheck/lint passes" dan "Verify in browser" dipindahkan ke bagian *
 
 ### US-002: Upload gambar dan video dalam sesi
 
-- [~] Upload banyak file. UI menerima `image/jpeg`, `image/png`, `video/mp4`. Server menerima semua `image/*` dan video (`mp4|mov|webm|mkv`). **Video maksimal 20 menit** (K2). Belum ada batas ukuran byte atau jumlah media.
+- [~] Upload banyak file. UI menerima `image/jpeg`, `image/png`, `video/mp4`. Server menerima semua `image/*` dan video (`mp4|mov|webm|mkv`). **Video maksimal 2 menit** (K2). Belum ada batas ukuran byte atau jumlah media.
 - [x] Satu file = satu `MediaAsset`.
 - [x] Gambar → satu `MediaSegment`.
-- [ ] Video > 10 detik dibagi menjadi segmen ≤10 detik (lihat 3.3; durasi dibatasi 20 menit).
+- [ ] Video > 10 detik dibagi menjadi segmen ≤10 detik (lihat 3.3; durasi dibatasi 2 menit).
 - [~] Upload dan AI asynchronous: SAM3 berjalan sebagai job background (route mengembalikan `202` lalu UI polling). Jalur VLM menunggu worker dalam satu request server.
 - [x] Frontend tidak menunggu seluruh proses AI untuk melanjutkan.
 - [x] Status media tampil per media (UI polling media yang `processing`).
@@ -387,7 +387,7 @@ Kriteria "Typecheck/lint passes" dan "Verify in browser" dipindahkan ke bagian *
 | FR-5 | Satu sesi banyak MediaAsset | ✅ | |
 | FR-6 | Satu MediaAsset = satu file | ✅ | |
 | FR-7 | Gambar = satu segmen | ✅ | |
-| FR-8 | Video >10 dtk dibagi segmen ≤10 dtk | ❌ | SAM3: satu segmen. VLM: hanya rencana, durasi diasumsikan 15 dtk. Durasi dibatasi 20 menit (K2) |
+| FR-8 | Video >10 dtk dibagi segmen ≤10 dtk | ❌ | SAM3: satu segmen. VLM: hanya rencana, durasi diasumsikan 15 dtk. Durasi dibatasi 2 menit (K2) |
 | FR-9 | Proses AI asynchronous | 🟡 | SAM3 job background. VLM menunggu worker dalam satu request |
 | FR-10 | Lifecycle 7 status media | 🟡 | `queued`/`uploading`/`deleted` tidak dipakai alur saat ini |
 | FR-11 | Gagal media tidak mengubah status sesi | ✅ | |
@@ -482,7 +482,7 @@ Kriteria "Typecheck/lint passes" dan "Verify in browser" dipindahkan ke bagian *
 | FR-84 | Pencarian alamat Nominatim | ✅ | |
 | FR-85 | Frame temporary dapat dihapus setelah processing | 🟡 | Direktori kerja SAM3 dihapus otomatis. Frame VLM tidak disimpan |
 | FR-86 | Simpan media untuk menampilkan hasil Detection | ✅ | Menurut K7: hanya hasil kompresi yang disimpan, file asli tidak. SAM3 video menyimpan hasil anotasi |
-| FR-87 | Limit media lewat konfigurasi | 🟡 | Batas durasi video dapat diatur admin sampai 20 menit (K2). Batas ukuran byte dan jumlah media belum ada |
+| FR-87 | Limit media lewat konfigurasi | 🟡 | Batas durasi video dapat diatur admin sampai 2 menit (K2). Batas ukuran byte dan jumlah media belum ada |
 | FR-88 | Validasi format dan limit sebelum diproses | 🟡 | Tipe dan durasi divalidasi (browser + server). Limit ukuran belum ada |
 
 ### Kebutuhan baru ➕ (belum ada di PRD v1.0)
@@ -502,7 +502,7 @@ Kriteria "Typecheck/lint passes" dan "Verify in browser" dipindahkan ke bagian *
 | FR-A11 | Halaman `/admin/*` dan `/surveyor/*` diamankan di level route: tanpa JWT valid → redirect ke `/login`; role `surveyor` di `/admin/*` → redirect ke `/surveyor/sessions` (`src/proxy.ts`, Next.js 16) | ✅ |
 | FR-A15 | **Tidak ada nilai lingkungan yang di-hardcode di kode.** Secret, URL, host/port, path binary, batas, timeout, kredensial seed, dan endpoint layanan pihak ketiga hanya berasal dari environment. Variabel yang kosong menghentikan fitur terkait dengan galat yang menyebut nama variabelnya (`web/src/lib/env.ts`, `ai-service/config.py`). Daftar variabel: [`docs/operations.md`](docs/operations.md) | ✅ |
 | FR-A13 | Pagination temuan di halaman sesi surveyor dan review admin (12 kartu per halaman, atas data yang sudah dimuat) | ✅ |
-| FR-A14 | Batas durasi video 20 menit, divalidasi ffprobe di server dan di browser | ✅ |
+| FR-A14 | Batas durasi video 2 menit, divalidasi ffprobe di server dan di browser | ✅ |
 | FR-A12 | Rate limiting login | ❌ |
 
 ## 10. Non-Goals (Out of Scope)
@@ -520,7 +520,7 @@ Tetap berlaku dari v1.0:
 
 Ditambahkan di v2.0/v2.1:
 
-- Video lebih dari 20 menit (K2).
+- Video lebih dari 2 menit (K2).
 - Autentikasi eksternal (OAuth/SSO) dan Supabase Auth (K1).
 - Penyimpanan file media asli beresolusi penuh (K7).
 
@@ -625,7 +625,7 @@ Tidak berubah dari v1.0:
 | Format media didukung? | UI: JPG, PNG, MP4. Server juga menerima MOV/WebM/MKV |
 | Encryption key? | Application-managed lewat `ENCRYPTION_SECRET_KEY` |
 | Perlu menyimpan file asli? | Tidak. Hanya hasil kompresi yang disimpan (K7) |
-| Maksimal durasi video? | 20 menit (K2). Ukuran byte dan jumlah media belum ditetapkan |
+| Maksimal durasi video? | 2 menit (K2). Ukuran byte dan jumlah media belum ditetapkan |
 | Autentikasi Supabase Auth atau sendiri? | Sendiri: JWT + bcrypt (K1) |
 | Model on-premise awal? | Belum ditentukan. Provider `onpremise` menerima `endpoint_url` bebas |
 | Bolehkah revision draft menambah media baru? | Ya |
@@ -634,11 +634,11 @@ Tidak berubah dari v1.0:
 
 1. Haruskah dashboard dan pelaporan membaca `snapshotData` versi yang disetujui (benar-benar immutable), atau tetap `Detection` hidup?
 2. Apakah koreksi admin setelah approve tetap diizinkan? Saat ini tidak ada larangan di level data selain status sesi.
-3. Berapa maksimal ukuran byte gambar/video dan jumlah media per sesi (FR-87)? (Durasi video sudah 20 menit.)
+3. Berapa maksimal ukuran byte gambar/video dan jumlah media per sesi (FR-87)? (Durasi video sudah 2 menit.)
 4. Berapa lama file terkompresi disimpan?
 5. Perlukah raw AI response disimpan (FR-18), dan berapa lama?
 6. Apakah video pada jalur VLM akan dibangun ulang dengan ekstraksi frame nyata, atau jalur VLM dibatasi untuk gambar dan video hanya untuk SAM3?
-7. Dengan batas 20 menit, apakah video SAM3 tetap satu segmen, atau tetap dipecah ≤10 detik?
+7. Dengan batas 2 menit, apakah video SAM3 tetap satu segmen, atau tetap dipecah ≤10 detik?
 8. Apakah kelayakan berbasis luas area pada SAM3 cukup, atau perlu kriteria per kelas?
 9. Apakah `sameSite`/`Secure` cookie dan akses lewat HTTPS Tailscale menjadi bentuk deployment standar (lihat [`docs/operations.md`](docs/operations.md))?
 10. Apakah semua admin memiliki hak yang sama atas konfigurasi model dan kelas, dan apakah perubahan kelas memerlukan approval?

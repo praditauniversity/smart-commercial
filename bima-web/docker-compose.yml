@@ -8,6 +8,7 @@ services:
   web:
     build:
       context: ./web
+      target: ${WEB_BUILD_TARGET:-runner}
       secrets:
         - web_env
     env_file: ${WEB_ENV_FILE:-./web/.env}

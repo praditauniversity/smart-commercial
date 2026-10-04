@@ -2,10 +2,10 @@ export const VEGETATION_CRITERIA = [
   { id: 'obstructs_object', label: 'Vegetasi menutupi atau menghalangi objek' },
   { id: 'dead_parts', label: 'Vegetasi mati: daun, batang, atau dahan' },
   { id: 'weeds', label: 'Vegetasi gulma atau rumput liar' },
-  { id: 'overgrown', label: 'Vegetasi terlalu lebat dan menghalangi ruang vertikal/horizontal' },
-  { id: 'overlapping', label: 'Vegetasi saling bertumpu atau tumbuh terlalu rapat' },
+  { id: 'overgrown', label: 'Vegetasi terlalu lebat (menghalangi ruang vertikal/horizontal)' },
+  { id: 'overlapping', label: 'Vegetasi saling bertumpu atau terlalu rapat' },
   { id: 'forked_trunk', label: 'Batang ganda berbentuk V' },
-  { id: 'diseased_or_damaged', label: 'Vegetasi sakit atau rusak, seperti daun berlubang atau terkena ulat/hama' },
+  { id: 'diseased_or_damaged', label: 'Vegetasi sakit atau rusak, misalnya daun berlubang atau banyak ulat/hama' },
 ] as const;
 
 const labelsById = new Map<string, string>(VEGETATION_CRITERIA.map(({ id, label }) => [id, label]));

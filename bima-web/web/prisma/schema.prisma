@@ -76,7 +76,7 @@ model ModelConfig {
 
 model MediaSettings {
   id                       String   @id @default("global")
-  maxVideoDurationSeconds  Int      @default(1200)
+  maxVideoDurationSeconds  Int      @default(120)
   updatedAt                DateTime @updatedAt
 }
 

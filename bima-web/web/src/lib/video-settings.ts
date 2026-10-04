@@ -1,7 +1,7 @@
 import prisma from '@/lib/prisma';
+import { DEFAULT_MAX_VIDEO_DURATION_SECONDS } from '@/lib/media-limits';
 
-export const DEFAULT_MAX_VIDEO_DURATION_SECONDS = 120;
-export const MAX_VIDEO_DURATION_SECONDS = 1200;
+export { DEFAULT_MAX_VIDEO_DURATION_SECONDS, MAX_VIDEO_DURATION_SECONDS } from '@/lib/media-limits';
 
 export async function getMaxVideoDurationSeconds(): Promise<number> {
   const settings = await prisma.mediaSettings.upsert({

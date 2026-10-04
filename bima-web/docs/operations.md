@@ -268,6 +268,7 @@ cp .env.example .env
 |---|---|
 | `SAM3_WEIGHTS_HOST_PATH` | Path absolut bobot SAM 3.1 di host ini. Di-mount **read-only** ke `/weights/sam3_1.pt`; file itu tidak pernah disalin ke dalam image |
 | `WEB_HOST_PORT` | Port host untuk container web (port di dalam container tetap 3000) |
+| `WEB_BUILD_TARGET` | `runner` (default) untuk production; `development` menjalankan Next.js dev server di container lokal |
 | `WEB_ENV_FILE`, `AI_ENV_FILE` | File konfigurasi app; default memakai file Cloud saat ini. Untuk lokal, arahkan ke salinan `.env.local` |
 | `SUPABASE_INTERNAL_URL` | Kosong menggunakan Supabase Cloud dari app `.env`; untuk lokal isi `http://supabase-api:8000` |
 
@@ -294,6 +295,14 @@ tailscale serve --bg --https=8443 <WEB_HOST_PORT>
 cd bima-web
 docker compose build
 docker compose up -d
+```
+
+Untuk portal Docker lokal dalam mode development, isi `WEB_BUILD_TARGET=development`
+di root `.env.local`. Isi `DEMO_LOGIN_ENABLED=true` dan kredensial `SEED_ADMIN_*` /
+`SEED_SURVEYOR_*` di `web/.env.local` untuk menampilkan Akses Cepat. Buat ulang web:
+
+```bash
+docker compose --env-file .env.local -p bima-web-local up -d --build --no-deps web
 ```
 
 Migrasi database dijalankan terpisah (tidak otomatis saat start):
@@ -339,7 +348,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/login
 | Login berhasil tetapi tetap dianggap belum login | Situs diakses lewat `http://` sementara cookie `Secure` | Akses lewat `https://` (4.3) atau `http://localhost` |
 | Membuka `/admin/*` langsung kembali ke `/login` | Belum login atau sesi kedaluwarsa (proxy halaman bekerja) | Login. Surveyor yang membuka `/admin/*` dialihkan ke `/surveyor/sessions` |
 | Semua halaman/login galat 500, atau fitur berhenti dengan pesan "Environment variable X belum diisi" | Variabel wajib kosong di `web/.env` atau `ai-service/.env` | Isi variabel yang disebut (lihat `.env.example`), restart service (dan `npm run build` bila `NEXT_PUBLIC_*`). Pesan lengkap ada di `journalctl --user -u bima-web` / `bima-ai` |
-| Upload video ditolak karena durasi | Durasi terukur ffprobe melebihi setelan Admin → Batas Media | Potong video atau minta admin menaikkan batas (maksimal 20 menit) |
+| Upload video ditolak karena durasi | Durasi terukur ffprobe melebihi setelan Admin → Batas Media | Potong video atau minta admin menaikkan batas (maksimal 2 menit) |
 | Upload video ditolak: durasi tidak terbaca / `ffprobe tidak bisa dijalankan` | File rusak atau `FFPROBE_PATH` salah | Periksa file; set `FFPROBE_PATH` (`which ffprobe`) |
 | `Client sent an HTTP request to an HTTPS server` | Membuka `http://...:8443` | Gunakan `https://...:8443` |
 | Port 3000 tidak bisa dijangkau | Service web tidak jalan atau firewall | `systemctl --user status bima-web`; `ss -tlnp \| grep 3000` |

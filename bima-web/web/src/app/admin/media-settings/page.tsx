@@ -4,13 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Clapperboard, Loader2, Save } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useToast } from '@/components/ToastProvider';
-import { formatDuration } from '@/lib/media-limits';
-
-const MAX_VIDEO_DURATION_SECONDS = 1200;
+import { DEFAULT_MAX_VIDEO_DURATION_SECONDS, MAX_VIDEO_DURATION_SECONDS, formatDuration } from '@/lib/media-limits';
 
 export default function AdminMediaSettingsPage() {
   const toast = useToast();
-  const [maxVideoSeconds, setMaxVideoSeconds] = useState('120');
+  const [maxVideoSeconds, setMaxVideoSeconds] = useState(String(DEFAULT_MAX_VIDEO_DURATION_SECONDS));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -92,7 +90,7 @@ export default function AdminMediaSettingsPage() {
               {Number.isInteger(parsedSeconds) && parsedSeconds > 0
                 ? `Saat ini: ${formatDuration(parsedSeconds)}.`
                 : 'Masukkan jumlah detik, misalnya 120 untuk 2 menit.'}{' '}
-              Batas konfigurasi maksimum adalah 20 menit untuk menjaga beban pemrosesan.
+              Batas konfigurasi maksimum adalah {formatDuration(MAX_VIDEO_DURATION_SECONDS)}.
             </p>
           </div>
 
