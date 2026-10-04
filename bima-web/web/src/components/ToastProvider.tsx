@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -55,7 +55,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [removeToast]
   );
 
-  const toast = {
+  const toast = useMemo(() => ({
     success: (message: string, title?: string, duration?: number) =>
       addToast('success', message, title || 'Berhasil', duration),
     error: (message: string, title?: string, duration?: number) =>
@@ -64,10 +64,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       addToast('warning', message, title || 'Peringatan', duration),
     info: (message: string, title?: string, duration?: number) =>
       addToast('info', message, title || 'Informasi', duration),
-  };
+  }), [addToast]);
+  const contextValue = useMemo(() => ({ toast }), [toast]);
 
   return (
-    <ToastContext.Provider value={{ toast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
 
       {/* Floating Toast Notification Container */}

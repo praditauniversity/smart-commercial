@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Polygon, Popup, Tooltip, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { mapConfig } from '@/lib/public-config';
@@ -68,7 +68,7 @@ function MapAutoBounds({
     } else if (point) {
       map.setView(point, 16);
     }
-  }, [map]);
+  }, [map, point, polygonCoords]);
   return null;
 }
 
@@ -139,7 +139,7 @@ export default function FindingLocationMapInner({
     setFindingIcon(customIcon);
   }, []);
 
-  const triggerShake = () => {
+  const triggerShake = useCallback(() => {
     setShowOutsideWarning(true);
     // Apply shake class to leaflet marker DOM element
     const markerEl = markerRef.current?._icon;
@@ -151,7 +151,7 @@ export default function FindingLocationMapInner({
     }
     setTimeout(() => setShowOutsideWarning(false), 2500);
     onOutsideArea?.();
-  };
+  }, [onOutsideArea]);
 
   const { sessionPolygonCoords, sessionDefaultCenter } = useMemo(() => {
     let polygonCoords: [number, number][] = [];
@@ -188,7 +188,7 @@ export default function FindingLocationMapInner({
         onPointChange([lat, lng], { type: 'Point', coordinates: [lng, lat] });
       },
     }),
-    [canEdit, onPointChange, sessionPolygonCoords, findingPoint]
+    [canEdit, onPointChange, sessionPolygonCoords, findingPoint, triggerShake]
   );
 
   return (

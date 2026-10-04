@@ -34,26 +34,26 @@ export default function YoloMediaCard({ media, detections, onOpen }: {
 
   return (
     <button type="button" onClick={onOpen} aria-label={`Buka hasil deteksi ${media.fileName}`}
-      className="group flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white text-left shadow-sm transition-all hover:border-zinc-300 hover:shadow-md">
-      <div className="relative h-48 overflow-hidden bg-zinc-950">
+      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-xs transition-all hover:border-blue-300 hover:shadow-lg">
+      <div className="relative h-48 overflow-hidden bg-slate-950">
         {thumb && <img src={thumb.imageUrl} alt={`Frame ${thumb.frameIndex + 1} dari ${media.fileName}`} className="h-48 w-full object-cover" />}
         <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
-          <span className="flex items-center gap-1.5 rounded-md bg-white/90 px-3 py-1.5 text-xs font-medium text-zinc-900 shadow-sm"><Eye className="h-3.5 w-3.5" />Lihat galeri frame</span>
+          <span className="flex items-center gap-1.5 rounded-xl bg-blue-600/90 px-3 py-1.5 text-xs font-bold text-white shadow-lg"><Eye className="h-3.5 w-3.5" />Lihat galeri frame</span>
         </span>
       </div>
       <div className="space-y-2 p-4">
-        <h4 className="truncate text-sm font-semibold text-zinc-900 group-hover:text-brand-green">{media.fileName}</h4>
+        <h4 className="truncate text-sm font-bold text-slate-900 group-hover:text-blue-600">{media.fileName}</h4>
         {media.fileType === 'video' && <ClipEvaluationBadge clip={media.evaluatedClip} note={media.clipMatchNote} />}
-        <div className="flex flex-wrap gap-1.5 text-[10px] font-medium">
+        <div className="flex flex-wrap gap-1.5 text-[10px] font-bold">
           {ORDER.filter((b) => counts[b] > 0).map((b) => (
-            <span key={b} className={`rounded-md border px-2 py-0.5 ${BAND_STYLE[b].chip}`}>{BAND_LABEL[b]} {counts[b]}</span>
+            <span key={b} className={`rounded-full border px-2 py-0.5 ${BAND_STYLE[b].chip}`}>{BAND_LABEL[b]} {counts[b]}</span>
           ))}
-          {unscored > 0 && <span className="rounded-md border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-zinc-500">Belum dinilai {unscored}</span>}
-          {normalSigns > 0 && <span className="rounded-md border border-brand-green/20 bg-brand-green/10 px-2 py-0.5 text-brand-green">Rambu normal {normalSigns} (tanpa skor)</span>}
-          {compliance.length > 0 && <span className="rounded-md border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-zinc-700">Kepatuhan {compliance.length} (tanpa skor)</span>}
-          {valid.length === 0 && <span className="rounded-md border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-zinc-500">Tidak ada deteksi</span>}
+          {unscored > 0 && <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-500">Belum dinilai {unscored}</span>}
+          {normalSigns > 0 && <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-emerald-800">Rambu normal {normalSigns} (tanpa skor)</span>}
+          {compliance.length > 0 && <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-slate-700">Kepatuhan {compliance.length} (tanpa skor)</span>}
+          {valid.length === 0 && <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-500">Tidak ada deteksi</span>}
         </div>
-        <p className="text-[11px] text-zinc-500">{valid.length} kotak deteksi pada {framesWithDet} dari {frames.length} frame · klik untuk detail</p>
+        <p className="text-[11px] text-slate-400">{valid.length} kotak deteksi pada {framesWithDet} dari {frames.length} frame · klik untuk detail</p>
       </div>
     </button>
   );

@@ -48,11 +48,11 @@ export default function SessionRiskTable({ detailHref, showSurveyorFilter = true
 
   if (error) return <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error}</div>;
 
-  const select = 'rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-900 shadow-sm';
+  const select = 'rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium';
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white shadow-sm" aria-label="Daftar lokasi dan sesi">
-      <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 p-4">
-        <h3 className="mr-auto text-sm font-semibold text-zinc-900">Lokasi/sesi (risiko tertinggi di atas)</h3>
+    <section className="rounded-2xl border border-slate-200 bg-white" aria-label="Daftar lokasi dan sesi">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-3">
+        <h3 className="mr-auto text-sm font-bold text-slate-800">Lokasi/sesi (risiko tertinggi di atas)</h3>
         <select aria-label="Filter status" value={status} onChange={(e) => setStatus(e.target.value)} className={select}>
           <option value="">Semua status</option>
           {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -68,31 +68,31 @@ export default function SessionRiskTable({ detailHref, showSurveyorFilter = true
             {surveyors.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
           </select>
         )}
-        {loading && <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />}
+        {loading && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
       </div>
       <div className="max-h-[32rem] overflow-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="sticky top-0 z-10 bg-white text-sm font-medium text-zinc-500 shadow-[inset_0_-1px_0_var(--color-zinc-100)]">
+        <table className="w-full text-left text-xs">
+          <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3">Sesi</th><th className="px-4 py-3">Surveyor</th><th className="px-4 py-3">Zona</th>
-              <th className="px-4 py-3">Risiko tertinggi</th><th className="px-4 py-3" title="Deteksi pada frame sampel">Infrastruktur</th><th className="px-4 py-3" title="Monitoring Kepatuhan: tanpa skor risiko">Kepatuhan (tanpa skor)</th>
-              <th className="px-4 py-3">Ditinjau</th><th className="px-4 py-3">Status</th>
+              <th className="px-3 py-2">Sesi</th><th className="px-3 py-2">Surveyor</th><th className="px-3 py-2">Zona</th>
+              <th className="px-3 py-2">Risiko tertinggi</th><th className="px-3 py-2" title="Deteksi pada frame sampel">Infrastruktur</th><th className="px-3 py-2" title="Monitoring Kepatuhan: tanpa skor risiko">Kepatuhan (tanpa skor)</th>
+              <th className="px-3 py-2">Ditinjau</th><th className="px-3 py-2">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100 text-zinc-900">
+          <tbody className="divide-y divide-slate-100">
             {rows.map((s) => (
-              <tr key={s.id} className="hover:bg-zinc-50/60">
-                <td className="px-4 py-3 font-semibold"><Link href={detailHref(s.id)} className="text-zinc-900 hover:text-brand-green hover:underline">{s.name}</Link></td>
-                <td className="px-4 py-3 text-zinc-500">{s.surveyor.name}</td>
-                <td className="px-4 py-3">{s.zone ? <span className="inline-flex items-center gap-1">{s.zone.name} <span className="font-mono text-zinc-500">(E{s.zone.exposure})</span></span> : <span className="text-zinc-400">tanpa zona</span>}</td>
-                <td className="px-4 py-3"><RiskBadge score={s.worstScore} band={s.worstBand} /></td>
-                <td className="px-4 py-3 font-mono">{s.infraCount}</td>
-                <td className="px-4 py-3"><span className={s.complianceCount > 0 ? 'font-mono' : 'font-mono text-zinc-400'}>{s.complianceCount}</span></td>
-                <td className="px-4 py-3 font-mono">{s.reviewed}/{s.valid}{s.missedCount > 0 && <span className="ml-1 inline-flex items-center gap-0.5 text-amber-700" title="Temuan terlewat ditandai petugas"><AlertTriangle className="h-3 w-3" />{s.missedCount}</span>}</td>
-                <td className="px-4 py-3 text-zinc-500">{STATUS_LABEL[s.status] ?? s.status}</td>
+              <tr key={s.id} className="hover:bg-slate-50">
+                <td className="px-3 py-2 font-semibold"><Link href={detailHref(s.id)} className="text-blue-700 hover:underline">{s.name}</Link></td>
+                <td className="px-3 py-2">{s.surveyor.name}</td>
+                <td className="px-3 py-2">{s.zone ? <span className="inline-flex items-center gap-1">{s.zone.name} <span className="font-mono text-slate-500">(E{s.zone.exposure})</span></span> : <span className="text-slate-400">tanpa zona</span>}</td>
+                <td className="px-3 py-2"><RiskBadge score={s.worstScore} band={s.worstBand} /></td>
+                <td className="px-3 py-2 font-mono">{s.infraCount}</td>
+                <td className="px-3 py-2"><span className={s.complianceCount > 0 ? 'font-mono' : 'font-mono text-slate-400'}>{s.complianceCount}</span></td>
+                <td className="px-3 py-2 font-mono">{s.reviewed}/{s.valid}{s.missedCount > 0 && <span className="ml-1 inline-flex items-center gap-0.5 text-amber-700" title="Temuan terlewat ditandai petugas"><AlertTriangle className="h-3 w-3" />{s.missedCount}</span>}</td>
+                <td className="px-3 py-2">{STATUS_LABEL[s.status] ?? s.status}</td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={8} className="px-3 py-10 text-center text-zinc-400">Tidak ada sesi yang cocok.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={8} className="px-3 py-8 text-center text-slate-400">Tidak ada sesi yang cocok.</td></tr>}
           </tbody>
         </table>
       </div>

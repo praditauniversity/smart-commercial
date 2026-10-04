@@ -94,41 +94,41 @@ export default function SupervisorSessionPage() {
     }
   }
 
-  if (error) return <div className="min-h-screen bg-dashboard-bg"><Navbar /><p role="alert" className="mx-auto mt-10 max-w-xl rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error}</p></div>;
-  if (!session) return <div className="min-h-screen bg-dashboard-bg"><Navbar /><p className="flex items-center justify-center gap-2 p-10 text-sm text-zinc-500"><Loader2 className="h-4 w-4 animate-spin" />Memuat sesi…</p></div>;
+  if (error) return <div className="min-h-screen bg-slate-50"><Navbar /><p role="alert" className="mx-auto mt-10 max-w-xl rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error}</p></div>;
+  if (!session) return <div className="min-h-screen bg-slate-50"><Navbar /><p className="flex items-center justify-center gap-2 p-10 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" />Memuat sesi…</p></div>;
 
   return (
-    <div className="flex min-h-screen flex-col bg-dashboard-bg pb-24 sm:pb-16">
+    <div className="flex min-h-screen flex-col bg-slate-50 pb-24 sm:pb-16">
       <Navbar />
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        <Link href="/supervisor/dashboard" className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900"><ArrowLeft className="h-3.5 w-3.5" />Kembali ke dashboard</Link>
+        <Link href="/supervisor/dashboard" className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline"><ArrowLeft className="h-3.5 w-3.5" />Kembali ke dashboard</Link>
 
-        <header className="rounded-xl border border-zinc-200 bg-white shadow-sm p-4">
-          <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">{session.name}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
-            <span>Surveyor: <b className="font-medium text-zinc-900">{session.surveyor.name}</b></span>
-            <span>Status: <b className="font-medium text-zinc-900">{session.status.replace(/_/g, ' ')}</b></span>
+        <header className="rounded-2xl border border-slate-200 bg-white p-4">
+          <h1 className="text-xl font-bold text-slate-900">{session.name}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
+            <span>Surveyor: <b>{session.surveyor.name}</b></span>
+            <span>Status: <b>{session.status.replace(/_/g, ' ')}</b></span>
             {session.locationAddress && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{session.locationAddress}</span>}
             <span className="inline-flex items-center gap-1.5">
-              Zona: {session.zone ? <b className="font-medium text-zinc-900">{session.zone.name} · Exposure {EXPOSURE_LABEL[session.zone.exposure as Exposure]} ({session.zone.exposure})</b> : <b className="text-amber-700">belum ada zona — temuan belum dapat diberi skor</b>}
+              Zona: {session.zone ? <b>{session.zone.name} · Exposure {EXPOSURE_LABEL[session.zone.exposure as Exposure]} ({session.zone.exposure})</b> : <b className="text-amber-700">belum ada zona — temuan belum dapat diberi skor</b>}
             </span>
           </div>
         </header>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="min-w-0 space-y-6">
-            {session.mediaAssets.length === 0 && <p className="rounded-xl border border-dashed border-zinc-200 bg-white p-8 text-center text-sm text-zinc-500">Sesi ini belum memiliki media.</p>}
+            {session.mediaAssets.length === 0 && <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">Sesi ini belum memiliki media.</p>}
             {session.mediaAssets.map((m) => {
               const dets = session.detections.filter((d) => d.mediaAssetId === m.id);
               return (
-                <article key={m.id} className="space-y-3 rounded-xl border border-zinc-200 bg-white shadow-sm p-4" aria-label={m.fileName}>
+                <article key={m.id} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4" aria-label={m.fileName}>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Video className="h-4 w-4 text-zinc-500" />
-                    <h2 className="mr-auto break-all text-sm font-semibold text-zinc-900">{m.fileName}</h2>
+                    <Video className="h-4 w-4 text-slate-500" />
+                    <h2 className="mr-auto break-all text-sm font-bold text-slate-900">{m.fileName}</h2>
                     {m.fileType === 'video' && <ClipEvaluationBadge clip={m.evaluatedClip} note={m.clipMatchNote} />}
                   </div>
                   {m.status !== 'completed' ? (
-                    <p className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-500">Status media: <b>{m.status}</b>. Deteksi belum selesai atau belum dijalankan.</p>
+                    <p className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">Status media: <b>{m.status}</b>. Deteksi belum selesai atau belum dijalankan.</p>
                   ) : (
                     <FrameGallery
                       frames={m.frames} detections={dets} mode="koreksi"
@@ -148,7 +148,7 @@ export default function SupervisorSessionPage() {
                               key={String(boxes)} type="button" disabled={disabled} aria-pressed={active}
                               title={disabled ? 'Belum ada frame deteksi untuk video ini.' : undefined}
                               onClick={() => setPlaying(active ? null : { id: m.id, boxes })}
-                              className={`rounded-md border px-2.5 py-1 text-xs font-medium shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${active ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50'}`}
+                              className={`rounded-lg border px-2.5 py-1 text-xs font-semibold shadow-xs disabled:cursor-not-allowed disabled:opacity-50 ${active ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
                             >
                               {active ? 'Sembunyikan video' : label}
                             </button>
@@ -162,19 +162,19 @@ export default function SupervisorSessionPage() {
                       )}
                     </div>
                   )}
-                  {m.fileType === 'video' ? <NarrativePanel clip={m.evaluatedClip} note={m.clipMatchNote} /> : <p className="text-[11px] text-zinc-500">Deskripsi naratif hanya tersedia untuk video.</p>}
+                  {m.fileType === 'video' ? <NarrativePanel clip={m.evaluatedClip} note={m.clipMatchNote} /> : <p className="text-[11px] text-slate-500">Deskripsi naratif hanya tersedia untuk video.</p>}
                 </article>
               );
             })}
           </div>
 
           <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
-            <section className="rounded-xl border border-zinc-200 bg-white shadow-sm p-4" aria-label="Panel koreksi">
-              <h2 className="mb-2 text-sm font-semibold text-zinc-900">Koreksi temuan</h2>
+            <section className="rounded-2xl border border-slate-200 bg-white p-4" aria-label="Panel koreksi">
+              <h2 className="mb-2 text-sm font-bold text-slate-900">Koreksi temuan</h2>
               {selectedIds.length > 1 ? (
-                <p className="text-xs text-zinc-500"><b>{selectedIds.length} temuan dipilih.</b> Gunakan tombol “Konfirmasi benar” atau “Tandai keliru” pada panel temuan di samping gambar. Pilih satu temuan saja untuk koreksi rinci.</p>
+                <p className="text-xs text-slate-600"><b>{selectedIds.length} temuan dipilih.</b> Gunakan tombol “Konfirmasi benar” atau “Tandai keliru” pada panel temuan di samping gambar. Pilih satu temuan saja untuk koreksi rinci.</p>
               ) : !selected ? (
-                <p className="text-xs text-zinc-500">Pilih sebuah kotak atau baris temuan pada galeri untuk mengoreksinya. Centang beberapa temuan di panel untuk koreksi massal.</p>
+                <p className="text-xs text-slate-500">Pilih sebuah kotak atau baris temuan pada galeri untuk mengoreksinya. Centang beberapa temuan di panel untuk koreksi massal.</p>
               ) : (
                 <CorrectionForm key={selected.id} detection={selected} classes={classes} tags={tags} busy={busy} onSubmit={correct} />
               )}
@@ -204,45 +204,45 @@ function CorrectionForm({ detection: d, classes, tags, busy, onSubmit }: { detec
   const isNormalSign = hasStage && d.conditionLabel === 'normal';
   // Rambu yang sudah diklasifikasi Tahap 2: severity ditentukan kondisi + tag subtipe, bukan form terpisah.
   const stageDecides = hasStage && Boolean(d.conditionLabel);
-  const btn = 'rounded-md px-3 py-1.5 text-xs font-medium shadow-sm disabled:opacity-50';
+  const btn = 'rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50';
   return (
     <div className="space-y-3 text-xs">
-      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-2.5">
-        <div className="font-semibold text-zinc-900">{d.classDefinition?.displayName ?? d.className}</div>
+      <div className="rounded-lg bg-slate-50 p-2.5">
+        <div className="font-bold text-slate-900">{d.classDefinition?.displayName ?? d.className}</div>
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           {infra ? (isNormalSign ? null : <RiskBadge score={d.riskScore} band={d.priorityBand} severity={d.severity} exposure={d.exposure} source={d.severitySource} />) : <ComplianceBadge />}
           {hasStage && <ConditionBadge label={d.conditionLabel} tag={d.conditionTag} />}
-          <span className="font-mono text-zinc-500">conf {d.confidence?.toFixed(2) ?? '-'}</span>
-          <span className="text-zinc-500">status: {d.reviewStatus.replace('_', ' ')}</span>
+          <span className="font-mono text-slate-500">conf {d.confidence?.toFixed(2) ?? '-'}</span>
+          <span className="text-slate-500">status: {d.reviewStatus.replace('_', ' ')}</span>
         </div>
-        {infra && d.severity && !isNormalSign && <div className="mt-1 text-zinc-500">Severity {SEVERITY_LABEL[d.severity as Severity]} ({d.severity}) — {SOURCE_TEXT[d.severitySource] ?? d.severitySource}</div>}
+        {infra && d.severity && !isNormalSign && <div className="mt-1 text-slate-600">Severity {SEVERITY_LABEL[d.severity as Severity]} ({d.severity}) — {SOURCE_TEXT[d.severitySource] ?? d.severitySource}</div>}
         {hasStage && !d.conditionLabel && <div className="mt-1 text-amber-700">Kondisi rambu belum diklasifikasi (Tahap 2 tidak aktif saat deteksi).</div>}
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={busy} className={`${btn} bg-brand-green text-white hover:bg-brand-green/90`} onClick={() => onSubmit({ kind: 'dikonfirmasi' })}>Konfirmasi benar</button>
+        <button type="button" disabled={busy} className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`} onClick={() => onSubmit({ kind: 'dikonfirmasi' })}>Konfirmasi benar</button>
       </div>
 
       <label className="block">
-        <span className="mb-1 block font-medium text-zinc-900">Alasan (opsional)</span>
-        <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className="w-full rounded-md border border-zinc-200 bg-white focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-green/40 p-2" />
+        <span className="mb-1 block font-semibold text-slate-700">Alasan (opsional)</span>
+        <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 p-2" />
       </label>
       <button type="button" disabled={busy} className={`${btn} bg-rose-600 text-white hover:bg-rose-700`} onClick={() => onSubmit({ kind: 'keliru', reason })}>Tandai keliru (false positive)</button>
 
-      <div className="border-t border-zinc-100 pt-3">
-        <span className="mb-1 block font-medium text-zinc-900">Kelas yang benar</span>
+      <div className="border-t border-slate-100 pt-3">
+        <span className="mb-1 block font-semibold text-slate-700">Kelas yang benar</span>
         <div className="flex gap-2">
-          <select value={classId} onChange={(e) => setClassId(e.target.value)} aria-label="Kelas yang benar" className="min-w-0 flex-1 rounded-md border border-zinc-200 bg-white focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-green/40 p-1.5">
+          <select value={classId} onChange={(e) => setClassId(e.target.value)} aria-label="Kelas yang benar" className="min-w-0 flex-1 rounded-lg border border-slate-300 p-1.5">
             <option value="">Pilih kelas…</option>
             {classes.filter((c) => c.id !== d.classDefinition?.id).map((c) => <option key={c.id} value={c.id}>{c.displayName}</option>)}
           </select>
-          <button type="button" disabled={busy || !classId} className={`${btn} border border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50`} onClick={() => onSubmit({ kind: 'kelas_diubah', classId, reason })}>Ubah</button>
+          <button type="button" disabled={busy || !classId} className={`${btn} bg-indigo-600 text-white hover:bg-indigo-700`} onClick={() => onSubmit({ kind: 'kelas_diubah', classId, reason })}>Ubah</button>
         </div>
       </div>
 
       {hasStage && (
-        <div className="space-y-2 border-t border-zinc-100 pt-3" role="group" aria-label="Kondisi rambu">
-          <span className="block font-medium text-zinc-900">Kondisi rambu</span>
+        <div className="space-y-2 border-t border-slate-100 pt-3" role="group" aria-label="Kondisi rambu">
+          <span className="block font-semibold text-slate-700">Kondisi rambu</span>
           <div className="flex gap-4">
             {[['normal', 'Normal'], ['damaged', 'Rusak']].map(([v, l]) => (
               <label key={v} className="flex items-center gap-1.5"><input type="radio" name="cond" value={v} checked={cond === v} onChange={() => { setCond(v); if (v === 'normal') setTagId(''); }} />{l}</label>
@@ -250,28 +250,28 @@ function CorrectionForm({ detection: d, classes, tags, busy, onSubmit }: { detec
           </div>
           {cond === 'damaged' && (
             <label className="block">
-              <span className="mb-1 block text-zinc-500">Subtipe kerusakan (tag)</span>
-              <select value={tagId} onChange={(e) => setTagId(e.target.value)} aria-label="Subtipe kerusakan" className="w-full rounded-md border border-zinc-200 bg-white focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-green/40 p-1.5">
+              <span className="mb-1 block text-slate-600">Subtipe kerusakan (tag)</span>
+              <select value={tagId} onChange={(e) => setTagId(e.target.value)} aria-label="Subtipe kerusakan" className="w-full rounded-lg border border-slate-300 p-1.5">
                 <option value="">Subtipe belum ditentukan (severity sementara)</option>
                 {classTags.map((t) => <option key={t.id} value={t.id}>{t.label} — severity {SEVERITY_LABEL[t.severity as Severity]} ({t.severity})</option>)}
               </select>
             </label>
           )}
-          <button type="button" disabled={busy || !cond} className={`${btn} border border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50`} onClick={() => onSubmit({ kind: 'kondisi_diubah', condition: cond, tagId: cond === 'damaged' ? (tagId || null) : undefined, reason })}>Simpan kondisi</button>
-          <p className="text-[11px] text-zinc-500">Normal = tanpa skor risiko. Rusak tanpa subtipe = severity sementara; memilih tag mengganti severity sesuai master tag. Hasil awal: {CONDITION_MODEL_LABEL}.</p>
+          <button type="button" disabled={busy || !cond} className={`${btn} bg-teal-600 text-white hover:bg-teal-700`} onClick={() => onSubmit({ kind: 'kondisi_diubah', condition: cond, tagId: cond === 'damaged' ? (tagId || null) : undefined, reason })}>Simpan kondisi</button>
+          <p className="text-[11px] text-slate-500">Normal = tanpa skor risiko. Rusak tanpa subtipe = severity sementara; memilih tag mengganti severity sesuai master tag. Hasil awal: {CONDITION_MODEL_LABEL}.</p>
         </div>
       )}
 
       {infra && !stageDecides && (
-        <div className="border-t border-zinc-100 pt-3">
-          <span className="mb-1 block font-medium text-zinc-900">Severity</span>
+        <div className="border-t border-slate-100 pt-3">
+          <span className="mb-1 block font-semibold text-slate-700">Severity</span>
           <div className="flex gap-2">
-            <select value={severity} onChange={(e) => setSeverity(e.target.value)} aria-label="Severity" className="flex-1 rounded-md border border-zinc-200 bg-white focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-green/40 p-1.5">
+            <select value={severity} onChange={(e) => setSeverity(e.target.value)} aria-label="Severity" className="flex-1 rounded-lg border border-slate-300 p-1.5">
               {([1, 2, 3] as Severity[]).map((s) => <option key={s} value={s}>{SEVERITY_LABEL[s]} ({s})</option>)}
             </select>
-            <button type="button" disabled={busy} className={`${btn} border border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50`} onClick={() => onSubmit({ kind: 'severity_diubah', severity: Number(severity), reason })}>Ubah</button>
+            <button type="button" disabled={busy} className={`${btn} bg-amber-600 text-white hover:bg-amber-700`} onClick={() => onSubmit({ kind: 'severity_diubah', severity: Number(severity), reason })}>Ubah</button>
           </div>
-          <p className="mt-1 text-[11px] text-zinc-500">Skor dihitung ulang dari severity baru × exposure zona sesi.</p>
+          <p className="mt-1 text-[11px] text-slate-500">Skor dihitung ulang dari severity baru × exposure zona sesi.</p>
         </div>
       )}
     </div>
@@ -306,22 +306,22 @@ function MissedForm({ sessionId, media, classes, onSaved }: { sessionId: string;
   }
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white shadow-sm p-4 text-xs" aria-label="Tandai temuan terlewat">
-      <h2 className="mb-1 text-sm font-semibold text-zinc-900">Tandai temuan terlewat</h2>
-      <p className="mb-2 text-zinc-500">Objek yang ada di lapangan tetapi tidak terdeteksi model (false negative).</p>
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 text-xs" aria-label="Tandai temuan terlewat">
+      <h2 className="mb-1 text-sm font-bold text-slate-900">Tandai temuan terlewat</h2>
+      <p className="mb-2 text-slate-500">Objek yang ada di lapangan tetapi tidak terdeteksi model (false negative).</p>
       <div className="space-y-2">
-        <select value={classId} onChange={(e) => setClassId(e.target.value)} aria-label="Kelas yang terlewat" className="w-full rounded-md border border-zinc-200 bg-white focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-green/40 p-1.5">
+        <select value={classId} onChange={(e) => setClassId(e.target.value)} aria-label="Kelas yang terlewat" className="w-full rounded-lg border border-slate-300 p-1.5">
           <option value="">Kelas yang terlewat…</option>
           {classes.map((c) => <option key={c.id} value={c.id}>{c.displayName}</option>)}
         </select>
-        <select value={mediaId} onChange={(e) => setMediaId(e.target.value)} aria-label="Media" className="w-full rounded-md border border-zinc-200 bg-white focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-green/40 p-1.5">
+        <select value={mediaId} onChange={(e) => setMediaId(e.target.value)} aria-label="Media" className="w-full rounded-lg border border-slate-300 p-1.5">
           <option value="">Seluruh sesi (tanpa media tertentu)</option>
           {media.map((m) => <option key={m.id} value={m.id}>{m.fileName}</option>)}
         </select>
-        <input value={ts} onChange={(e) => setTs(e.target.value)} type="number" min={0} step="0.1" placeholder="Detik ke- (opsional)" aria-label="Detik" className="w-full rounded-md border border-zinc-200 bg-white focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-green/40 p-1.5" />
-        <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Catatan (opsional)" className="w-full rounded-md border border-zinc-200 bg-white focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-brand-green/40 p-2" />
+        <input value={ts} onChange={(e) => setTs(e.target.value)} type="number" min={0} step="0.1" placeholder="Detik ke- (opsional)" aria-label="Detik" className="w-full rounded-lg border border-slate-300 p-1.5" />
+        <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Catatan (opsional)" className="w-full rounded-lg border border-slate-300 p-2" />
         {err && <p role="alert" className="text-rose-700">{err}</p>}
-        <button type="button" onClick={submit} disabled={busy || !classId} className="rounded-md bg-zinc-900 px-3 py-1.5 font-medium text-white shadow-sm hover:bg-zinc-800 disabled:opacity-50">Catat terlewat</button>
+        <button type="button" onClick={submit} disabled={busy || !classId} className="rounded-lg bg-slate-800 px-3 py-1.5 font-semibold text-white hover:bg-slate-900 disabled:opacity-50">Catat terlewat</button>
       </div>
     </section>
   );

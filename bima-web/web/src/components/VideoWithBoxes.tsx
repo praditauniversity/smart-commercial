@@ -167,10 +167,10 @@ export default function VideoWithBoxes({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-500">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
         <button
           type="button" onClick={() => setShowBoxes((v) => !v)} aria-pressed={showBoxes}
-          className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2 py-1 font-medium text-zinc-900 shadow-sm hover:bg-zinc-50"
+          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 font-semibold text-blue-700 shadow-xs hover:bg-slate-50"
         >
           {showBoxes ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
           {showBoxes ? 'Sembunyikan kotak' : 'Tampilkan kotak'}
@@ -191,7 +191,7 @@ export default function VideoWithBoxes({
       </div>
 
       {!smooth && (
-        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-2.5 text-[11px] text-zinc-500" role="status">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[11px] text-slate-500" role="status">
           {playback === undefined ? (
             <span className="inline-flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" />Memeriksa kotak halus…</span>
           ) : processing ? (
@@ -202,7 +202,7 @@ export default function VideoWithBoxes({
                 {playback === null ? 'Kotak halus belum dibuat untuk video ini.' : playback.note ?? 'Kotak halus belum tersedia.'} Kotak yang tampil berganti per frame sampel, bukan di setiap frame video.
               </span>
               {playback?.status !== 'skipped' && (
-                <button type="button" onClick={generate} className="rounded-md border border-zinc-200 bg-white px-2 py-1 font-medium text-zinc-900 shadow-sm hover:bg-zinc-50">
+                <button type="button" onClick={generate} className="rounded-lg border border-slate-200 bg-white px-2 py-1 font-semibold text-blue-700 shadow-xs hover:bg-slate-50">
                   {playback?.status === 'failed' ? 'Coba buat lagi' : 'Buat kotak halus'}
                 </button>
               )}

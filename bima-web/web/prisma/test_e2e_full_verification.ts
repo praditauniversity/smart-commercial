@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { requireEnv } from '../src/lib/env';
 import { PrismaClient } from '@prisma/client';
-import { encryptSecret, decryptSecret } from '../src/lib/security';
+import { encryptSecret } from '../src/lib/security';
 
 const prisma = new PrismaClient();
 
@@ -216,7 +216,7 @@ async function runEndToEndVerification() {
     },
   });
 
-  const detectionRecord2 = await prisma.detection.create({
+  await prisma.detection.create({
     data: {
       sessionId: session.id,
       mediaAssetId: mediaAsset2.id,

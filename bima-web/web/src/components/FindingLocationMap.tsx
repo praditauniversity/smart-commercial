@@ -42,7 +42,6 @@ function extractLatLng(geojson: any): [number, number] | null {
 export default function FindingLocationMap({
   sessionLocationType = 'point',
   sessionGeojson,
-  sessionAddress,
   initialPointGeojson,
   canEdit,
   onLocationChange,
@@ -76,34 +75,6 @@ export default function FindingLocationMap({
     setIsModified(true);
     onLocationChange(newGeojson);
     toast.info(`Titik lokasi temuan digeser ke: [${newPoint[0].toFixed(5)}, ${newPoint[1].toFixed(5)}]`, 'Titik Diubah');
-  };
-
-  const handleUseCurrentGps = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation tidak didukung oleh browser Anda.');
-      return;
-    }
-    setGpsLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setGpsLoading(false);
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const point: [number, number] = [lat, lng];
-        const geojson: { type: string; coordinates: [number, number] } = { type: 'Point', coordinates: [lng, lat] };
-        setFindingPoint(point);
-        setFlyToPoint(point);   // auto-zoom peta ke titik GPS
-        setIsModified(true);
-        onLocationChange(geojson);
-        toast.success(`Lokasi GPS berhasil diambil: [${lat.toFixed(5)}, ${lng.toFixed(5)}]`, 'GPS Terhubung');
-      },
-      (err) => {
-        setGpsLoading(false);
-        console.warn('GPS error:', err);
-        toast.error('Gagal mengambil lokasi GPS: ' + err.message);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
   };
 
   const handleResetToSessionCenter = () => {
@@ -143,11 +114,18 @@ export default function FindingLocationMap({
         if (sessionGeo?.type === 'Polygon') {
           const polygonCoords: [number, number][] = (sessionGeo.coordinates[0] as number[][]).map((c: number[]) => [c[1], c[0]]);
           if (polygonCoords.length >= 3) {
-            const L_ref = require('leaflet');
-            const latlngs = polygonCoords.map(([plat, plng]: [number, number]) => L_ref.latLng(plat, plng));
-            const poly = L_ref.polygon(latlngs);
-            const bounds = poly.getBounds();
-            if (!bounds.contains(L_ref.latLng(lat, lng))) {
+            const bounds = polygonCoords.reduce(
+              (current, [polygonLat, polygonLng]) => ({
+                minLat: Math.min(current.minLat, polygonLat),
+                maxLat: Math.max(current.maxLat, polygonLat),
+                minLng: Math.min(current.minLng, polygonLng),
+                maxLng: Math.max(current.maxLng, polygonLng),
+              }),
+              { minLat: Infinity, maxLat: -Infinity, minLng: Infinity, maxLng: -Infinity }
+            );
+            const pointWithinBounds =
+              lat >= bounds.minLat && lat <= bounds.maxLat && lng >= bounds.minLng && lng <= bounds.maxLng;
+            if (!pointWithinBounds) {
               toast.warning(
                 `Lokasi GPS Anda ([${lat.toFixed(4)}, ${lng.toFixed(4)}]) berada di luar batas area survei. Pin tidak dipindahkan.`,
                 'GPS Di Luar Area'

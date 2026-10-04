@@ -14,7 +14,6 @@ import {
   RotateCcw,
   Target,
   LocateFixed,
-  Compass,
 } from 'lucide-react';
 import type { FlyToCommand } from './LeafletMapInner';
 import { mapConfig } from '@/lib/public-config';
@@ -28,6 +27,8 @@ const LeafletMapInner = dynamic(() => import('./LeafletMapInner'), {
     </div>
   ),
 });
+
+const DEFAULT_CENTER: [number, number] = [-6.2088, 106.8456];
 
 interface MapPickerProps {
   initialType?: 'point' | 'polygon';
@@ -67,13 +68,13 @@ export default function MapPicker({
   // Direct flyTo command controller
   const [flyToCommand, setFlyToCommand] = useState<FlyToCommand | null>(null);
 
-  const defaultCenter: [number, number] = [-6.2088, 106.8456];
+  const initialGeojsonRef = useRef(initialGeojson);
 
   useEffect(() => {
     setMounted(true);
-    if (initialGeojson) {
+    if (initialGeojsonRef.current) {
       try {
-        const geo = typeof initialGeojson === 'string' ? JSON.parse(initialGeojson) : initialGeojson;
+        const geo = typeof initialGeojsonRef.current === 'string' ? JSON.parse(initialGeojsonRef.current) : initialGeojsonRef.current;
         if (geo.type === 'Point' && Array.isArray(geo.coordinates)) {
           const initPt: [number, number] = [geo.coordinates[1], geo.coordinates[0]];
           setPoint(initPt);
@@ -84,7 +85,7 @@ export default function MapPicker({
         console.error('Error parsing initialGeojson:', err);
       }
     } else {
-      setPoint(defaultCenter);
+      setPoint(DEFAULT_CENTER);
     }
 
     // Auto-detect user position in background on mount if permitted
@@ -480,7 +481,7 @@ export default function MapPicker({
           onMapClick={handleMapClick}
           onMarkerDrag={handleMarkerDrag}
           onSetPointToUserLocation={handleSetPointToUserLocation}
-          defaultCenter={defaultCenter}
+          defaultCenter={DEFAULT_CENTER}
           gpsAccuracy={gpsAccuracy}
           address={address}
           flyToCommand={flyToCommand}

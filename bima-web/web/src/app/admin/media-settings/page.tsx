@@ -23,7 +23,7 @@ export default function AdminMediaSettingsPage() {
       })
       .catch((error) => toast.error(error.message || 'Gagal memuat pengaturan durasi video.'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [toast]);
 
   const save = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

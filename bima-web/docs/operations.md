@@ -299,7 +299,9 @@ docker compose up -d
 
 Untuk portal Docker lokal dalam mode development, isi `WEB_BUILD_TARGET=development`
 di root `.env.local`. Isi `DEMO_LOGIN_ENABLED=true` dan kredensial `SEED_ADMIN_*` /
-`SEED_SURVEYOR_*` di `web/.env.local` untuk menampilkan Akses Cepat. Buat ulang web:
+`SEED_SURVEYOR_*` di `web/.env.local` untuk menampilkan Akses Cepat. Tambahkan hostname
+portal Tailscale (tanpa protokol/port) ke `ALLOWED_DEV_ORIGINS` di file yang sama agar
+browser dapat memuat resource development. Buat ulang web:
 
 ```bash
 docker compose --env-file .env.local -p bima-web-local up -d --build --no-deps web

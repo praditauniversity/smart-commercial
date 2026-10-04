@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   CheckCircle2,
@@ -17,7 +17,6 @@ import {
   Layers,
   FileImage,
   Info,
-  Sparkles,
 } from 'lucide-react';
 import MediaBoxOverlay, { OverlayDetection, BoundingBox } from './MediaBoxOverlay';
 import FindingLocationMap from './FindingLocationMap';
@@ -120,6 +119,7 @@ export default function MediaInspectionModal({
   const [saveAllLoading, setSaveAllLoading] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const initializedMediaId = useRef<string | null>(null);
 
   // Helper to extract a Point object from detection or session
   const extractPointGeojson = (detGeo: any, sessionGeo: any) => {
@@ -147,7 +147,12 @@ export default function MediaInspectionModal({
 
   // Initialize edit states when modal opens
   useEffect(() => {
-    if (!isOpen || !detections) return;
+    if (!isOpen || !mediaAsset) {
+      initializedMediaId.current = null;
+      return;
+    }
+    if (initializedMediaId.current === mediaAsset.id) return;
+    initializedMediaId.current = mediaAsset.id;
     const initial: Record<
       string,
       {
@@ -170,7 +175,7 @@ export default function MediaInspectionModal({
     // Tampilan awal tanpa pilihan: kotak yang tampil mengikuti status tinjau (lihat visibleBoxes).
     setSelectedDetId(null);
     setFeedback(null);
-  }, [isOpen, mediaAsset?.id]);
+  }, [isOpen, mediaAsset, detections, activeClasses, session?.locationGeojson]);
 
   if (!isOpen || !mediaAsset) return null;
 
@@ -359,37 +364,37 @@ export default function MediaInspectionModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[95vh] sm:max-h-[92vh] flex flex-col overflow-hidden border border-zinc-200 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[95vh] sm:max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
         {/* Modal Header */}
-        <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-zinc-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3 bg-white shrink-0">
+        <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3 bg-slate-50 shrink-0">
           <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 sm:flex-1">
-            <div className="p-2 bg-zinc-100 text-zinc-700 rounded-lg shrink-0">
+            <div className="p-2 bg-blue-100 text-blue-700 rounded-xl shrink-0">
               <FileImage className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-sm sm:text-base font-semibold text-zinc-900 truncate sm:max-w-md">{mediaAsset.fileName}</h2>
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 truncate sm:max-w-md">{mediaAsset.fileName}</h2>
               <div className="mt-0.5 flex items-center gap-2 flex-wrap">
                 <span
-                  className={`px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-medium uppercase tracking-wider ${
+                  className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${
                     mediaAsset.status === 'completed'
-                      ? 'bg-brand-green/10 text-brand-green border border-brand-green/20'
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                       : mediaAsset.status === 'processing'
-                      ? 'bg-zinc-100 text-zinc-700 border border-zinc-200 animate-pulse'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-300 animate-pulse'
                       : mediaAsset.status === 'failed'
-                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                      : 'bg-zinc-100 text-zinc-700 border border-zinc-200'
+                      ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                      : 'bg-slate-200 text-slate-700'
                   }`}
                 >
                   {mediaAsset.status}
                 </span>
-                <p className="text-[11px] sm:text-xs text-zinc-500 leading-snug sm:truncate">
+                <p className="text-[11px] sm:text-xs text-slate-500 leading-snug sm:truncate">
                   {canEdit
                     ? `Mode Edit (${detections.length} objek)`
                     : `Mode Pratinjau (${detections.length} objek)`}
                   {sam3Result && (
                     <>
                       {' · '}
-                      <span className="font-medium text-zinc-900">SAM3 lokal</span>
+                      <span className="font-semibold text-blue-600">SAM3 lokal</span>
                       {sam3Result.algorithm ? ` (${sam3Result.algorithm})` : ''}
                       {sam3Result.processingSeconds ? ` · ${sam3Result.processingSeconds}s` : ''}
                     </>
@@ -402,7 +407,7 @@ export default function MediaInspectionModal({
               type="button"
               onClick={onClose}
               aria-label="Tutup"
-              className="sm:hidden -mr-1 p-2 border border-zinc-200 bg-white hover:bg-zinc-50 active:scale-95 text-zinc-900 rounded-md shadow-sm transition-all cursor-pointer shrink-0"
+              className="sm:hidden -mr-1 p-2 bg-slate-200 hover:bg-slate-300 active:scale-95 text-slate-700 rounded-xl transition-all cursor-pointer shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -414,7 +419,7 @@ export default function MediaInspectionModal({
                 type="button"
                 onClick={handleRetryProcessing}
                 disabled={retrying || mediaAsset.status === 'processing'}
-                className="flex-1 sm:flex-none justify-center px-3 py-2 sm:py-1.5 border border-zinc-200 bg-white hover:bg-zinc-50 active:scale-95 text-zinc-900 rounded-md text-xs font-medium flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                className="flex-1 sm:flex-none justify-center px-3 py-2 sm:py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
                 title="Scan ulang media"
               >
                 {retrying || mediaAsset.status === 'processing' ? (
@@ -431,7 +436,7 @@ export default function MediaInspectionModal({
                 type="button"
                 onClick={handleSaveAll}
                 disabled={saveAllLoading}
-                className="flex-1 sm:flex-none justify-center px-3 py-2 sm:py-1.5 bg-brand-green hover:bg-brand-green/90 active:scale-95 text-white rounded-md text-xs font-medium flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                className="flex-1 sm:flex-none justify-center px-3 py-2 sm:py-1.5 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
               >
                 {saveAllLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 <span>Simpan Semua ({detections.length})</span>
@@ -440,7 +445,7 @@ export default function MediaInspectionModal({
             <button
               type="button"
               onClick={onClose}
-              className="hidden sm:flex px-3 py-1.5 border border-zinc-200 bg-white hover:bg-zinc-50 active:scale-95 text-zinc-900 rounded-md shadow-sm text-xs font-medium transition-all cursor-pointer items-center gap-1"
+              className="hidden sm:flex px-3 py-1.5 bg-slate-200 hover:bg-slate-300 active:scale-95 text-slate-700 rounded-xl text-xs font-semibold transition-all cursor-pointer items-center gap-1"
               title="Tutup"
             >
               <X className="w-4 h-4" />
@@ -454,19 +459,19 @@ export default function MediaInspectionModal({
           <div
             className={`px-4 sm:px-6 py-2.5 text-xs flex items-center justify-between gap-2 border-b shrink-0 ${
               feedback.type === 'success'
-                ? 'bg-brand-green/10 text-brand-green border-brand-green/20'
-                : 'bg-rose-50 text-rose-700 border-rose-200'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : 'bg-rose-50 text-rose-800 border-rose-200'
             }`}
           >
             <div className="flex items-center gap-2 font-medium">
               {feedback.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 text-brand-green shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               ) : (
                 <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
               )}
               <span>{feedback.message}</span>
             </div>
-            <button onClick={() => setFeedback(null)} className="text-zinc-400 hover:text-zinc-600 cursor-pointer">
+            <button onClick={() => setFeedback(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -482,11 +487,11 @@ export default function MediaInspectionModal({
         >
           {sam3Result ? (
             /* LEFT SIDE (SAM3): image + stat cards stay on screen on phones; pills/slider join the scrolling part */
-            <div className="lg:col-span-5 shrink-0 max-h-[52dvh] lg:max-h-none overflow-y-auto overscroll-contain p-3 sm:p-5 bg-zinc-50 border-b lg:border-b-0 lg:border-r border-zinc-200">
+            <div className="lg:col-span-5 shrink-0 max-h-[52dvh] lg:max-h-none overflow-y-auto overscroll-contain p-3 sm:p-5 bg-slate-50 border-b lg:border-b-0 lg:border-r border-slate-200">
               {mediaAsset.status === 'processing' ? (
-                <div className="flex flex-col items-center justify-center p-6 text-center text-zinc-500 min-h-[200px]">
-                  <Loader2 className="w-8 h-8 animate-spin text-zinc-400 mb-3" />
-                  <p className="font-semibold text-sm text-zinc-700">AI Sedang Menganalisis Media...</p>
+                <div className="flex flex-col items-center justify-center p-6 text-center text-slate-500 min-h-[200px]">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-3" />
+                  <p className="font-semibold text-sm text-slate-700">AI Sedang Menganalisis Media...</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -496,30 +501,30 @@ export default function MediaInspectionModal({
                   </div>
                 </div>
               )}
-              <div className="hidden lg:flex pt-3 mt-3 border-t border-zinc-200 text-[11px] text-zinc-500 flex-wrap justify-between gap-2">
-                <span>Tipe: <strong className="text-zinc-700 uppercase">{mediaAsset.fileType}</strong></span>
-                <span>Upload: <strong className="text-zinc-700">{new Date(mediaAsset.createdAt).toLocaleDateString('id-ID')}</strong></span>
+              <div className="hidden lg:flex pt-3 mt-3 border-t border-slate-200 text-[11px] text-slate-500 flex-wrap justify-between gap-2">
+                <span>Tipe: <strong className="text-slate-700 uppercase">{mediaAsset.fileType}</strong></span>
+                <span>Upload: <strong className="text-slate-700">{new Date(mediaAsset.createdAt).toLocaleDateString('id-ID')}</strong></span>
               </div>
             </div>
           ) : (
           /* LEFT SIDE: Media Visual & Bounding Box Overlays */
-          <div className="lg:col-span-5 p-4 sm:p-5 bg-zinc-50 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-zinc-200 space-y-4">
+          <div className="lg:col-span-5 p-4 sm:p-5 bg-slate-950 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800 space-y-4">
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs text-zinc-500 pb-2 border-b border-zinc-200">
-                <span className="font-medium text-zinc-900 flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-zinc-400" />
+              <div className="flex items-center justify-between text-xs text-slate-400 pb-2 border-b border-slate-800">
+                <span className="font-semibold text-slate-200 flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-blue-400" />
                   Visual Bounding Box AI
                 </span>
                 <span>{shownOverlay.length} dari {overlayDetections.length} Objek tampil</span>
               </div>
 
               {/* Media Image / Video with Overlays */}
-              <div className="relative min-h-[220px] sm:min-h-[300px] md:min-h-[360px] bg-zinc-950 rounded-xl overflow-hidden flex items-center justify-center">
+              <div className="relative min-h-[220px] sm:min-h-[300px] md:min-h-[360px] bg-slate-900 rounded-xl overflow-hidden flex items-center justify-center">
                 {mediaAsset.status === 'processing' ? (
-                  <div className="flex flex-col items-center justify-center p-6 text-center text-zinc-400">
-                    <Loader2 className="w-8 h-8 animate-spin text-zinc-400 mb-3" />
-                    <p className="font-semibold text-sm text-zinc-200">AI Sedang Menganalisis Media...</p>
-                    <p className="text-xs text-zinc-400 mt-1 max-w-xs">
+                  <div className="flex flex-col items-center justify-center p-6 text-center text-slate-400">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-3" />
+                    <p className="font-semibold text-sm text-slate-200">AI Sedang Menganalisis Media...</p>
+                    <p className="text-xs text-slate-400 mt-1 max-w-xs">
                       Sedang memproses deteksi objek dan penilaian kelayakan infrastruktur.
                     </p>
                   </div>
@@ -536,11 +541,11 @@ export default function MediaInspectionModal({
               </div>
 
               {mediaAsset.status === 'failed' && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 space-y-2">
+                <div className="p-3 bg-rose-950/60 border border-rose-800 rounded-xl text-xs text-rose-300 space-y-2">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="block text-rose-900">AI Processing Gagal:</strong>
+                      <strong className="block text-rose-200">AI Processing Gagal:</strong>
                       <span className="text-[11px] leading-relaxed">{mediaAsset.errorMessage || 'Error tidak diketahui'}</span>
                     </div>
                   </div>
@@ -549,7 +554,7 @@ export default function MediaInspectionModal({
                       type="button"
                       onClick={handleRetryProcessing}
                       disabled={retrying}
-                      className="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md font-medium shadow-sm text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      className="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                     >
                       {retrying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                       Proses Ulang AI (Retry)
@@ -560,9 +565,9 @@ export default function MediaInspectionModal({
             </div>
 
             {/* Media File Specs */}
-            <div className="pt-3 mt-3 border-t border-zinc-200 text-[10px] sm:text-[11px] text-zinc-500 flex flex-wrap justify-between gap-2">
-              <span>Tipe: <strong className="text-zinc-900 uppercase">{mediaAsset.fileType}</strong></span>
-              <span>Upload: <strong className="text-zinc-900">{new Date(mediaAsset.createdAt).toLocaleDateString('id-ID')}</strong></span>
+            <div className="pt-3 mt-3 border-t border-slate-800 text-[10px] sm:text-[11px] text-slate-400 flex flex-wrap justify-between gap-2">
+              <span>Tipe: <strong className="text-slate-200 uppercase">{mediaAsset.fileType}</strong></span>
+              <span>Upload: <strong className="text-slate-200">{new Date(mediaAsset.createdAt).toLocaleDateString('id-ID')}</strong></span>
             </div>
           </div>
 
@@ -576,47 +581,47 @@ export default function MediaInspectionModal({
           >
             {/* Phones: pills + slider start the scrolling part (on desktop they sit under the image) */}
             {sam3Result && mediaAsset.status !== 'processing' && (
-              <div className="lg:hidden p-3.5 bg-white border border-zinc-200 rounded-xl shadow-sm">
+              <div className="lg:hidden p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
                 <Sam3Controls result={sam3Result} view={sam3View} />
               </div>
             )}
 
             {/* Session Context Metadata Box */}
             {session && (
-              <div className="p-3.5 sm:p-4 bg-white border border-zinc-200 rounded-xl shadow-sm space-y-2 text-xs">
-                <div className="flex items-center justify-between font-semibold text-zinc-900 border-b border-zinc-100 pb-2">
+              <div className="p-3.5 sm:p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+                <div className="flex items-center justify-between font-bold text-slate-800 border-b border-slate-200 pb-2">
                   <span className="flex items-center gap-1.5">
-                    <Info className="w-4 h-4 text-zinc-500 shrink-0" />
+                    <Info className="w-4 h-4 text-blue-600 shrink-0" />
                     Informasi Sesi Survei
                   </span>
-                  <span className="text-zinc-500 font-normal text-[11px]">
-                    Status: <strong className="text-zinc-700 uppercase">{session.status.replace(/_/g, ' ')}</strong>
+                  <span className="text-slate-500 font-normal text-[11px]">
+                    Status: <strong className="text-slate-700 uppercase">{session.status.replace(/_/g, ' ')}</strong>
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-zinc-500 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-600 pt-1">
                   <div>
-                    <span className="text-zinc-500 block text-[10px]">Nama Sesi:</span>
-                    <strong className="text-zinc-900 break-words">{session.name}</strong>
+                    <span className="text-slate-400 block text-[10px]">Nama Sesi:</span>
+                    <strong className="text-slate-900 break-words">{session.name}</strong>
                   </div>
                   <div>
-                    <span className="text-zinc-500 block text-[10px]">Lokasi Survei:</span>
-                    <span className="flex items-center gap-1 text-zinc-900 break-words" title={session.locationAddress || '-'}>
-                      <MapPin className="w-3 h-3 text-zinc-400 shrink-0" />
+                    <span className="text-slate-400 block text-[10px]">Lokasi Survei:</span>
+                    <span className="flex items-center gap-1 text-slate-800 break-words" title={session.locationAddress || '-'}>
+                      <MapPin className="w-3 h-3 text-blue-500 shrink-0" />
                       {session.locationAddress || '-'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-zinc-500 block text-[10px]">Tanggal Survei:</span>
-                    <span className="flex items-center gap-1 text-zinc-900">
-                      <Calendar className="w-3 h-3 text-zinc-400 shrink-0" />
+                    <span className="text-slate-400 block text-[10px]">Tanggal Survei:</span>
+                    <span className="flex items-center gap-1 text-slate-800">
+                      <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
                       {new Date(session.surveyDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </span>
                   </div>
                   <div>
-                    <span className="text-zinc-500 block text-[10px]">Waktu Mulai:</span>
-                    <span className="flex items-center gap-1 text-zinc-900">
-                      <Clock className="w-3 h-3 text-zinc-400 shrink-0" />
+                    <span className="text-slate-400 block text-[10px]">Waktu Mulai:</span>
+                    <span className="flex items-center gap-1 text-slate-800">
+                      <Clock className="w-3 h-3 text-slate-400 shrink-0" />
                       {new Date(session.startedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                       {session.finishedAt && ` • Selesai: ${new Date(session.finishedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`}
                     </span>
@@ -626,7 +631,7 @@ export default function MediaInspectionModal({
             )}
 
             {/* Interactive Location Map */}
-            <div className="p-3.5 sm:p-4 bg-white border border-zinc-200 rounded-xl shadow-sm space-y-2">
+            <div className="p-3.5 sm:p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
               <FindingLocationMap
                 sessionLocationType={session?.locationType || 'point'}
                 sessionGeojson={session?.locationGeojson}
@@ -644,17 +649,17 @@ export default function MediaInspectionModal({
             {/* Detections List & Editing Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-zinc-900 text-xs sm:text-sm flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-zinc-500 shrink-0" />
+                <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-blue-600 shrink-0" />
                   Hasil Temuan AI ({detections.length})
                 </h3>
               </div>
 
               {detections.length === 0 ? (
-                <div className="p-6 sm:p-8 bg-white border border-zinc-200 rounded-xl shadow-sm text-center text-zinc-500 space-y-2">
-                  <Layers className="w-8 h-8 mx-auto text-zinc-300" />
-                  <p className="font-semibold text-zinc-700 text-sm">0 Objek Terdeteksi oleh AI pada media ini.</p>
-                  <p className="text-xs text-zinc-500 max-w-sm mx-auto">
+                <div className="p-6 sm:p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center text-slate-400 space-y-2">
+                  <Layers className="w-8 h-8 mx-auto text-slate-300" />
+                  <p className="font-semibold text-slate-700 text-sm">0 Objek Terdeteksi oleh AI pada media ini.</p>
+                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
                     {mediaAsset.status === 'completed'
                       ? 'AI telah menyelesaikan inferensi dan tidak menemukan kerusakan infrastruktur yang memenuhi kriteria kelas aktif.'
                       : mediaAsset.status === 'processing'
@@ -684,17 +689,17 @@ export default function MediaInspectionModal({
                         onClick={() => toggleSelected(det.id)}
                         className={`p-3.5 sm:p-4 rounded-xl border transition-all ${
                           isSelected
-                            ? 'border-brand-green ring-2 ring-brand-green/20 bg-white shadow-sm'
-                            : 'border-zinc-200 bg-white shadow-sm hover:border-zinc-300'
+                            ? 'border-blue-500 ring-2 ring-blue-100 bg-blue-50/20 shadow-xs'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
                         }`}
                       >
                         {/* Detection Card Header */}
-                        <div className="flex items-start justify-between gap-2 pb-2.5 mb-2.5 border-b border-zinc-100">
+                        <div className="flex items-start justify-between gap-2 pb-2.5 mb-2.5 border-b border-slate-100">
                           <div>
-                            <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
+                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
                               Objek #{idx + 1}
                             </span>
-                            <h4 className="font-semibold text-sm text-zinc-900 break-words">
+                            <h4 className="font-bold text-sm text-slate-900 break-words">
                               {activeClasses.find((c) => c.id === edit.classId)?.displayName ||
                                 det.classDefinition?.displayName ||
                                 det.className}
@@ -705,17 +710,17 @@ export default function MediaInspectionModal({
                             {det.reviewStatus && (() => {
                               const rv = reviewLabel(det.reviewStatus);
                               return (
-                                <span className={`px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-medium uppercase tracking-wider ${rv.tone === 'benar' ? 'bg-brand-green/10 text-brand-green' : rv.tone === 'keliru' ? 'bg-zinc-100 text-zinc-700' : 'bg-amber-50 text-amber-700'}`}>{rv.text}</span>
+                                <span className={`px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${rv.tone === 'benar' ? 'bg-emerald-100 text-emerald-800' : rv.tone === 'keliru' ? 'bg-slate-200 text-slate-700' : 'bg-amber-100 text-amber-800'}`}>{rv.text}</span>
                               );
                             })()}
                             {isFeasibilityRated(edit.feasibility) && (
                               <span
-                                className={`px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-medium uppercase tracking-wider ${
+                                className={`px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${
                                   edit.feasibility === 'tidak_layak'
-                                    ? 'bg-rose-50 text-rose-700'
+                                    ? 'bg-rose-100 text-rose-800'
                                     : edit.feasibility === 'cukup_layak'
-                                    ? 'bg-amber-50 text-amber-700'
-                                    : 'bg-brand-green/10 text-brand-green'
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-emerald-100 text-emerald-800'
                                 }`}
                               >
                                 {feasibilityText(edit.feasibility)}
@@ -730,7 +735,7 @@ export default function MediaInspectionModal({
                                   handleDeleteDetection(det.id);
                                 }}
                                 disabled={isSaving}
-                                className="p-1 text-zinc-400 hover:text-rose-600 rounded-md hover:bg-rose-50 transition-colors cursor-pointer"
+                                className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
                                 title="Hapus Deteksi"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -740,34 +745,34 @@ export default function MediaInspectionModal({
                         </div>
 
                         {/* Technical Metadata Snippet */}
-                        <div className="mb-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] sm:text-[11px] bg-zinc-50 border border-zinc-100 p-2.5 rounded-lg text-zinc-500">
+                        <div className="mb-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] sm:text-[11px] bg-slate-50 p-2.5 rounded-lg text-slate-500">
                           <div>
-                            <span className="text-zinc-500 block text-[9px]">Model AI:</span>
-                            <span className="font-mono text-zinc-900 font-semibold truncate block">{det.modelName || '-'}</span>
+                            <span className="text-slate-400 block text-[9px]">Model AI:</span>
+                            <span className="font-mono text-slate-700 font-semibold truncate block">{det.modelName || '-'}</span>
                           </div>
                           <div>
-                            <span className="text-zinc-500 block text-[9px]">Bounding Box:</span>
-                            <span className="font-mono text-zinc-900 truncate block">
+                            <span className="text-slate-400 block text-[9px]">Bounding Box:</span>
+                            <span className="font-mono text-slate-700 truncate block">
                               [{bboxObj.x.toFixed(2)}, {bboxObj.y.toFixed(2)}]
                             </span>
                           </div>
                           <div>
-                            <span className="text-zinc-500 block text-[9px]">Waktu Deteksi:</span>
-                            <span className="text-zinc-900">{new Date(det.createdAt).toLocaleTimeString('id-ID')}</span>
+                            <span className="text-slate-400 block text-[9px]">Waktu Deteksi:</span>
+                            <span className="text-slate-700">{new Date(det.createdAt).toLocaleTimeString('id-ID')}</span>
                           </div>
                         </div>
 
                         {/* Editable Form Fields */}
                         <div className="space-y-3 text-xs">
                           <div>
-                            <label className="block font-medium text-zinc-900 mb-1">
+                            <label className="block font-semibold text-slate-700 mb-1">
                               Kelas Objek <span className="text-rose-500">*</span>
                             </label>
                             {canEdit ? (
                               <select
                                 value={edit.classId}
                                 onChange={(e) => handleFieldChange(det.id, 'classId', e.target.value)}
-                                className="w-full px-3 py-2 border border-zinc-200 rounded-md bg-white focus:ring-2 focus:ring-brand-green/40 focus:border-zinc-300 focus:outline-none font-medium text-xs sm:text-sm"
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium text-xs sm:text-sm"
                               >
                                 {activeClasses.map((c) => (
                                   <option key={c.id} value={c.id}>
@@ -776,14 +781,14 @@ export default function MediaInspectionModal({
                                 ))}
                               </select>
                             ) : (
-                              <div className="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-md text-zinc-900 font-medium">
+                              <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-medium">
                                 {det.classDefinition?.displayName || det.className}
                               </div>
                             )}
                           </div>
 
                           <div>
-                            <label className="block font-medium text-zinc-900 mb-1">
+                            <label className="block font-semibold text-slate-700 mb-1">
                               Deskripsi Kondisi / Kerusakan <span className="text-rose-500">*</span>
                             </label>
                             {canEdit ? (
@@ -791,11 +796,11 @@ export default function MediaInspectionModal({
                                 rows={2}
                                 value={edit.condition}
                                 onChange={(e) => handleFieldChange(det.id, 'condition', e.target.value)}
-                                className="w-full px-3 py-2 border border-zinc-200 rounded-md bg-white focus:ring-2 focus:ring-brand-green/40 focus:border-zinc-300 focus:outline-none text-xs sm:text-sm"
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs sm:text-sm"
                                 placeholder="Jelaskan kondisi kerusakan objek..."
                               />
                             ) : (
-                              <div className="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-md text-zinc-900 break-words">
+                              <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 break-words">
                                 {det.condition}
                               </div>
                             )}
@@ -803,7 +808,7 @@ export default function MediaInspectionModal({
 
                           {isFeasibilityRated(edit.feasibility) && (
                           <div>
-                            <label className="block font-medium text-zinc-900 mb-1">
+                            <label className="block font-semibold text-slate-700 mb-1">
                               Tingkat Kelayakan <span className="text-rose-500">*</span>
                             </label>
                             {canEdit ? (
@@ -816,14 +821,14 @@ export default function MediaInspectionModal({
                                     e.target.value as 'layak' | 'cukup_layak' | 'tidak_layak'
                                   )
                                 }
-                                className="w-full px-3 py-2 border border-zinc-200 rounded-md bg-white focus:ring-2 focus:ring-brand-green/40 focus:border-zinc-300 focus:outline-none font-medium text-xs sm:text-sm"
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium text-xs sm:text-sm"
                               >
                                 <option value="layak">Layak (Good / Berfungsi Normal)</option>
                                 <option value="cukup_layak">Cukup Layak (Fair / Perlu Perhatian)</option>
                                 <option value="tidak_layak">Tidak Layak (Poor / Rusak Berat)</option>
                               </select>
                             ) : (
-                              <div className="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-md text-zinc-900 font-medium capitalize">
+                              <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-medium capitalize">
                                 {feasibilityText(det.feasibility)}
                               </div>
                             )}
@@ -839,7 +844,7 @@ export default function MediaInspectionModal({
                                   handleSaveDetection(det.id);
                                 }}
                                 disabled={isSaving}
-                                className="w-full sm:w-auto px-4 py-2 bg-brand-green hover:bg-brand-green/90 active:scale-95 text-white rounded-md text-xs font-medium shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                                className="w-full sm:w-auto px-4 py-2 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                               >
                                 {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                                 Simpan Perubahan Objek
@@ -859,4 +864,3 @@ export default function MediaInspectionModal({
     </div>
   );
 }
-

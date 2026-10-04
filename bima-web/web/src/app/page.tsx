@@ -28,7 +28,7 @@ export default function HomePage() {
         }
       })
       .catch(() => setChecking(false));
-  }, []);
+  }, [router]);
 
   if (checking) {
     return (

@@ -366,7 +366,7 @@ async function runE2ETests() {
   const revValidation = validateSurveySessionTransition(rejectedSession.status as SurveySessionStatus, 'perlu_perbaikan');
   if (!revValidation.allowed) throw new Error('Cannot create revision');
 
-  const revisionSession = await prisma.surveySession.update({
+  await prisma.surveySession.update({
     where: { id: session.id },
     data: { status: 'perlu_perbaikan' }
   });
