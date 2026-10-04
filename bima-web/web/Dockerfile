@@ -7,6 +7,11 @@ RUN npm ci
 
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
+# Prisma detects the OpenSSL ABI during client generation; without the openssl package it can
+# fall back to an OpenSSL 1.1 query engine that cannot run in the Debian Bookworm runtime image.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        openssl \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate

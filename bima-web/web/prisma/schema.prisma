@@ -28,6 +28,7 @@ model ClassDefinition {
   displayName           String
   visualDescription     String
   conditionCriteria     String
+  vegetationCriteria    String                   @default("[]") // JSON array of selected vegetation criteria keys
   feasibilityCriteria   String
   isActive              Boolean                  @default(true)
   mutuallyExclusiveWith String                   @default("[]") // JSON Array of class IDs
@@ -63,6 +64,12 @@ model ModelConfig {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   detections      Detection[]
+}
+
+model MediaSettings {
+  id                       String   @id @default("global")
+  maxVideoDurationSeconds  Int      @default(1200)
+  updatedAt                DateTime @updatedAt
 }
 
 model SurveySession {

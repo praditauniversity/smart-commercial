@@ -1,8 +1,8 @@
 name: bima-web
 
-# Both services read their configuration from the same .env files the native setup uses
-# (web/.env, ai-service/.env). Only the values that differ *inside* a container are overridden
-# here; everything else, including every secret, stays in those files.
+# By default both services read the same .env files as the native setup. For local Supabase,
+# point WEB_ENV_FILE and AI_ENV_FILE at private .env.local copies to keep cloud settings available
+# for rollback. Only container-specific network addresses are overridden below.
 
 services:
   web:
@@ -10,12 +10,17 @@ services:
       context: ./web
       secrets:
         - web_env
-    env_file: ./web/.env
+    env_file: ${WEB_ENV_FILE:-./web/.env}
     environment:
       # On the compose network the AI service is reached by name, not on loopback.
       FASTAPI_SERVICE_URL: http://ai-service:8000
+      # Blank keeps cloud mode on the app's public URL; set this in the root .env.local for Docker Supabase.
+      SUPABASE_INTERNAL_URL: ${SUPABASE_INTERNAL_URL:-}
       FFMPEG_PATH: /usr/bin/ffmpeg
       FFPROBE_PATH: /usr/bin/ffprobe
+    networks:
+      - default
+      - supabase
     ports:
       # Loopback only: Tailscale Serve terminates HTTPS in front of this.
       # The session cookie is Secure in production, so plain http://<lan-ip>:<port> cannot log in.
@@ -38,7 +43,7 @@ services:
   ai-service:
     build:
       context: ./ai-service
-    env_file: ./ai-service/.env
+    env_file: ${AI_ENV_FILE:-./ai-service/.env}
     environment:
       # Listens on all interfaces *within* the container. It is still unreachable from the
       # network because no port is published: the compose network replaces loopback as the
@@ -48,6 +53,10 @@ services:
       SAM3_CHECKPOINT: /weights/sam3_1.pt
       FFMPEG_PATH: /usr/bin/ffmpeg
       WEB_BASE_URL: http://web:3000
+      SUPABASE_INTERNAL_URL: ${SUPABASE_INTERNAL_URL:-}
+    networks:
+      - default
+      - supabase
     volumes:
       # The 3.3 GB checkpoint is mounted read-only, never baked into the image.
       - ${SAM3_WEIGHTS_HOST_PATH:?set SAM3_WEIGHTS_HOST_PATH in bima-web/.env (see .env.example)}:/weights/sam3_1.pt:ro
@@ -69,10 +78,18 @@ services:
       # Same builder stage as `web`, so it needs the same build secret.
       secrets:
         - web_env
-    env_file: ./web/.env
+    env_file: ${WEB_ENV_FILE:-./web/.env}
+    networks:
+      - default
+      - supabase
     command: ["npx", "prisma", "migrate", "deploy"]
     restart: "no"
 
 secrets:
   web_env:
-    file: ./web/.env
+    file: ${WEB_ENV_FILE:-./web/.env}
+
+networks:
+  supabase:
+    external: true
+    name: bima-supabase-app

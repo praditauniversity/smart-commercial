@@ -68,8 +68,8 @@ Prinsip yang dijaga:
 
 | Layanan | Dipakai untuk | Konfigurasi |
 |---|---|---|
-| Supabase PostgreSQL | Semua data aplikasi | `DATABASE_URL` (pooler), `DIRECT_URL` (migrasi) |
-| Supabase Storage | Media terkompresi, video anotasi | `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`; bucket `img`, `vids` (publik) |
+| Supabase PostgreSQL | Semua data aplikasi | `DATABASE_URL`, `DIRECT_URL`; local Docker uses the private `supabase-db` network alias |
+| Supabase Storage | Media terkompresi, video anotasi | `SUPABASE_INTERNAL_URL` for service uploads; `NEXT_PUBLIC_SUPABASE_URL` for browser URLs; buckets `img`, `vids` (public) |
 | OpenRouter | VLM (Qwen3 VL 8B dan lainnya) | API key per konfigurasi model, atau `OPEN_ROUTER_API_KEY` sebagai bootstrap |
 | OpenStreetMap tiles + Nominatim | Peta dan geocoding | Tanpa key; ikuti kebijakan penggunaan Nominatim |
 | GPU + bobot SAM 3.1 | Provider `sam3` | `SAM3_CHECKPOINT`, torch, ultralytics |
@@ -134,7 +134,7 @@ Perilaku penting:
 - Path objek: `sessions/{sessionId}/{uuid}.{ext}`; hasil anotasi SAM3: `sessions/{sessionId}/sam3-{uuid}.mp4`.
 - Kompresi: gambar sisi terpanjang ≤1280 px (hanya diperkecil), WebP kualitas 65; video tinggi ≤720 px, H.264 CRF 30, tanpa audio, `faststart`.
 - **File asli tidak disimpan** (keputusan produk K7). Hanya versi terkompresi.
-- **Durasi video maksimal 20 menit** (`NEXT_PUBLIC_MAX_VIDEO_SECONDS`, contoh konfigurasi 1200). Diukur `ffprobe` di server sebelum kompresi (HTTP 400 bila melebihi atau tidak terbaca) dan dicek di browser sebelum upload.
+- **Durasi video maksimal 20 menit** (default 120 detik; dapat diatur admin di menu Batas Media). Diukur `ffprobe` di server sebelum kompresi (HTTP 400 bila melebihi atau tidak terbaca) dan dicek di browser sebelum upload.
 - Penghapusan media menghapus objek di bucket (`removeStoredFile`); URL non-Supabase (data lama `/uploads/...`) diabaikan.
 
 ## 6. Konfigurasi

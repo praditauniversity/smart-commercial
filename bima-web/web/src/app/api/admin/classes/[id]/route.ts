@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { invalidateClassCache } from '@/lib/classCache';
+import { normalizeVegetationCriteria } from '@/lib/vegetation-criteria';
 
 export async function PATCH(
   request: Request,
@@ -34,6 +35,10 @@ export async function PATCH(
     }
     if (body.conditionCriteria !== undefined) {
       updateData.conditionCriteria = body.conditionCriteria.trim();
+      shouldCreateVersion = true;
+    }
+    if (body.vegetationCriteria !== undefined) {
+      updateData.vegetationCriteria = JSON.stringify(normalizeVegetationCriteria(body.vegetationCriteria));
       shouldCreateVersion = true;
     }
     if (body.feasibilityCriteria !== undefined) {
@@ -77,6 +82,7 @@ export async function PATCH(
             displayName: updated.displayName,
             visualDescription: updated.visualDescription,
             conditionCriteria: updated.conditionCriteria,
+            vegetationCriteria: updated.vegetationCriteria,
             feasibilityCriteria: updated.feasibilityCriteria,
             samPrompt: updated.samPrompt,
             samColor: updated.samColor,

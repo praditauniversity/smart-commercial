@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { getCachedClasses, invalidateClassCache } from '@/lib/classCache';
+import { normalizeVegetationCriteria } from '@/lib/vegetation-criteria';
 
 export async function GET() {
   try {
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
       displayName,
       visualDescription,
       conditionCriteria,
+      vegetationCriteria,
       feasibilityCriteria,
       mutuallyExclusiveWith,
       conflictIouThreshold,
@@ -60,6 +62,7 @@ export async function POST(request: Request) {
         displayName: displayName?.trim() || cleanName,
         visualDescription: visualDescription.trim(),
         conditionCriteria: conditionCriteria.trim(),
+        vegetationCriteria: JSON.stringify(normalizeVegetationCriteria(vegetationCriteria)),
         feasibilityCriteria: feasibilityCriteria.trim(),
         mutuallyExclusiveWith: JSON.stringify(mutuallyExclusiveWith || []),
         conflictIouThreshold: conflictIouThreshold ? parseFloat(conflictIouThreshold) : 0.5,
@@ -74,6 +77,7 @@ export async function POST(request: Request) {
               displayName: displayName?.trim() || cleanName,
               visualDescription: visualDescription.trim(),
               conditionCriteria: conditionCriteria.trim(),
+              vegetationCriteria: JSON.stringify(normalizeVegetationCriteria(vegetationCriteria)),
               feasibilityCriteria: feasibilityCriteria.trim(),
               samPrompt: samPrompt?.trim() || null,
               samColor: samColor?.trim() || null,

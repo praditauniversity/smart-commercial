@@ -4,8 +4,8 @@ import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { getMaxVideoSeconds, videoTooLongMessage } from './media-limits';
-import { requireEnv, requireEnvNumber } from './env';
+import { videoTooLongMessage } from './media-limits';
+import { requireEnv, requireEnvNumber, requirePublicEnv } from './env';
 
 // ffmpeg needs libx264 and libwebp (the anaconda build lacks libx264). Paths come from the environment only.
 const ffmpegPath = () => requireEnv('FFMPEG_PATH');
@@ -28,7 +28,9 @@ let adminClient: SupabaseClient | null = null;
 
 function getAdminClient(): SupabaseClient {
   if (adminClient) return adminClient;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  // Containers can reach Supabase over the private Docker network while saved object URLs
+  // must remain reachable by users' browsers over the public (Tailscale) endpoint.
+  const url = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
     throw new Error('NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY belum dikonfigurasi.');
@@ -97,7 +99,8 @@ const videoScale = () => `scale=-2:'min(${requireEnvNumber('MEDIA_VIDEO_MAX_HEIG
 /** Compress raw media with ffmpeg: images -> WebP, videos -> H.264 (no audio). */
 export async function compressMedia(
   input: Buffer,
-  kind: MediaKind
+  kind: MediaKind,
+  maxVideoDurationSeconds: number
 ): Promise<{ buffer: Buffer; contentType: string; ext: string; durationSeconds: number | null }> {
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bima-media-'));
   const inPath = path.join(workDir, 'input');
@@ -108,12 +111,16 @@ export async function compressMedia(
     await fs.writeFile(inPath, input);
 
     let durationSeconds: number | null = null;
+    const probedDurationSeconds = await probeDurationSeconds(inPath);
     if (kind === 'video') {
       // Enforced here (not trusted from the client) and before the expensive re-encode.
-      durationSeconds = await probeDurationSeconds(inPath);
-      if (durationSeconds === null || durationSeconds > getMaxVideoSeconds()) {
-        throw new MediaLimitError(videoTooLongMessage(durationSeconds));
+      durationSeconds = probedDurationSeconds;
+      if (durationSeconds === null || durationSeconds > maxVideoDurationSeconds) {
+        throw new MediaLimitError(videoTooLongMessage(durationSeconds, maxVideoDurationSeconds));
       }
+    } else if (probedDurationSeconds !== null && probedDurationSeconds > maxVideoDurationSeconds) {
+      // Do not let a long video bypass the limit by claiming an image MIME type and filename.
+      throw new MediaLimitError(videoTooLongMessage(probedDurationSeconds, maxVideoDurationSeconds));
     }
 
     if (kind === 'image') {
@@ -148,6 +155,7 @@ export async function compressAndUpload(params: {
   input: Buffer;
   kind: MediaKind;
   sessionId: string;
+  maxVideoDurationSeconds: number;
 }): Promise<{
   fileUrl: string;
   storagePath: string;
@@ -155,8 +163,8 @@ export async function compressAndUpload(params: {
   storedBytes: number;
   durationSeconds: number | null;
 }> {
-  const { input, kind, sessionId } = params;
-  const { buffer, contentType, ext, durationSeconds } = await compressMedia(input, kind);
+  const { input, kind, sessionId, maxVideoDurationSeconds } = params;
+  const { buffer, contentType, ext, durationSeconds } = await compressMedia(input, kind, maxVideoDurationSeconds);
 
   const storagePath = `sessions/${sessionId}/${crypto.randomUUID()}.${ext}`;
   const bucket = BUCKETS[kind];
@@ -169,9 +177,13 @@ export async function compressAndUpload(params: {
   });
   if (error) throw new Error(`Gagal upload ke bucket "${bucket}": ${error.message}`);
 
-  const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath);
+  const publicBaseUrl = requirePublicEnv(
+    'NEXT_PUBLIC_SUPABASE_URL',
+    process.env.NEXT_PUBLIC_SUPABASE_URL
+  ).replace(/\/+$/, '');
+  const publicStoragePath = storagePath.split('/').map(encodeURIComponent).join('/');
   return {
-    fileUrl: data.publicUrl,
+    fileUrl: `${publicBaseUrl}/storage/v1/object/public/${bucket}/${publicStoragePath}`,
     storagePath,
     originalBytes: input.length,
     storedBytes: buffer.length,

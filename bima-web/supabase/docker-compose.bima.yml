@@ -1,0 +1,21 @@
+# Bima-only Docker network. The upstream Supabase stack remains on its own default network;
+# only Postgres and the API gateway are reachable by Bima containers.
+services:
+  api-gw:
+    networks:
+      default: {}
+      bima-app:
+        aliases:
+          - supabase-api
+
+  db:
+    networks:
+      default: {}
+      bima-app:
+        aliases:
+          - supabase-db
+
+networks:
+  bima-app:
+    external: true
+    name: bima-supabase-app

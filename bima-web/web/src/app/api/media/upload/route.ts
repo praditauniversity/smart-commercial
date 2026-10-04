@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import crypto from 'crypto';
 import { compressAndUpload, MediaLimitError } from '@/lib/media-storage';
+import { getMaxVideoDurationSeconds } from '@/lib/video-settings';
 
 export async function POST(request: Request) {
   try {
@@ -48,12 +49,14 @@ export async function POST(request: Request) {
 
     const idempotencyKey = crypto.randomUUID();
     const mediaId = crypto.randomUUID();
+    const maxVideoDurationSeconds = await getMaxVideoDurationSeconds();
 
     // Compress as small as possible, then store in the Supabase bucket (img / vids)
     const stored = await compressAndUpload({
       input: Buffer.from(await file.arrayBuffer()),
       kind: isVideo ? 'video' : 'image',
       sessionId,
+      maxVideoDurationSeconds,
     });
 
     const mediaAsset = await prisma.mediaAsset.create({

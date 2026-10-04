@@ -31,7 +31,7 @@ Diputuskan oleh tim dan sudah tercermin di seluruh dokumen ini:
 | # | Keputusan | Dampak |
 |---|---|---|
 | K1 | **Autentikasi memakai JWT + bcrypt buatan sendiri**, bukan Supabase Auth. Supabase hanya untuk PostgreSQL dan Storage | US-010, FR-58, FR-68 menjadi ✅ (bukan lagi penyimpangan) |
-| K2 | **Video dibatasi maksimal 20 menit** (dapat diubah lewat `NEXT_PUBLIC_MAX_VIDEO_SECONDS`, mis. `60` untuk 1 menit) | FR-87/88 sebagian terpenuhi. Divalidasi di server (ffprobe) dan di browser |
+| K2 | **Video dibatasi maksimal 20 menit** (default 2 menit; admin dapat mengatur 1 detik sampai 20 menit di menu Batas Media) | FR-87/88 sebagian terpenuhi. Divalidasi di server (ffprobe) dan di browser |
 | K3 | **Konflik kelas harus bekerja juga pada hasil SAM3** | Diimplementasikan (FR-25) |
 | K4 | **Hasil per kelas memakai pagination** | Diimplementasikan (US-002, US-007) |
 | K5 | **Halaman `/admin/*` dan `/surveyor/*` dijaga proxy (middleware)** | Diimplementasikan (FR-A11) |
@@ -104,7 +104,7 @@ Catatan implementasi:
 - Alur upload langsung menetapkan `uploaded`. Status `queued` dan `uploading` ada di state machine tetapi **tidak dipakai** oleh alur saat ini (upload dilakukan satu request ke server, bukan resumable).
 - Penghapusan media adalah **hard delete** (baris `MediaAsset`, `MediaSegment`, `Detection`, dan file di bucket dihapus). Status `deleted` disediakan tetapi tidak ditulis oleh route hapus.
 - Kegagalan satu media tidak mengubah status sesi ✅.
-- **Batas durasi video** (K2): maksimal 1200 detik. Server mengukur durasi asli dengan `ffprobe` sebelum kompresi dan menolak dengan HTTP 400 bila lebih panjang atau tidak terbaca. Browser memeriksa lebih dulu agar file besar tidak diunggah sia-sia. Batas diatur `NEXT_PUBLIC_MAX_VIDEO_SECONDS` (butuh build ulang).
+- **Batas durasi video** (K2): default 120 detik. Admin mengatur batas 1–1200 detik di menu Batas Media. Server membaca durasi asli dengan `ffprobe` dan menolak dengan HTTP 400 bila lebih panjang atau tidak terbaca; pemeriksaan browser hanya memberi peringatan lebih awal.
 
 ### 3.3 MediaSegment
 
@@ -482,7 +482,7 @@ Kriteria "Typecheck/lint passes" dan "Verify in browser" dipindahkan ke bagian *
 | FR-84 | Pencarian alamat Nominatim | ✅ | |
 | FR-85 | Frame temporary dapat dihapus setelah processing | 🟡 | Direktori kerja SAM3 dihapus otomatis. Frame VLM tidak disimpan |
 | FR-86 | Simpan media untuk menampilkan hasil Detection | ✅ | Menurut K7: hanya hasil kompresi yang disimpan, file asli tidak. SAM3 video menyimpan hasil anotasi |
-| FR-87 | Limit media lewat konfigurasi | 🟡 | Durasi video maks 20 menit lewat `NEXT_PUBLIC_MAX_VIDEO_SECONDS` (K2). Batas ukuran byte dan jumlah media belum ada |
+| FR-87 | Limit media lewat konfigurasi | 🟡 | Batas durasi video dapat diatur admin sampai 20 menit (K2). Batas ukuran byte dan jumlah media belum ada |
 | FR-88 | Validasi format dan limit sebelum diproses | 🟡 | Tipe dan durasi divalidasi (browser + server). Limit ukuran belum ada |
 
 ### Kebutuhan baru ➕ (belum ada di PRD v1.0)

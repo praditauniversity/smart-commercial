@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { decryptSecret, encryptSecret } from '@/lib/security';
 import { runSam3Job } from '@/lib/sam3-runner';
 import { requireEnv, requireEnvNumber } from '@/lib/env';
+import { parseVegetationCriteria } from '@/lib/vegetation-criteria';
 
 export async function POST(
   _request: Request,
@@ -142,7 +143,10 @@ export async function POST(
         name: c.name,
         display_name: c.displayName,
         visual_description: c.visualDescription,
-        condition_criteria: c.conditionCriteria,
+        condition_criteria: [
+          c.conditionCriteria,
+          ...parseVegetationCriteria(c.vegetationCriteria),
+        ].filter(Boolean).join('\n'),
         feasibility_criteria: c.feasibilityCriteria,
         mutually_exclusive_with: JSON.parse(c.mutuallyExclusiveWith || '[]'),
         conflict_iou_threshold: c.conflictIouThreshold,

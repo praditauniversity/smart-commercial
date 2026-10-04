@@ -1,22 +1,3 @@
-import { requirePublicEnv } from './env';
-
-/**
- * Media limits shared by the browser and the server.
- *
- * NEXT_PUBLIC_MAX_VIDEO_SECONDS is the single source of truth and has no built-in default: it is read at
- * runtime on the server and inlined at build time for the browser, so changing it requires
- * `npm run build` + a restart. The server check (ffprobe in media-storage.ts) is authoritative; the
- * browser check only saves a pointless upload of a large file.
- */
-export function getMaxVideoSeconds(): number {
-  const raw = requirePublicEnv('NEXT_PUBLIC_MAX_VIDEO_SECONDS', process.env.NEXT_PUBLIC_MAX_VIDEO_SECONDS);
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value <= 0) {
-    throw new Error(`NEXT_PUBLIC_MAX_VIDEO_SECONDS harus angka lebih dari 0, bukan "${raw}".`);
-  }
-  return value;
-}
-
 export function formatDuration(seconds: number): string {
   const total = Math.round(seconds);
   const m = Math.floor(total / 60);
@@ -25,8 +6,8 @@ export function formatDuration(seconds: number): string {
   return s === 0 ? `${m} menit` : `${m} menit ${s} detik`;
 }
 
-export function videoTooLongMessage(seconds: number | null): string {
-  const limit = formatDuration(getMaxVideoSeconds());
+export function videoTooLongMessage(seconds: number | null, maxVideoSeconds: number): string {
+  const limit = formatDuration(maxVideoSeconds);
   return seconds === null
     ? `Durasi video tidak dapat dibaca. Batas durasi video adalah ${limit}.`
     : `Video berdurasi ${formatDuration(seconds)}, melebihi batas ${limit}. Potong video terlebih dahulu.`;

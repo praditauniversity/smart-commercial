@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { TableSkeleton } from '@/components/SkeletonLoaders';
 import { useToast } from '@/components/ToastProvider';
+import { VEGETATION_CRITERIA } from '@/lib/vegetation-criteria';
 import {
   Layers,
   Plus,
@@ -21,6 +22,7 @@ interface ClassItem {
   displayName: string;
   visualDescription: string;
   conditionCriteria: string;
+  vegetationCriteria: string;
   feasibilityCriteria: string;
   isActive: boolean;
   mutuallyExclusiveWith: string;
@@ -48,6 +50,7 @@ export default function AdminClassesPage() {
   const [formDisplayName, setFormDisplayName] = useState('');
   const [formVisual, setFormVisual] = useState('');
   const [formCondition, setFormCondition] = useState('');
+  const [formVegetationCriteria, setFormVegetationCriteria] = useState<string[]>([]);
   const [formFeasibility, setFormFeasibility] = useState('');
   const [formMutual, setFormMutual] = useState<string[]>([]);
   const [formIou, setFormIou] = useState(0.5);
@@ -100,6 +103,7 @@ export default function AdminClassesPage() {
     setFormDisplayName('');
     setFormVisual('');
     setFormCondition('');
+    setFormVegetationCriteria([]);
     setFormFeasibility(
       'Layak: kondisi baik/normal; Cukup Layak: sedikit aus namun berfungsi; Tidak Layak: rusak berat dan membahayakan.'
     );
@@ -116,6 +120,12 @@ export default function AdminClassesPage() {
     setFormDisplayName(cls.displayName);
     setFormVisual(cls.visualDescription);
     setFormCondition(cls.conditionCriteria);
+    try {
+      const parsed: unknown = JSON.parse(cls.vegetationCriteria || '[]');
+      setFormVegetationCriteria(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : []);
+    } catch {
+      setFormVegetationCriteria([]);
+    }
     setFormFeasibility(cls.feasibilityCriteria);
     try {
       setFormMutual(JSON.parse(cls.mutuallyExclusiveWith || '[]'));
@@ -139,6 +149,7 @@ export default function AdminClassesPage() {
           displayName: formDisplayName,
           samPrompt: formSamPrompt.trim(),
           samColor: formSamColor,
+          vegetationCriteria: formVegetationCriteria,
           // Required by the schema but unused by SAM3
           ...(editingClass
             ? {}
@@ -154,6 +165,7 @@ export default function AdminClassesPage() {
           displayName: formDisplayName,
           visualDescription: formVisual,
           conditionCriteria: formCondition,
+          vegetationCriteria: formVegetationCriteria,
           feasibilityCriteria: formFeasibility,
           mutuallyExclusiveWith: formMutual,
           conflictIouThreshold: formIou,
@@ -479,6 +491,30 @@ export default function AdminClassesPage() {
               </div>
                 </>
               )}
+
+              <fieldset className="p-3 border border-emerald-200 bg-emerald-50/50 rounded-xl space-y-2">
+                <legend className="px-1 font-semibold text-slate-700">Kriteria Vegetasi untuk kelas ini</legend>
+                <p className="text-[11px] text-slate-500">
+                  Pilih yang berlaku untuk kelas ini. Pilihan disimpan per kelas dan menjadi panduan kondisi saat model VLM aktif. SAM3 memakai SAM Prompt untuk segmentasi.
+                </p>
+                <div className="space-y-1.5">
+                  {VEGETATION_CRITERIA.map((criterion) => (
+                    <label key={criterion.id} className="flex items-start gap-2 text-slate-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formVegetationCriteria.includes(criterion.id)}
+                        onChange={(event) => setFormVegetationCriteria((current) =>
+                          event.target.checked
+                            ? [...current, criterion.id]
+                            : current.filter((id) => id !== criterion.id)
+                        )}
+                        className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      <span>{criterion.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
             </div>
 
             <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">

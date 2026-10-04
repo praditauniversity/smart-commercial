@@ -12,6 +12,7 @@ import {
   Layers,
   Cpu,
   Users,
+  SlidersHorizontal,
   LogOut,
   Shield,
   User as UserIcon,
@@ -152,6 +153,17 @@ export default function Navbar() {
                       >
                         <Cpu className="w-4 h-4" />
                         Model AI
+                      </Link>
+                      <Link
+                        href="/admin/media-settings"
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          pathname.startsWith('/admin/media-settings')
+                            ? 'bg-blue-50 text-blue-700 font-bold'
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }`}
+                      >
+                        <SlidersHorizontal className="w-4 h-4" />
+                        Batas Media
                       </Link>
                       <Link
                         href="/admin/users"
@@ -295,6 +307,17 @@ export default function Navbar() {
                     Model AI
                   </Link>
                   <Link
+                    href="/admin/media-settings"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
+                      pathname.startsWith('/admin/media-settings')
+                        ? 'bg-blue-600 text-white shadow-xs font-bold'
+                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
+                    Batas Media
+                  </Link>
+                  <Link
                     href="/admin/users"
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
                       pathname.startsWith('/admin/users')
@@ -406,5 +429,4 @@ export default function Navbar() {
     </>
   );
 }
-
 

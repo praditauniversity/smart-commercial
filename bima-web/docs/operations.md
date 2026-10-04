@@ -9,7 +9,7 @@ Panduan ini mencakup dua mode: **development** (laptop) dan **server tetap** (sa
 | Node.js | 22 (dipakai saat ini) dan npm |
 | Python | 3.10+ |
 | ffmpeg | Build dengan `libx264` dan `libwebp` (`/usr/bin/ffmpeg`). Build anaconda **tidak** punya libx264 |
-| Database | Proyek Supabase (PostgreSQL) + bucket Storage `img` dan `vids` (publik) |
+| Database | Cloud Supabase atau self-hosted Supabase Docker + bucket Storage `img` dan `vids` (publik) |
 | GPU (opsional) | Untuk provider `sam3`: CUDA, torch, ultralytics, bobot SAM 3.1 |
 | Tailscale (opsional) | Untuk akses jarak jauh dengan HTTPS |
 
@@ -21,9 +21,11 @@ Panduan ini mencakup dua mode: **development** (laptop) dan **server tetap** (sa
 
 | Variabel | Fungsi |
 |---|---|
-| `DATABASE_URL`, `DIRECT_URL` | PostgreSQL: pooler untuk aplikasi, koneksi langsung untuk migrasi |
-| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase (klien) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Hanya server: upload/hapus objek Storage. **Rahasia** |
+| `DATABASE_URL`, `DIRECT_URL` | PostgreSQL. Untuk Docker, Bima memakai `supabase-db:5432` di jaringan privat; host migration memakai port loopback `5433` |
+| `NEXT_PUBLIC_SUPABASE_URL` | URL HTTPS Storage yang dapat dicapai browser; perubahan perlu build ulang |
+| `SUPABASE_INTERNAL_URL` | Opsional: URL Storage server-ke-server. Docker Compose menetapkannya ke `http://supabase-api:8000` |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Tersimpan untuk kompatibilitas; aplikasi tidak memakai Supabase Auth |
+| `SUPABASE_SERVICE_ROLE_KEY` | Hanya server: upload/hapus objek Storage. Untuk local Supabase, salin `SERVICE_ROLE_KEY` dari `supabase/.env`. **Rahasia** |
 | `JWT_SECRET` | Penandatangan sesi login. **Rahasia**, acak dan panjang (`openssl rand -base64 48`) |
 | `ENCRYPTION_SECRET_KEY` | Kunci enkripsi API key model. **Rahasia** |
 | `INTERNAL_API_SECRET` | Rahasia bersama dengan ai-service. **Harus sama** di kedua `.env`. **Rahasia** |
@@ -34,7 +36,6 @@ Panduan ini mencakup dua mode: **development** (laptop) dan **server tetap** (sa
 | `FFPROBE_TIMEOUT_MS`, `FFMPEG_IMAGE_TIMEOUT_MS`, `FFMPEG_VIDEO_TIMEOUT_MS` | Batas waktu proses media, ms |
 | `MEDIA_IMAGE_MAX_SIDE`, `MEDIA_IMAGE_QUALITY` | Sisi terpanjang dan kualitas WebP gambar |
 | `MEDIA_VIDEO_MAX_HEIGHT`, `MEDIA_VIDEO_CRF` | Tinggi maksimum dan CRF H.264 video |
-| `NEXT_PUBLIC_MAX_VIDEO_SECONDS` | Batas durasi video dalam detik (mis. `1200` = 20 menit) |
 | `SAM3_POLL_INTERVAL_MS`, `SAM3_MAX_WAIT_MS` | Interval polling dan batas tunggu job SAM3, ms |
 | `DEFAULT_CONFLICT_IOU_THRESHOLD` | Ambang IoU konflik kelas bila kelas tidak menentukan sendiri |
 | `ALLOWED_DEV_ORIGINS` | Host/IP yang boleh membuka server dev (dipisah koma; kosong = tidak ada) |
@@ -219,7 +220,7 @@ Perubahan `.env` hanya terbaca setelah service di-restart. Variabel `NEXT_PUBLIC
 
 ## 5. Deploy dengan Docker
 
-Alternatif dari service systemd (bagian 4.2): web dan ai-service dijalankan sebagai container. Database dan Storage tetap di Supabase, jadi tidak ada container database.
+Alternatif dari service systemd (bagian 4.2): web dan ai-service dijalankan sebagai container. Supabase dapat tetap di cloud atau dijalankan lokal dari stack self-hosted di [`supabase/`](../supabase/README.md).
 
 ### 5.1 Prasyarat tambahan
 
@@ -251,11 +252,13 @@ Container memakai **`web/.env` dan `ai-service/.env` yang sama** dengan cara men
 | Service | Ditimpa menjadi | Alasan |
 |---|---|---|
 | web | `FASTAPI_SERVICE_URL=http://ai-service:8000` | Di jaringan compose, ai-service dipanggil lewat nama service, bukan loopback |
+| web | `SUPABASE_INTERNAL_URL` | Kosong memakai URL publik app; isi `http://supabase-api:8000` untuk Supabase lokal |
 | ai-service | `AI_SERVICE_HOST=0.0.0.0` | Harus mendengarkan semua interface **di dalam** container |
+| ai-service | `SUPABASE_INTERNAL_URL` | Kosong memakai URL app; isi `http://supabase-api:8000` untuk Supabase lokal |
 | ai-service | `SAM3_CHECKPOINT=/weights/sam3_1.pt` | Bobot di-mount, bukan ikut di dalam image |
 | ai-service | `WEB_BASE_URL=http://web:3000` | Fallback pengambilan file `/uploads/...` lama |
 
-Selain itu ada dua variabel khusus Docker di **`bima-web/.env`** (contoh: `bima-web/.env.example`):
+Selain itu, variabel khusus Docker ada di **`bima-web/.env`** (contoh: `bima-web/.env.example`):
 
 ```bash
 cp .env.example .env
@@ -265,8 +268,19 @@ cp .env.example .env
 |---|---|
 | `SAM3_WEIGHTS_HOST_PATH` | Path absolut bobot SAM 3.1 di host ini. Di-mount **read-only** ke `/weights/sam3_1.pt`; file itu tidak pernah disalin ke dalam image |
 | `WEB_HOST_PORT` | Port host untuk container web (port di dalam container tetap 3000) |
+| `WEB_ENV_FILE`, `AI_ENV_FILE` | File konfigurasi app; default memakai file Cloud saat ini. Untuk lokal, arahkan ke salinan `.env.local` |
+| `SUPABASE_INTERNAL_URL` | Kosong menggunakan Supabase Cloud dari app `.env`; untuk lokal isi `http://supabase-api:8000` |
 
-Compose menolak start bila salah satu variabel itu kosong.
+Compose menolak start bila path bobot SAM3 atau port web kosong.
+
+Untuk local Supabase, mulai stack di `supabase/` lebih dulu dan pastikan jaringan
+`bima-supabase-app` sudah dibuat. Gunakan salinan private `web/.env.local` dan
+`ai-service/.env.local`, pilih keduanya melalui `WEB_ENV_FILE` dan `AI_ENV_FILE`,
+lalu set root `SUPABASE_INTERNAL_URL=http://supabase-api:8000`. Atur
+`NEXT_PUBLIC_SUPABASE_URL` dan `SUPABASE_PUBLIC_URL` ke HTTPS Tailscale gateway;
+salin `SERVICE_ROLE_KEY` dari Supabase lokal ke kedua salinan env. Untuk Supabase
+Cloud, biarkan `SUPABASE_INTERNAL_URL` kosong dan gunakan app `.env` cloud. Langkah
+stack lokal ada di [`supabase/README.md`](../supabase/README.md).
 
 **Tentang `WEB_HOST_PORT`:** pakai port bebas (mis. `3100`) bila server dev native masih jalan di 3000, atau `3000` bila container yang mengambil alih. Tailscale Serve meneruskan ke port tetap, jadi samakan keduanya:
 
@@ -325,7 +339,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/login
 | Login berhasil tetapi tetap dianggap belum login | Situs diakses lewat `http://` sementara cookie `Secure` | Akses lewat `https://` (4.3) atau `http://localhost` |
 | Membuka `/admin/*` langsung kembali ke `/login` | Belum login atau sesi kedaluwarsa (proxy halaman bekerja) | Login. Surveyor yang membuka `/admin/*` dialihkan ke `/surveyor/sessions` |
 | Semua halaman/login galat 500, atau fitur berhenti dengan pesan "Environment variable X belum diisi" | Variabel wajib kosong di `web/.env` atau `ai-service/.env` | Isi variabel yang disebut (lihat `.env.example`), restart service (dan `npm run build` bila `NEXT_PUBLIC_*`). Pesan lengkap ada di `journalctl --user -u bima-web` / `bima-ai` |
-| Upload video ditolak: "melebihi batas 20 menit" | Durasi video > `NEXT_PUBLIC_MAX_VIDEO_SECONDS` | Potong video, atau naikkan batas lalu build ulang |
+| Upload video ditolak karena durasi | Durasi terukur ffprobe melebihi setelan Admin → Batas Media | Potong video atau minta admin menaikkan batas (maksimal 20 menit) |
 | Upload video ditolak: durasi tidak terbaca / `ffprobe tidak bisa dijalankan` | File rusak atau `FFPROBE_PATH` salah | Periksa file; set `FFPROBE_PATH` (`which ffprobe`) |
 | `Client sent an HTTP request to an HTTPS server` | Membuka `http://...:8443` | Gunakan `https://...:8443` |
 | Port 3000 tidak bisa dijangkau | Service web tidak jalan atau firewall | `systemctl --user status bima-web`; `ss -tlnp \| grep 3000` |

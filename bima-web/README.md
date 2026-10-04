@@ -146,9 +146,12 @@ docker compose --profile tools run --rm migrate
 | `FASTAPI_SERVICE_URL` | URL internal AI Service. Gunakan loopback `http://127.0.0.1:8000` (server-ke-server, bukan IP jaringan). |
 | `JWT_SECRET` | Penandatangan sesi login. **Wajib diisi** (tanpa nilai bawaan; aplikasi menolak login bila kosong) dengan nilai acak yang panjang, mis. `openssl rand -base64 48`. |
 | `ENCRYPTION_SECRET_KEY` | Kunci enkripsi API key model. **Wajib diisi.** |
-| `NEXT_PUBLIC_MAX_VIDEO_SECONDS` | Batas durasi video dalam detik (mis. `1200` = 20 menit). Ubah lalu `npm run build` dan restart. |
+| `Admin → Batas Media` | Batas awal 2 menit; admin dapat mengatur batas durasi video surveyor dari 1 detik sampai 20 menit. Server mengukur dan menolak video yang melewati batas. |
 | `FFMPEG_PATH`, `FFPROBE_PATH` | Path ffmpeg dan ffprobe (butuh libx264 dan libwebp). |
-| `SUPABASE_SERVICE_ROLE_KEY` | Hanya server: upload/hapus media di Supabase Storage (bucket `img`, `vids`). **Rahasia.** |
+| `SUPABASE_SERVICE_ROLE_KEY` | Hanya server: upload/hapus media di Supabase Storage (bucket `img`, `vids`). Pada local stack, salin `SERVICE_ROLE_KEY` dari `supabase/.env`. **Rahasia.** |
 | `SAM3_CHECKPOINT`, `FFMPEG_PATH` | (ai-service) Bobot SAM 3.1 dan ffmpeg dengan libx264, untuk provider `sam3`. |
 | `DATABASE_URL` & `DIRECT_URL` | Connection string PostgreSQL (Supabase / local DB). |
-| `NEXT_PUBLIC_SUPABASE_URL` & `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Kredensial Supabase Storage & Auth. |
+| `NEXT_PUBLIC_SUPABASE_URL` | URL Storage yang dapat dicapai browser; dibangun ke bundle browser. `SUPABASE_INTERNAL_URL` dipakai server bila endpoint Docker internal berbeda. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Konfigurasi lama; login Bima tidak menggunakan Supabase Auth. |
+
+Untuk menjalankan Supabase lokal di Docker, ikuti [`supabase/README.md`](supabase/README.md). Penyalinan data dari Cloud bersifat opsional dan memerlukan koneksi PostgreSQL cloud yang aktif.

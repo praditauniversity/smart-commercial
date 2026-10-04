@@ -8,7 +8,7 @@ import MediaInspectionModal from '@/components/MediaInspectionModal';
 import { Sam3Chips, getSam3Result } from '@/components/Sam3Result';
 import Pagination from '@/components/Pagination';
 import { FINDINGS_PAGE_SIZE, paginateTwo } from '@/lib/pagination';
-import { getMaxVideoSeconds, formatDuration, readVideoDuration, videoTooLongMessage } from '@/lib/media-limits';
+import { formatDuration, readVideoDuration, videoTooLongMessage } from '@/lib/media-limits';
 import { useToast } from '@/components/ToastProvider';
 import { DetailWorkspaceSkeleton } from '@/components/SkeletonLoaders';
 import {
@@ -78,6 +78,7 @@ export default function SurveyorSessionWorkspace() {
   // Media upload state
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [maxVideoDurationSeconds, setMaxVideoDurationSeconds] = useState<number | null>(null);
 
   // Conflict modal state
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
@@ -136,6 +137,17 @@ export default function SurveyorSessionWorkspace() {
     fetchClasses();
   }, [sessionId]);
 
+  useEffect(() => {
+    fetch('/api/media/limits')
+      .then((res) => res.json())
+      .then((data) => {
+        if (typeof data.maxVideoDurationSeconds === 'number') {
+          setMaxVideoDurationSeconds(data.maxVideoDurationSeconds);
+        }
+      })
+      .catch((error) => console.error('Gagal memuat batas durasi video:', error));
+  }, []);
+
   // Polling for processing media assets
   useEffect(() => {
     if (!session) return;
@@ -168,8 +180,14 @@ export default function SurveyorSessionWorkspace() {
         // Reject over-long videos in the browser first so a large file is not uploaded for nothing.
         if (file.type.startsWith('video/')) {
           const duration = await readVideoDuration(file);
-          if (duration === null || duration > getMaxVideoSeconds()) {
-            toast.warning(`${file.name}: ${videoTooLongMessage(duration)}`, 'Video Dilewati');
+          if (
+            maxVideoDurationSeconds !== null &&
+            (duration === null || duration > maxVideoDurationSeconds)
+          ) {
+            toast.warning(
+              `${file.name}: ${videoTooLongMessage(duration, maxVideoDurationSeconds)}`,
+              'Video Dilewati'
+            );
             continue;
           }
         }
@@ -818,7 +836,9 @@ export default function SurveyorSessionWorkspace() {
               <label className="cursor-pointer px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-all shrink-0">
                 <Plus className="w-3.5 h-3.5" />
                 <span>Upload Gambar/Video</span>
-                <span className="hidden sm:inline text-[10px] font-normal opacity-80">(video maks {formatDuration(getMaxVideoSeconds())})</span>
+                <span className="hidden sm:inline text-[10px] font-normal opacity-80">
+                  (video maks {maxVideoDurationSeconds === null ? '…' : formatDuration(maxVideoDurationSeconds)})
+                </span>
                 <input
                   type="file"
                   multiple
@@ -1050,7 +1070,7 @@ export default function SurveyorSessionWorkspace() {
                 <UploadCloud className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                 <h3 className="font-semibold text-slate-700 text-sm">Belum Ada File Media</h3>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1 mb-4">
-                  Upload file foto (JPG, PNG) atau video (MP4, maks {formatDuration(getMaxVideoSeconds())}) untuk sesi survei ini.
+                  Upload file foto (JPG, PNG) atau video (MP4, maks {maxVideoDurationSeconds === null ? '…' : formatDuration(maxVideoDurationSeconds)}) untuk sesi survei ini.
                 </p>
                 {canUploadMedia && (
                   <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm">
