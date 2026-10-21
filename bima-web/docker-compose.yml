@@ -13,14 +13,14 @@ services:
     env_file: ${WEB_ENV_FILE:-./web/.env}
     environment:
       # On the compose network the AI service is reached by name, not on loopback.
-      FASTAPI_SERVICE_URL: http://ai-service:8000
+      FASTAPI_SERVICE_URL: http://bima-web-local-ai:8000
       # Blank keeps cloud mode on the app's public URL; set this in the root .env.local for Docker Supabase.
       SUPABASE_INTERNAL_URL: ${SUPABASE_INTERNAL_URL:-}
       FFMPEG_PATH: /usr/bin/ffmpeg
       FFPROBE_PATH: /usr/bin/ffprobe
     networks:
-      - default
-      - supabase
+      default: {}
+      supabase: {}
     ports:
       # Loopback only: Tailscale Serve terminates HTTPS in front of this.
       # The session cookie is Secure in production, so plain http://<lan-ip>:<port> cannot log in.
@@ -55,8 +55,10 @@ services:
       WEB_BASE_URL: http://web:3000
       SUPABASE_INTERNAL_URL: ${SUPABASE_INTERNAL_URL:-}
     networks:
-      - default
-      - supabase
+      default:
+        aliases:
+          - bima-web-local-ai
+      supabase: {}
     volumes:
       # The 3.3 GB checkpoint is mounted read-only, never baked into the image.
       - ${SAM3_WEIGHTS_HOST_PATH:?set SAM3_WEIGHTS_HOST_PATH in bima-web/.env (see .env.example)}:/weights/sam3_1.pt:ro

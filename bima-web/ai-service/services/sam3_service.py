@@ -13,7 +13,7 @@ from config import require_env_float
 from schemas import BBox, DetectionItem, MediaSegmentResult, ProcessMediaRequest, ProcessMediaResponse
 from services.conflict_detector import detect_class_conflicts, detect_video_conflicts
 from services.sam3_engine import DEFAULT_COLORS_BGR, ClassPrompts, engine, hex_to_bgr
-from services.storage import upload_public
+from services.storage import internal_media_url, upload_public
 
 logger = logging.getLogger("ai_service.sam3")
 
@@ -118,6 +118,7 @@ def _materialize_input(file_url: str, workdir: str, suffix: str) -> str:
             f.write(base64.b64decode(file_url.split(",", 1)[1]))
         return path
     if file_url.startswith(("http://", "https://")):
+        file_url = internal_media_url(file_url)
         ext = os.path.splitext(urlparse(file_url).path)[1] or suffix
         path = os.path.join(workdir, f"input{ext}")
         with httpx.stream("GET", file_url, timeout=300.0, follow_redirects=True) as r:

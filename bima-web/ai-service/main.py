@@ -33,6 +33,7 @@ from services.deduplication import deduplicate_temporal_detections
 from services.conflict_detector import detect_class_conflicts
 from services.video_splitter import plan_video_segments
 from services.sam3_service import run_sam3_job
+from services.storage import internal_media_url
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ai_service")
@@ -213,7 +214,7 @@ async def process_media(
             image_base64 = req.file_url.split(",")[1] if "," in req.file_url else req.file_url
         elif req.file_url.startswith("http://") or req.file_url.startswith("https://"):
             async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.get(req.file_url)
+                resp = await client.get(internal_media_url(req.file_url))
                 if resp.status_code == 200:
                     image_base64 = base64.b64encode(resp.content).decode("utf-8")
                 else:

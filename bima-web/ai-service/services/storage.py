@@ -1,8 +1,26 @@
 """Minimal Supabase Storage uploader (REST) for annotated SAM3 results."""
 import os
 import uuid
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
+
+
+def internal_media_url(file_url: str) -> str:
+    """Use Docker's private Supabase endpoint when fetching an object stored with its public URL."""
+    public_base = os.getenv("SUPABASE_PUBLIC_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+    internal_base = os.getenv("SUPABASE_INTERNAL_URL")
+    if not public_base or not internal_base:
+        return file_url
+    try:
+        source = urlsplit(file_url)
+        public = urlsplit(public_base)
+        internal = urlsplit(internal_base)
+    except ValueError:
+        return file_url
+    if not source.scheme or source.netloc.lower() != public.netloc.lower():
+        return file_url
+    return urlunsplit((internal.scheme, internal.netloc, source.path, source.query, source.fragment))
 
 
 def _config():
